@@ -1,0 +1,21 @@
+import { CrudPageConfig } from "@/types/crud/crud.types";
+
+import { Unit } from "../units/types/unit.types";
+
+import { UnitService } from "@/services/unit/unit.service";
+
+import UnitForm from "../units/components/UnitForm";
+import { unitColumns } from "../units/components/UnitColumns";
+
+export const unitConfig: CrudPageConfig<
+  Unit,
+  Omit<Unit, "id" | "createdAt" | "updatedAt" | "isActive">
+> = {
+  title: "Units",
+
+  columns: unitColumns,
+
+  service: UnitService,
+
+  Form: UnitForm,
+};

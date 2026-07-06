@@ -1,0 +1,21 @@
+:root {
+  --erp-primary: #1E3A8A;
+  --erp-primary-hover: #1D4ED8;
+
+  --erp-success: #16A34A;
+  --erp-warning: #D97706;
+  --erp-danger: #DC2626;
+
+  --erp-bg: #F6F8FB;
+  --erp-card: #FFFFFF;
+
+  --erp-sidebar: #FFFFFF;
+  --erp-header: #FFFFFF;
+
+  --erp-border: #E5E7EB;
+
+  --erp-text: #111827;
+  --erp-text-muted: #6B7280;
+
+  --erp-radius: 12px;
+}

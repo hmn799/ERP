@@ -1,0 +1,13 @@
+export enum PriceSourceType {
+  PARTY_PRICE = 'PARTY_PRICE',
+
+  ITEM_PRICE = 'ITEM_PRICE',
+
+  PRICE_LIST = 'PRICE_LIST',
+
+  QUANTITY_PRICE = 'QUANTITY_PRICE',
+
+  SCHEME = 'SCHEME',
+
+  MANUAL = 'MANUAL',
+}
