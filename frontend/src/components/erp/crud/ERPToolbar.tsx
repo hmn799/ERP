@@ -10,29 +10,21 @@ interface ERPToolbarProps {
   searchPlaceholder?: string;
 
   onSearch?(value: string): void;
-
   onAdd?(): void;
-
   onRefresh?(): void;
 
   addLabel?: string;
-
   loading?: boolean;
 }
 
 export default function ERPToolbar({
   search = "",
   searchPlaceholder = "Search...",
-
   onSearch,
-
   onAdd,
-
   onRefresh,
-
   addLabel = "Add",
-
-  loading,
+  loading = false,
 }: ERPToolbarProps) {
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -47,20 +39,18 @@ export default function ERPToolbar({
         />
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex gap-2">
         <Button
           variant="outline"
           disabled={loading}
           onClick={onRefresh}
         >
           <RefreshCw className="mr-2 h-4 w-4" />
-
           Refresh
         </Button>
 
         <Button onClick={onAdd}>
           <Plus className="mr-2 h-4 w-4" />
-
           {addLabel}
         </Button>
       </div>

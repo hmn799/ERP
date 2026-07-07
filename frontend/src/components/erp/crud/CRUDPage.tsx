@@ -3,8 +3,8 @@
 import { useState } from "react";
 import { ColumnDef } from "@tanstack/react-table";
 
-import MasterToolbar from "@/components/erp/master/MasterToolbar";
-import MasterDataTable from "@/components/erp/master/MasterDataTable";
+import ERPToolbar from "./ERPToolbar";
+import ERPDataTable from "./ERPDataTable";
 
 export interface CrudService<T, TCreate> {
   getAll(): Promise<T[]>;
@@ -38,15 +38,16 @@ export default function CRUDPage<T, TCreate>({
 
   return (
     <div className="space-y-6">
-      <MasterToolbar
-        title={title}
+      <h1 className="text-2xl font-bold">{title}</h1>
+
+      <ERPToolbar
         search={search}
-        onSearchChange={setSearch}
+        onSearch={setSearch}
         onAdd={() => {}}
         onRefresh={onRefresh}
       />
 
-      <MasterDataTable
+      <ERPDataTable
         columns={columns}
         data={data}
       />
