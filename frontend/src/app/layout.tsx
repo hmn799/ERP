@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 
+import QueryProvider from "@/providers/QueryProvider";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Toaster } from "@/components/ui/sonner";
 
@@ -34,16 +35,18 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable}`}
     >
       <body className="min-h-screen bg-background font-sans antialiased">
-        <TooltipProvider delayDuration={150}>
-          {children}
+        <QueryProvider>
+          <TooltipProvider delayDuration={150}>
+            {children}
 
-          <Toaster
-            position="top-right"
-            richColors
-            closeButton
-            expand
-          />
-        </TooltipProvider>
+            <Toaster
+              position="top-right"
+              richColors
+              closeButton
+              expand
+            />
+          </TooltipProvider>
+        </QueryProvider>
       </body>
     </html>
   );

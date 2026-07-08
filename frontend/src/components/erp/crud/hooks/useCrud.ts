@@ -6,9 +6,7 @@ export function useCrud<T>() {
   const [selected, setSelected] = useState<T | null>(null);
 
   const [createOpen, setCreateOpen] = useState(false);
-
   const [editOpen, setEditOpen] = useState(false);
-
   const [deleteOpen, setDeleteOpen] = useState(false);
 
   function openCreate() {
@@ -26,11 +24,24 @@ export function useCrud<T>() {
     setDeleteOpen(true);
   }
 
-  function closeAll() {
+  function closeCreate() {
     setCreateOpen(false);
+  }
+
+  function closeEdit() {
     setEditOpen(false);
+    setSelected(null);
+  }
+
+  function closeDelete() {
     setDeleteOpen(false);
     setSelected(null);
+  }
+
+  function closeAll() {
+    closeCreate();
+    closeEdit();
+    closeDelete();
   }
 
   return {
@@ -43,6 +54,10 @@ export function useCrud<T>() {
     openCreate,
     openEdit,
     openDelete,
+
+    closeCreate,
+    closeEdit,
+    closeDelete,
 
     closeAll,
   };

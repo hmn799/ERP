@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateBrandDto } from './dto/create-brand.dto';
+import { UpdateBrandDto } from './dto/update-brand.dto';
 
 @Injectable()
 export class BrandService {
@@ -28,6 +29,18 @@ export class BrandService {
   findOne(id: string) {
     return this.prisma.brand.findUnique({
       where: { id },
+    });
+  }
+
+  update(
+    id: string,
+    dto: UpdateBrandDto,
+  ) {
+    return this.prisma.brand.update({
+      where: { id },
+      data: {
+        name: dto.name,
+      },
     });
   }
 

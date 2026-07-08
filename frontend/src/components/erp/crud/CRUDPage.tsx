@@ -24,6 +24,8 @@ interface CRUDPageProps<T, TCreate> {
 
   onRefresh(): void;
 
+  onAdd?(): void;
+
   children: React.ReactNode;
 }
 
@@ -32,6 +34,7 @@ export default function CRUDPage<T, TCreate>({
   data,
   columns,
   onRefresh,
+  onAdd,
   children,
 }: CRUDPageProps<T, TCreate>) {
   const [search, setSearch] = useState("");
@@ -43,7 +46,7 @@ export default function CRUDPage<T, TCreate>({
       <ERPToolbar
         search={search}
         onSearch={setSearch}
-        onAdd={() => {}}
+        onAdd={onAdd}
         onRefresh={onRefresh}
       />
 
