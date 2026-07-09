@@ -1,7 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateCategoryDto } from './dto/create-category.dto';
+import { PrismaService } from "../prisma/prisma.service";
+import { CreateCategoryDto } from "./dto/create-category.dto";
+import { UpdateCategoryDto } from "./dto/update-category.dto";
 
 @Injectable()
 export class CategoryService {
@@ -20,7 +21,7 @@ export class CategoryService {
   findAll() {
     return this.prisma.category.findMany({
       orderBy: {
-        name: 'asc',
+        name: "asc",
       },
     });
   }
@@ -28,6 +29,18 @@ export class CategoryService {
   findOne(id: string) {
     return this.prisma.category.findUnique({
       where: { id },
+    });
+  }
+
+  update(
+    id: string,
+    dto: UpdateCategoryDto,
+  ) {
+    return this.prisma.category.update({
+      where: { id },
+      data: {
+        name: dto.name,
+      },
     });
   }
 
