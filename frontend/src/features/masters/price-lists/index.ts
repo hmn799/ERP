@@ -1,0 +1,1 @@
+export { default as PriceListsPage } from "./pages/PriceListsPage";
