@@ -5,19 +5,23 @@ import {
   Get,
   Param,
   Post,
-} from '@nestjs/common';
+  Put,
+} from "@nestjs/common";
 
-import { WarehouseService } from './warehouse.service';
-import { CreateWarehouseDto } from './dto/create-warehouse.dto';
+import { WarehouseService } from "./warehouse.service";
+import { CreateWarehouseDto } from "./dto/create-warehouse.dto";
+import { UpdateWarehouseDto } from "./dto/update-warehouse.dto";
 
-@Controller('warehouses')
+@Controller("warehouses")
 export class WarehouseController {
   constructor(
     private readonly warehouseService: WarehouseService,
   ) {}
 
   @Post()
-  create(@Body() dto: CreateWarehouseDto) {
+  create(
+    @Body() dto: CreateWarehouseDto,
+  ) {
     return this.warehouseService.create(dto);
   }
 
@@ -26,13 +30,25 @@ export class WarehouseController {
     return this.warehouseService.findAll();
   }
 
-  @Get(':id')
-  findOne(@Param('id') id: string) {
+  @Get(":id")
+  findOne(
+    @Param("id") id: string,
+  ) {
     return this.warehouseService.findOne(id);
   }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
+  @Put(":id")
+  update(
+    @Param("id") id: string,
+    @Body() dto: UpdateWarehouseDto,
+  ) {
+    return this.warehouseService.update(id, dto);
+  }
+
+  @Delete(":id")
+  remove(
+    @Param("id") id: string,
+  ) {
     return this.warehouseService.remove(id);
   }
 }

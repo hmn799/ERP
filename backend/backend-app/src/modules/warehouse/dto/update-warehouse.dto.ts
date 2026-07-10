@@ -4,7 +4,7 @@ import {
   MaxLength,
 } from "class-validator";
 
-export class CreateWarehouseDto {
+export class UpdateWarehouseDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(100)
