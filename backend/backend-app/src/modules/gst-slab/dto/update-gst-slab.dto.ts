@@ -7,7 +7,7 @@ import {
   Min,
 } from "class-validator";
 
-export class CreateGstSlabDto {
+export class UpdateGstSlabDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(50)

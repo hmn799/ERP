@@ -5,12 +5,14 @@ import {
   Get,
   Param,
   Post,
-} from '@nestjs/common';
+  Put,
+} from "@nestjs/common";
 
-import { GstSlabService } from './gst-slab.service';
-import { CreateGstSlabDto } from './dto/create-gst-slab.dto';
+import { GstSlabService } from "./gst-slab.service";
+import { CreateGstSlabDto } from "./dto/create-gst-slab.dto";
+import { UpdateGstSlabDto } from "./dto/update-gst-slab.dto";
 
-@Controller('gst-slabs')
+@Controller("gst-slabs")
 export class GstSlabController {
   constructor(
     private readonly gstSlabService: GstSlabService,
@@ -28,16 +30,24 @@ export class GstSlabController {
     return this.gstSlabService.findAll();
   }
 
-  @Get(':id')
+  @Get(":id")
   findOne(
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     return this.gstSlabService.findOne(id);
   }
 
-  @Delete(':id')
+  @Put(":id")
+  update(
+    @Param("id") id: string,
+    @Body() dto: UpdateGstSlabDto,
+  ) {
+    return this.gstSlabService.update(id, dto);
+  }
+
+  @Delete(":id")
   remove(
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     return this.gstSlabService.remove(id);
   }

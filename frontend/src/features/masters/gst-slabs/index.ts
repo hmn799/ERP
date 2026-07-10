@@ -1,0 +1,1 @@
+export { default as GstSlabsPage } from "./pages/GstSlabsPage";
