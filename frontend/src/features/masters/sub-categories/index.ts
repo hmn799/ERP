@@ -1,0 +1,1 @@
+export { default as SubCategoriesPage } from "./pages/SubCategoriesPage";
