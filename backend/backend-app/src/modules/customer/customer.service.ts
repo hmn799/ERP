@@ -1,8 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../prisma/prisma.service';
+import { PrismaService } from "../prisma/prisma.service";
 
-import { CreateCustomerDto } from './dto/create-customer.dto';
+import { CreateCustomerDto } from "./dto/create-customer.dto";
+import { UpdateCustomerDto } from "./dto/update-customer.dto";
 
 @Injectable()
 export class CustomerService {
@@ -10,7 +11,7 @@ export class CustomerService {
     private prisma: PrismaService,
   ) {}
 
-  async create(dto: CreateCustomerDto) {
+  create(dto: CreateCustomerDto) {
     return this.prisma.customer.create({
       data: {
         customerCode: dto.customerCode,
@@ -18,6 +19,7 @@ export class CustomerService {
 
         customerGroup: dto.customerGroup,
         priceLevel: dto.priceLevel,
+        priceListId: dto.priceListId,
 
         gstCategory: dto.gstCategory,
         gstin: dto.gstin,
@@ -35,39 +37,85 @@ export class CustomerService {
 
         routeId: dto.routeId,
         salesmanId: dto.salesmanId,
+
+        isActive: dto.isActive ?? true,
+      },
+      include: {
+        priceList: true,
+        route: true,
+        salesman: true,
       },
     });
   }
 
-  async findAll() {
+  findAll() {
     return this.prisma.customer.findMany({
       include: {
+        priceList: true,
         route: true,
         salesman: true,
       },
       orderBy: {
-        name: 'asc',
+        name: "asc",
       },
     });
   }
 
-  async findOne(id: string) {
+  findOne(id: string) {
     return this.prisma.customer.findUnique({
-      where: {
-        id,
-      },
+      where: { id },
       include: {
+        priceList: true,
         route: true,
         salesman: true,
       },
     });
   }
 
-  async delete(id: string) {
-    return this.prisma.customer.delete({
-      where: {
-        id,
+  update(
+    id: string,
+    dto: UpdateCustomerDto,
+  ) {
+    return this.prisma.customer.update({
+      where: { id },
+      data: {
+        customerCode: dto.customerCode,
+        name: dto.name,
+
+        customerGroup: dto.customerGroup,
+        priceLevel: dto.priceLevel,
+        priceListId: dto.priceListId,
+
+        gstCategory: dto.gstCategory,
+        gstin: dto.gstin,
+
+        mobile: dto.mobile,
+        email: dto.email,
+
+        address: dto.address,
+        city: dto.city,
+        state: dto.state,
+        pincode: dto.pincode,
+
+        openingBalance: dto.openingBalance,
+        creditLimit: dto.creditLimit,
+
+        routeId: dto.routeId,
+        salesmanId: dto.salesmanId,
+
+        isActive: dto.isActive,
       },
+      include: {
+        priceList: true,
+        route: true,
+        salesman: true,
+      },
+    });
+  }
+
+  remove(id: string) {
+    return this.prisma.customer.delete({
+      where: { id },
     });
   }
 }

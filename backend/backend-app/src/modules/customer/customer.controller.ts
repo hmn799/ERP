@@ -5,13 +5,15 @@ import {
   Get,
   Param,
   Post,
-} from '@nestjs/common';
+  Put,
+} from "@nestjs/common";
 
-import { CustomerService } from './customer.service';
+import { CustomerService } from "./customer.service";
 
-import { CreateCustomerDto } from './dto/create-customer.dto';
+import { CreateCustomerDto } from "./dto/create-customer.dto";
+import { UpdateCustomerDto } from "./dto/update-customer.dto";
 
-@Controller('customers')
+@Controller("customers")
 export class CustomerController {
   constructor(
     private readonly customerService: CustomerService,
@@ -29,17 +31,25 @@ export class CustomerController {
     return this.customerService.findAll();
   }
 
-  @Get(':id')
+  @Get(":id")
   findOne(
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     return this.customerService.findOne(id);
   }
 
-  @Delete(':id')
-  delete(
-    @Param('id') id: string,
+  @Put(":id")
+  update(
+    @Param("id") id: string,
+    @Body() dto: UpdateCustomerDto,
   ) {
-    return this.customerService.delete(id);
+    return this.customerService.update(id, dto);
+  }
+
+  @Delete(":id")
+  remove(
+    @Param("id") id: string,
+  ) {
+    return this.customerService.remove(id);
   }
 }
