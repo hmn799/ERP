@@ -1,7 +1,9 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../prisma/prisma.service';
-import { CreateItemDto } from './dto/create-item.dto';
+import { PrismaService } from "../prisma/prisma.service";
+
+import { CreateItemDto } from "./dto/create-item.dto";
+import { UpdateItemDto } from "./dto/update-item.dto";
 
 @Injectable()
 export class ItemService {
@@ -9,35 +11,74 @@ export class ItemService {
     private prisma: PrismaService,
   ) {}
 
-  create(dto: CreateItemDto) {
-  console.log('ITEM DTO =>', dto);
+  async create(dto: CreateItemDto) {
+    const lastItem = await this.prisma.item.findFirst({
+      orderBy: {
+        createdAt: "desc",
+      },
+    });
 
-  return this.prisma.item.create({
-    data: {
-      itemCode: dto.itemCode,
-      name: dto.name,
+    let nextNumber = 1;
 
-      hsnCode: dto.hsnCode,
-      barcode: dto.barcode,
+    if (lastItem?.itemCode) {
+      const numericPart = parseInt(
+        lastItem.itemCode.replace("ITEM", ""),
+        10,
+      );
 
-      categoryId: dto.categoryId,
-      subCategoryId: dto.subCategoryId,
+      if (!Number.isNaN(numericPart)) {
+        nextNumber = numericPart + 1;
+      }
+    }
 
-      brandId: dto.brandId,
+    const itemCode = `ITEM${nextNumber
+      .toString()
+      .padStart(5, "0")}`;
 
-      gstSlabId: dto.gstSlabId,
+    return this.prisma.item.create({
+      data: {
+        itemCode,
 
-      baseUnitId: dto.baseUnitId,
-      purchaseUnitId: dto.purchaseUnitId,
-      saleUnitId: dto.saleUnitId,
+        name: dto.name,
 
-      conversionFactor: dto.conversionFactor,
+        hsnCode: dto.hsnCode,
 
-      mrp: dto.mrp,
-      purchaseRate: dto.purchaseRate,
-    },
-  });
-}
+        barcode: dto.barcode,
+
+        categoryId: dto.categoryId,
+
+        subCategoryId: dto.subCategoryId,
+
+        brandId: dto.brandId,
+
+        gstSlabId: dto.gstSlabId,
+
+        baseUnitId: dto.baseUnitId,
+
+        purchaseUnitId: dto.purchaseUnitId,
+
+        saleUnitId: dto.saleUnitId,
+
+        conversionFactor: dto.conversionFactor,
+
+        mrp: dto.mrp,
+
+        purchaseRate: dto.purchaseRate,
+
+        isActive: dto.isActive ?? true,
+      },
+
+      include: {
+        category: true,
+        subCategory: true,
+        brand: true,
+        gstSlab: true,
+        baseUnit: true,
+        purchaseUnit: true,
+        saleUnit: true,
+      },
+    });
+  }
 
   findAll() {
     return this.prisma.item.findMany({
@@ -51,7 +92,7 @@ export class ItemService {
         saleUnit: true,
       },
       orderBy: {
-        name: 'asc',
+        name: "asc",
       },
     });
   }
@@ -59,6 +100,55 @@ export class ItemService {
   findOne(id: string) {
     return this.prisma.item.findUnique({
       where: { id },
+      include: {
+        category: true,
+        subCategory: true,
+        brand: true,
+        gstSlab: true,
+        baseUnit: true,
+        purchaseUnit: true,
+        saleUnit: true,
+      },
+    });
+  }
+
+  update(
+    id: string,
+    dto: UpdateItemDto,
+  ) {
+    return this.prisma.item.update({
+      where: { id },
+
+      data: {
+        name: dto.name,
+
+        hsnCode: dto.hsnCode,
+
+        barcode: dto.barcode,
+
+        categoryId: dto.categoryId,
+
+        subCategoryId: dto.subCategoryId,
+
+        brandId: dto.brandId,
+
+        gstSlabId: dto.gstSlabId,
+
+        baseUnitId: dto.baseUnitId,
+
+        purchaseUnitId: dto.purchaseUnitId,
+
+        saleUnitId: dto.saleUnitId,
+
+        conversionFactor: dto.conversionFactor,
+
+        mrp: dto.mrp,
+
+        purchaseRate: dto.purchaseRate,
+
+        isActive: dto.isActive,
+      },
+
       include: {
         category: true,
         subCategory: true,

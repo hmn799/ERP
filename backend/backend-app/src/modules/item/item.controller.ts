@@ -4,13 +4,16 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
-} from '@nestjs/common';
+} from "@nestjs/common";
 
-import { ItemService } from './item.service';
-import { CreateItemDto } from './dto/create-item.dto';
+import { ItemService } from "./item.service";
 
-@Controller('items')
+import { CreateItemDto } from "./dto/create-item.dto";
+import { UpdateItemDto } from "./dto/update-item.dto";
+
+@Controller("items")
 export class ItemController {
   constructor(
     private readonly itemService: ItemService,
@@ -28,16 +31,24 @@ export class ItemController {
     return this.itemService.findAll();
   }
 
-  @Get(':id')
+  @Get(":id")
   findOne(
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     return this.itemService.findOne(id);
   }
 
-  @Delete(':id')
+  @Patch(":id")
+  update(
+    @Param("id") id: string,
+    @Body() dto: UpdateItemDto,
+  ) {
+    return this.itemService.update(id, dto);
+  }
+
+  @Delete(":id")
   remove(
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     return this.itemService.remove(id);
   }

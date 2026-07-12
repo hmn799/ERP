@@ -5,7 +5,7 @@ import type {
   CreateBrandDto,
 } from "@/features/masters/brands/types/brand.types";
 
-export const BrandService = {
+const brandService = {
   async getAll(): Promise<Brand[]> {
     const { data } = await apiClient.get("/brands");
     return data;
@@ -37,3 +37,5 @@ export const BrandService = {
     await apiClient.delete(`/brands/${id}`);
   },
 };
+
+export default brandService;

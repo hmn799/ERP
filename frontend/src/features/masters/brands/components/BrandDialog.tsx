@@ -4,9 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 
 import ERPFormDialog from "@/components/erp/crud/ERPFormDialog";
-
-import { BrandService } from "@/services/brand/brand.service";
-
+import brandService from "@/services/brand/brand.service";
 import type { Brand } from "../types/brand.types";
 import BrandForm, { BrandFormValues } from "./BrandForm";
 
@@ -33,10 +31,10 @@ export default function BrandDialog({
       setLoading(true);
 
       if (brand) {
-        await BrandService.update(brand.id, values);
+       await brandService.update(brand.id, values);
         toast.success("Brand updated successfully.");
       } else {
-        await BrandService.create(values);
+        await brandService.create(values);
         toast.success("Brand created successfully.");
       }
 

@@ -12,8 +12,7 @@ import { getBrandColumns } from "../components/BrandColumns";
 
 import ERPDataTable from "@/components/erp/crud/ERPDataTable";
 
-import { BrandService } from "@/services/brand/brand.service";
-
+import brandService from "@/services/brand/brand.service";
 import type { Brand } from "../types/brand.types";
 
 export default function BrandsPage() {
@@ -31,7 +30,7 @@ export default function BrandsPage() {
     if (!selected) return;
 
     try {
-      await BrandService.remove(selected.id);
+      await brandService.remove(selected.id);
 
       toast.success("Brand deleted");
 

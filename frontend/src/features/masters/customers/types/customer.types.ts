@@ -74,4 +74,4 @@ export interface CreateCustomerDto {
   salesmanId?: string;
 
   isActive?: boolean;
-}
+}   

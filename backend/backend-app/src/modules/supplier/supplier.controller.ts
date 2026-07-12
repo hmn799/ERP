@@ -5,12 +5,15 @@ import {
   Get,
   Param,
   Post,
-} from '@nestjs/common';
+  Put,
+} from "@nestjs/common";
 
-import { SupplierService } from './supplier.service';
-import { CreateSupplierDto } from './dto/create-supplier.dto';
+import { SupplierService } from "./supplier.service";
 
-@Controller('suppliers')
+import { CreateSupplierDto } from "./dto/create-supplier.dto";
+import { UpdateSupplierDto } from "./dto/update-supplier.dto";
+
+@Controller("suppliers")
 export class SupplierController {
   constructor(
     private readonly supplierService: SupplierService,
@@ -28,16 +31,24 @@ export class SupplierController {
     return this.supplierService.findAll();
   }
 
-  @Get(':id')
+  @Get(":id")
   findOne(
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     return this.supplierService.findOne(id);
   }
 
-  @Delete(':id')
+  @Put(":id")
+  update(
+    @Param("id") id: string,
+    @Body() dto: UpdateSupplierDto,
+  ) {
+    return this.supplierService.update(id, dto);
+  }
+
+  @Delete(":id")
   remove(
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
     return this.supplierService.remove(id);
   }

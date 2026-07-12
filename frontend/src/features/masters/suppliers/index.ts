@@ -1,0 +1,1 @@
+export { default as SuppliersPage } from "./pages/SuppliersPage";
