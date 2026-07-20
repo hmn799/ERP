@@ -31,6 +31,11 @@ export class ItemController {
     return this.itemService.findAll();
   }
 
+  @Get("lookup")
+lookup() {
+  return this.itemService.lookup();
+}
+
   @Get(":id")
   findOne(
     @Param("id") id: string,

@@ -166,4 +166,94 @@ export class ItemService {
       where: { id },
     });
   }
+
+  async lookup() {
+  const items = await this.prisma.item.findMany({
+    where: {
+      isActive: true,
+    },
+
+    select: {
+      id: true,
+
+      itemCode: true,
+
+      name: true,
+
+      barcode: true,
+
+      purchaseRate: true,
+
+      mrp: true,
+
+      gstSlab: {
+        select: {
+          percentage: true,
+        },
+      },
+
+      baseUnit: {
+        select: {
+          name: true,
+        },
+      },
+
+      batches: {
+        where: {
+          isActive: true,
+        },
+
+        orderBy: {
+          createdAt: "desc",
+        },
+
+        take: 1,
+
+        select: {
+          retailRate: true,
+
+          wholesaleRate: true,
+
+          distributorRate: true,
+        },
+      },
+    },
+
+    orderBy: {
+      name: "asc",
+    },
+  });
+
+  return items.map((item) => ({
+    id: item.id,
+
+    itemCode: item.itemCode,
+
+    name: item.name,
+
+    barcode: item.barcode,
+
+    purchaseRate: Number(item.purchaseRate),
+
+    retailRate: Number(
+      item.batches[0]?.retailRate ?? 0,
+    ),
+
+    wholesaleRate: Number(
+      item.batches[0]?.wholesaleRate ?? 0,
+    ),
+
+    distributorRate: Number(
+      item.batches[0]?.distributorRate ?? 0,
+    ),
+
+    mrp: Number(item.mrp),
+
+    gstPercent: Number(
+      item.gstSlab?.percentage ?? 0,
+    ),
+
+    unit: item.baseUnit?.name ?? "",
+  }));
+}
 }

@@ -1,25 +1,67 @@
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from "class-validator";
+
 export class CreatePurchaseItemDto {
-  itemId: string;
+  @IsString()
+  @IsNotEmpty()
+  itemId!: string;
 
-  batchNo: string;
+  @IsString()
+  @IsNotEmpty()
+  batchNo!: string;
 
-  qty: number;
+  @IsNumber()
+  @Min(0.01)
+  qty!: number;
 
-  purchaseRate: number;
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  freeQty?: number;
 
-  retailRate: number;
+  @IsNumber()
+  @Min(0)
+  purchaseRate!: number;
 
-  wholesaleRate: number;
+  @IsNumber()
+  @Min(0)
+  retailRate!: number;
 
-  distributorRate: number;
+  @IsNumber()
+  @Min(0)
+  wholesaleRate!: number;
 
-  mrp: number;
+  @IsNumber()
+  @Min(0)
+  distributorRate!: number;
 
-  expiryDate?: Date;
+  @IsNumber()
+  @Min(0)
+  mrp!: number;
 
+  @IsOptional()
+  @IsString()
   barcode?: string;
 
-  discountPercent: number;
+  @IsOptional()
+  @IsDateString()
+  expiryDate?: Date;
 
-  gstPercent: number;
+  @IsOptional()
+  @IsDateString()
+  manufacturingDate?: Date;
+
+  @IsNumber()
+  @Min(0)
+  discountPercent!: number;
+
+  @IsNumber()
+  @Min(0)
+  gstPercent!: number;
 }

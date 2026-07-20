@@ -22,6 +22,22 @@ enum PriceSource {
   SYSTEM
 }
 
+enum BatchStatus {
+  ACTIVE
+  EXHAUSTED
+  EXPIRED
+  BLOCKED
+}
+
+enum BatchCreationReason {
+  NEW_ITEM
+  PURCHASE_RATE_CHANGED
+  MRP_CHANGED
+  EXPIRY_CHANGED
+  MANUFACTURING_CHANGED
+  MANUAL
+}
+
 model Company {
   id        String   @id @default(cuid())
   name      String
@@ -126,19 +142,19 @@ model Brand {
 }
 
 model Unit {
-  id            String   @id @default(cuid())
+  id String @id @default(cuid())
 
-  name          String   @unique
-  shortName     String   @unique
+  name      String @unique
+  shortName String @unique
 
-  isActive      Boolean  @default(true)
+  isActive Boolean @default(true)
 
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  baseItems     Item[]   @relation("BaseUnit")
-  purchaseItems Item[]   @relation("PurchaseUnit")
-  saleItems     Item[]   @relation("SaleUnit")
+  baseItems     Item[] @relation("BaseUnit")
+  purchaseItems Item[] @relation("PurchaseUnit")
+  saleItems     Item[] @relation("SaleUnit")
 
   @@index([name])
   @@index([shortName])
@@ -246,29 +262,63 @@ model WarehouseStock {
 }
 
 model Batch {
-  id                 String               @id @default(cuid())
-  batchNo            String
-  itemId             String
-  barcode            String?
-  expiryDate         DateTime?
-  purchaseRate       Decimal              @db.Decimal(12, 2)
-  mrp                Decimal              @db.Decimal(12, 2)
-  isActive           Boolean              @default(true)
-  createdAt          DateTime             @default(now())
-  updatedAt          DateTime             @updatedAt
-  distributorRate    Decimal              @db.Decimal(12, 2)
-  retailRate         Decimal              @db.Decimal(12, 2)
-  wholesaleRate      Decimal              @db.Decimal(12, 2)
-  item               Item                 @relation(fields: [itemId], references: [id])
-  warehouseStocks    WarehouseStock[]
-  purchaseBillItems  PurchaseBillItem[]
-  salesBillItems     SalesBillItem[]
-  stockLedgers       StockLedger[]
-  stockTransferItems StockTransferItem[]
-  SaleReturnItem     SaleReturnItem[]
-  PurchaseReturnItem PurchaseReturnItem[]
+  id String @id @default(cuid())
 
-  @@unique([itemId, batchNo])
+  // ERP Generated Batch Number
+  batchNo String @unique
+
+  // Item
+  itemId String
+  item   Item   @relation(fields: [itemId], references: [id])
+
+  // Pricing
+  purchaseRate    Decimal @db.Decimal(12, 2)
+  retailRate      Decimal @db.Decimal(12, 2)
+  wholesaleRate   Decimal @db.Decimal(12, 2)
+  distributorRate Decimal @db.Decimal(12, 2)
+  mrp             Decimal @db.Decimal(12, 2)
+
+  // Dates
+  expiryDate        DateTime?
+  manufacturingDate DateTime?
+
+  // Status
+  status         BatchStatus         @default(ACTIVE)
+  creationReason BatchCreationReason
+
+  // Audit
+  purchaseBillId String?
+  purchaseBill   PurchaseBill? @relation(fields: [purchaseBillId], references: [id])
+
+  lastPurchaseDate DateTime?
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Relations
+  warehouseStocks     WarehouseStock[]
+  purchaseBillItems   PurchaseBillItem[]
+  salesBillItems      SalesBillItem[]
+  purchaseReturnItems PurchaseReturnItem[]
+  saleReturnItems     SaleReturnItem[]
+  stockLedgers        StockLedger[]
+  stockTransferItems  StockTransferItem[]
+
+  barcodes BatchBarcode[]
+}
+
+model BatchBarcode {
+  id        String   @id @default(cuid())
+  batchId   String
+  barcode   String   @unique
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  batch Batch @relation(fields: [batchId], references: [id], onDelete: Cascade)
+
+  @@index([batchId])
 }
 
 model StockTransfer {
@@ -344,6 +394,7 @@ model PurchaseBill {
 
   items          PurchaseBillItem[]
   PurchaseReturn PurchaseReturn[]
+  Batch          Batch[]
 }
 
 model PurchaseBillItem {

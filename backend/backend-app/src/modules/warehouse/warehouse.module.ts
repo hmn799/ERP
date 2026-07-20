@@ -5,11 +5,24 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { WarehouseController } from './warehouse.controller';
 import { WarehouseService } from './warehouse.service';
 
+import { WarehouseStockService } from './services/warehouse-stock.service';
+
 @Module({
-  imports: [PrismaModule],
+  imports: [
+    PrismaModule,
+  ],
 
-  controllers: [WarehouseController],
+  controllers: [
+    WarehouseController,
+  ],
 
-  providers: [WarehouseService],
+  providers: [
+    WarehouseService,
+    WarehouseStockService,
+  ],
+
+  exports: [
+    WarehouseStockService,
+  ],
 })
 export class WarehouseModule {}

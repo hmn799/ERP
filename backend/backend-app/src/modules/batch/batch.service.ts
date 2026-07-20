@@ -1,17 +1,52 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+
+import { BatchResolveService } from './services/batch-resolve.service';
+import { BatchSearchService } from './services/batch-search.service';
 
 @Injectable()
 export class BatchService {
   constructor(
     private readonly prisma: PrismaService,
+
+    private readonly batchResolveService: BatchResolveService,
+
+    private readonly batchSearchService: BatchSearchService,
   ) {}
+
+  async resolveBatch(data: {
+    itemId: string;
+
+    purchaseRate: number;
+
+    retailRate: number;
+
+    wholesaleRate: number;
+
+    distributorRate: number;
+
+    mrp: number;
+
+    expiryDate?: Date;
+
+    manufacturingDate?: Date;
+
+    purchaseBillId?: string;
+
+    barcode?: string;
+  }) {
+    return this.batchResolveService.resolve(data);
+  }
 
   async findAll() {
     return this.prisma.batch.findMany({
       include: {
         item: true,
+        barcodes: true,
       },
       orderBy: [
         {
@@ -27,14 +62,8 @@ export class BatchService {
   }
 
   async findOne(id: string) {
-    const batch = await this.prisma.batch.findUnique({
-      where: {
-        id,
-      },
-      include: {
-        item: true,
-      },
-    });
+    const batch =
+      await this.batchSearchService.findById(id);
 
     if (!batch) {
       throw new NotFoundException(
@@ -46,43 +75,20 @@ export class BatchService {
   }
 
   async findByBarcode(barcode: string) {
-    return this.prisma.batch.findMany({
-      where: {
-        barcode,
-        isActive: true,
-      },
-      include: {
-        item: true,
-      },
-      orderBy: {
-        expiryDate: 'asc',
-      },
-    });
+    return this.batchSearchService.findByBarcode(
+      barcode,
+    );
   }
 
   async findByItem(itemId: string) {
-    return this.prisma.batch.findMany({
-      where: {
-        itemId,
-        isActive: true,
-      },
-      orderBy: [
-        {
-          expiryDate: 'asc',
-        },
-        {
-          batchNo: 'asc',
-        },
-      ],
-    });
+    return this.batchSearchService.findByItem(
+      itemId,
+    );
   }
 
   async remove(id: string) {
-    const batch = await this.prisma.batch.findUnique({
-      where: {
-        id,
-      },
-    });
+    const batch =
+      await this.batchSearchService.findById(id);
 
     if (!batch) {
       throw new NotFoundException(

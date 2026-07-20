@@ -4,6 +4,7 @@ import {
   Get,
   Param,
   Post,
+  Put,
 } from '@nestjs/common';
 
 import { PurchaseService } from './purchase.service';
@@ -21,6 +22,14 @@ export class PurchaseController {
     @Body() dto: CreatePurchaseDto,
   ) {
     return this.purchaseService.create(dto);
+  }
+
+  @Put(':id')
+  update(
+    @Param('id') id: string,
+    @Body() dto: CreatePurchaseDto,
+  ) {
+    return this.purchaseService.update(id, dto);
   }
 
   @Get()
