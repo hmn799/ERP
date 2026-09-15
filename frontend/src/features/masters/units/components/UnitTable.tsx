@@ -1,6 +1,6 @@
 "use client";
 
-import ERPDataTable from "@/components/erp/table/ERPDataTable";
+import ERPDataTable from "@/components/erp/crud/ERPDataTable";
 
 import { Unit } from "../types/unit.types";
 import { getUnitColumns } from "./UnitColumns";

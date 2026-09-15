@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from "@prisma/client";
+
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class PurchaseStockService {
@@ -14,12 +16,15 @@ export class PurchaseStockService {
     warehouseId: string,
     qty: number,
     purchaseBillId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
   ) {
-    await this.prisma.stockLedger.create({
+    return prisma.stockLedger.create({
       data: {
-        transactionDate: new Date(),
+        transactionDate:
+          new Date(),
 
-        transactionType: 'PURCHASE',
+        transactionType:
+          "PURCHASE",
 
         itemId,
 
@@ -31,11 +36,14 @@ export class PurchaseStockService {
 
         qtyOut: 0,
 
-        referenceType: 'PURCHASE',
+        referenceType:
+          "PURCHASE",
 
-        referenceId: purchaseBillId,
+        referenceId:
+          purchaseBillId,
 
-        remarks: 'Purchase Entry',
+        remarks:
+          "Purchase Entry",
       },
     });
   }

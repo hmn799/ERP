@@ -368,6 +368,7 @@ model StockLedger {
 model PurchaseBill {
   id          String    @id @default(cuid())
   billNo      String    @unique
+  status      String    @default("ACTIVE")
   billDate    DateTime
   invoiceNo   String?
   invoiceDate DateTime?
@@ -423,6 +424,8 @@ model PurchaseReturn {
 
   returnNo   String   @unique
   returnDate DateTime
+
+  status String @default("ACTIVE")
 
   purchaseBillId String
 
@@ -697,6 +700,9 @@ model SalesBill {
   sgstAmount         Decimal         @db.Decimal(14, 2)
   igstAmount         Decimal         @db.Decimal(14, 2)
   netAmount          Decimal         @db.Decimal(14, 2)
+  roundOff           Decimal         @default(0) @db.Decimal(14, 2)
+  shortAmount        Decimal         @default(0) @db.Decimal(14, 2)
+  finalPayable       Decimal         @default(0) @db.Decimal(14, 2)
   isCredit           Boolean         @default(false)
   createdAt          DateTime        @default(now())
   updatedAt          DateTime        @updatedAt
@@ -705,6 +711,37 @@ model SalesBill {
   warehouse          Warehouse       @relation(fields: [warehouseId], references: [id])
   items              SalesBillItem[]
   saleReturns        SaleReturn[]
+  payments           SalesPayment[]
+}
+
+model HeldSale {
+  id          String   @id @default(cuid())
+  holdName    String?
+  customerId  String?
+  warehouseId String
+  payload     Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([warehouseId])
+  @@index([updatedAt])
+}
+
+model SalesPayment {
+  id            String   @id @default(cuid())
+  salesBillId   String
+  paymentMode   String
+  amount        Decimal  @db.Decimal(14, 2)
+  cardSurcharge Decimal  @default(0) @db.Decimal(14, 2)
+  transactionNo String?
+  remarks       String?
+  createdAt     DateTime @default(now())
+
+  salesBill SalesBill @relation(fields: [salesBillId], references: [id], onDelete: Cascade)
+
+  @@index([salesBillId])
+  @@index([paymentMode])
 }
 
 model SalesBillItem {
@@ -756,6 +793,28 @@ model SaleReturn {
   warehouse Warehouse @relation(fields: [warehouseId], references: [id])
 
   items SaleReturnItem[]
+  payments SaleReturnPayment[]
+}
+
+model SaleReturnPayment {
+  id            String   @id @default(cuid())
+
+  saleReturnId  String
+  paymentMode   String
+
+  amount        Decimal  @db.Decimal(14, 2)
+
+  cardSurcharge Decimal  @default(0) @db.Decimal(14, 2)
+
+  transactionNo String?
+  remarks       String?
+
+  createdAt     DateTime @default(now())
+
+  saleReturn SaleReturn @relation(fields: [saleReturnId], references: [id], onDelete: Cascade)
+
+  @@index([saleReturnId])
+  @@index([paymentMode])
 }
 
 model SaleReturnItem {

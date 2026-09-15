@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
 
-import { PrismaService } from '../../prisma/prisma.service';
+import { Prisma } from "@prisma/client";
+
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class WarehouseStockService {
@@ -13,9 +15,10 @@ export class WarehouseStockService {
     itemId: string,
     batchId: string,
     qty: number,
+    prisma: Prisma.TransactionClient = this.prisma,
   ) {
     const stock =
-      await this.prisma.warehouseStock.findUnique({
+      await prisma.warehouseStock.findUnique({
         where: {
           warehouseId_itemId_batchId: {
             warehouseId,
@@ -26,7 +29,7 @@ export class WarehouseStockService {
       });
 
     if (!stock) {
-      return this.prisma.warehouseStock.create({
+      return prisma.warehouseStock.create({
         data: {
           warehouseId,
           itemId,
@@ -36,10 +39,11 @@ export class WarehouseStockService {
       });
     }
 
-    return this.prisma.warehouseStock.update({
+    return prisma.warehouseStock.update({
       where: {
         id: stock.id,
       },
+
       data: {
         quantity: {
           increment: qty,
@@ -53,9 +57,10 @@ export class WarehouseStockService {
     itemId: string,
     batchId: string,
     qty: number,
+    prisma: Prisma.TransactionClient = this.prisma,
   ) {
     const stock =
-      await this.prisma.warehouseStock.findUnique({
+      await prisma.warehouseStock.findUnique({
         where: {
           warehouseId_itemId_batchId: {
             warehouseId,
@@ -67,20 +72,23 @@ export class WarehouseStockService {
 
     if (!stock) {
       throw new Error(
-        'Warehouse stock not found.',
+        "Warehouse stock not found.",
       );
     }
 
-    if (Number(stock.quantity) < qty) {
+    if (
+      Number(stock.quantity) < qty
+    ) {
       throw new Error(
-        'Insufficient stock.',
+        "Insufficient stock.",
       );
     }
 
-    return this.prisma.warehouseStock.update({
+    return prisma.warehouseStock.update({
       where: {
         id: stock.id,
       },
+
       data: {
         quantity: {
           decrement: qty,
@@ -114,12 +122,14 @@ export class WarehouseStockService {
         warehouseId,
         itemId,
       },
+
       include: {
         batch: true,
       },
+
       orderBy: {
         batch: {
-          expiryDate: 'asc',
+          expiryDate: "asc",
         },
       },
     });

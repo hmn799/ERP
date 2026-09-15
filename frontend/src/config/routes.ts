@@ -15,7 +15,7 @@ export const ROUTES = {
 
   // Transactions
   SALES: "/sales",
-  SALES_RETURN: "/sales-return",
+  SALES_RETURN: "/sales/returns/list",
   PURCHASE: "/purchase",
   PURCHASE_RETURN: "/purchase-return",
   PURCHASE_ORDER: "/purchase-order",

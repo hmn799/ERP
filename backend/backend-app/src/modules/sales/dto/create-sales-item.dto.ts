@@ -1,11 +1,38 @@
+import {
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
+
 export class CreateSalesItemDto {
-  itemId: string;
+  @IsString()
+  itemId!: string;
 
-  batchId: string;
+  @IsString()
+  batchId!: string;
 
-  qty: number;
+  @IsNumber()
+  @Min(0.01)
+  qty!: number;
 
-  discountPercent: number;
+  @IsNumber()
+  @Min(0)
+  discountPercent!: number;
 
-  gstPercent: number;
+  @IsNumber()
+  @Min(0)
+  gstPercent!: number;
+
+  /**
+   * Effective sale rate used on the bill.
+   *
+   * This may be:
+   * - the normal batch/customer price-level rate, OR
+   * - a manually overridden rate entered by the user.
+   */
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  saleRate?: number;
 }

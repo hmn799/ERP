@@ -1,15 +1,37 @@
-import { CreatePurchaseReturnItemDto } from './create-purchase-return-item.dto';
+import {
+  IsArray,
+  IsDate,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from "class-validator";
+
+import { Type } from "class-transformer";
+
+import { CreatePurchaseReturnItemDto } from "./create-purchase-return-item.dto";
 
 export class CreatePurchaseReturnDto {
-  returnNo: string;
+  @IsOptional()
+  @IsString()
+  returnNo?: string;
 
-  returnDate: Date;
+  @Type(() => Date)
+  @IsDate()
+  returnDate!: Date;
 
-  purchaseBillId: string;
+  @IsString()
+  purchaseBillId!: string;
 
-  supplierId: string;
+  @IsOptional()
+  @IsString()
+  supplierId?: string;
 
-  warehouseId: string;
+  @IsOptional()
+  @IsString()
+  warehouseId?: string;
 
-  items: CreatePurchaseReturnItemDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreatePurchaseReturnItemDto)
+  items!: CreatePurchaseReturnItemDto[];
 }

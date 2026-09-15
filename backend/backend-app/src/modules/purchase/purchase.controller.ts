@@ -5,42 +5,66 @@ import {
   Param,
   Post,
   Put,
-} from '@nestjs/common';
+  Query,
+} from "@nestjs/common";
 
-import { PurchaseService } from './purchase.service';
+import { PurchaseService } from "./purchase.service";
 
-import { CreatePurchaseDto } from './dto/create-purchase.dto';
+import { CreatePurchaseDto } from "./dto/create-purchase.dto";
+import { PurchaseListQueryDto } from "./dto/purchase-list-query.dto";
 
-@Controller('purchases')
+@Controller("purchases")
 export class PurchaseController {
   constructor(
-    private readonly purchaseService: PurchaseService,
+    private readonly purchaseService:
+      PurchaseService,
   ) {}
 
   @Post()
   create(
     @Body() dto: CreatePurchaseDto,
   ) {
-    return this.purchaseService.create(dto);
+    return this.purchaseService.create(
+      dto,
+    );
   }
 
-  @Put(':id')
+  @Put(":id")
   update(
-    @Param('id') id: string,
+    @Param("id") id: string,
+
     @Body() dto: CreatePurchaseDto,
   ) {
-    return this.purchaseService.update(id, dto);
+    return this.purchaseService.update(
+      id,
+      dto,
+    );
+  }
+
+  @Post(":id/cancel")
+  cancel(
+    @Param("id") id: string,
+  ) {
+    return this.purchaseService.cancel(
+      id,
+    );
   }
 
   @Get()
-  findAll() {
-    return this.purchaseService.findAll();
+  findAll(
+    @Query() query: PurchaseListQueryDto,
+  ) {
+    return this.purchaseService.findAll(
+      query,
+    );
   }
 
-  @Get(':id')
+  @Get(":id")
   findOne(
-    @Param('id') id: string,
+    @Param("id") id: string,
   ) {
-    return this.purchaseService.findOne(id);
+    return this.purchaseService.findOne(
+      id,
+    );
   }
 }

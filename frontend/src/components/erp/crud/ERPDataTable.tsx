@@ -19,11 +19,25 @@ import {
 interface ERPDataTableProps<TData> {
   columns: ColumnDef<TData>[];
   data: TData[];
+
+  loading?: boolean;
+
+  emptyMessage?: string;
+
+  onRowDoubleClick?(
+    row: TData,
+  ): void;
 }
 
 export default function ERPDataTable<TData>({
   columns,
   data,
+
+  loading = false,
+
+  emptyMessage = "No records found.",
+
+  onRowDoubleClick,
 }: ERPDataTableProps<TData>) {
   const table = useReactTable({
     data,
@@ -32,51 +46,94 @@ export default function ERPDataTable<TData>({
   });
 
   return (
-    <div className="rounded-md border bg-background">
+    <div className="rounded-lg border bg-background shadow-sm">
+
       <Table>
+
         <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext(),
-                      )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
+
+          {table
+            .getHeaderGroups()
+            .map((headerGroup) => (
+              <TableRow key={headerGroup.id}>
+
+                {headerGroup.headers.map(
+                  (header) => (
+                    <TableHead key={header.id}>
+                      {header.isPlaceholder
+                        ? null
+                        : flexRender(
+                            header.column
+                              .columnDef.header,
+                            header.getContext(),
+                          )}
+                    </TableHead>
+                  ),
+                )}
+
+              </TableRow>
+            ))}
+
         </TableHeader>
 
         <TableBody>
-          {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(
-                      cell.column.columnDef.cell,
-                      cell.getContext(),
-                    )}
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))
+
+          {loading ? (
+            <TableRow>
+
+              <TableCell
+                colSpan={columns.length}
+                className="h-24 text-center"
+              >
+                Loading...
+              </TableCell>
+
+            </TableRow>
+          ) : table.getRowModel().rows.length ? (
+            table
+              .getRowModel()
+              .rows
+              .map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="cursor-pointer"
+
+                  onDoubleClick={() =>
+                    onRowDoubleClick?.(
+                      row.original,
+                    )
+                  }
+                >
+                  {row
+                    .getVisibleCells()
+                    .map((cell) => (
+                      <TableCell key={cell.id}>
+                        {flexRender(
+                          cell.column.columnDef
+                            .cell,
+                          cell.getContext(),
+                        )}
+                      </TableCell>
+                    ))}
+                </TableRow>
+              ))
           ) : (
             <TableRow>
+
               <TableCell
                 colSpan={columns.length}
                 className="h-24 text-center text-muted-foreground"
               >
-                No records found.
+                {emptyMessage}
               </TableCell>
+
             </TableRow>
           )}
+
         </TableBody>
+
       </Table>
+
     </div>
   );
 }

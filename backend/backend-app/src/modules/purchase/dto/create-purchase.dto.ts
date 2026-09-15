@@ -1,7 +1,6 @@
 import {
   IsArray,
-  IsDateString,
-  IsNotEmpty,
+  IsDate,
   IsNumber,
   IsOptional,
   IsString,
@@ -13,19 +12,19 @@ import { Type } from "class-transformer";
 import { CreatePurchaseItemDto } from "./create-purchase-item.dto";
 
 export class CreatePurchaseDto {
-  
- @IsOptional()
-@IsString()
-billNo?: string;
+  @IsOptional()
+  @IsString()
+  billNo?: string;
 
-  @IsDateString()
-  billDate: Date;
+  @Type(() => Date)
+  @IsDate()
+  billDate!: Date;
 
   @IsString()
-  supplierId: string;
+  supplierId!: string;
 
   @IsString()
-  warehouseId: string;
+  warehouseId!: string;
 
   @IsOptional()
   @IsString()
@@ -36,7 +35,8 @@ billNo?: string;
   invoiceNo?: string;
 
   @IsOptional()
-  @IsDateString()
+  @Type(() => Date)
+  @IsDate()
   invoiceDate?: Date;
 
   @IsOptional()
@@ -46,5 +46,5 @@ billNo?: string;
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreatePurchaseItemDto)
-  items: CreatePurchaseItemDto[];
+  items!: CreatePurchaseItemDto[];
 }

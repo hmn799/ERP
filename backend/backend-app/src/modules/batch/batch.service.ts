@@ -1,12 +1,14 @@
 import {
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
+} from "@nestjs/common";
 
-import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from "@prisma/client";
 
-import { BatchResolveService } from './services/batch-resolve.service';
-import { BatchSearchService } from './services/batch-search.service';
+import { PrismaService } from "../prisma/prisma.service";
+
+import { BatchResolveService } from "./services/batch-resolve.service";
+import { BatchSearchService } from "./services/batch-search.service";
 
 @Injectable()
 export class BatchService {
@@ -18,28 +20,34 @@ export class BatchService {
     private readonly batchSearchService: BatchSearchService,
   ) {}
 
-  async resolveBatch(data: {
-    itemId: string;
+  async resolveBatch(
+    data: {
+      itemId: string;
 
-    purchaseRate: number;
+      purchaseRate: number;
 
-    retailRate: number;
+      retailRate: number;
 
-    wholesaleRate: number;
+      wholesaleRate: number;
 
-    distributorRate: number;
+      distributorRate: number;
 
-    mrp: number;
+      mrp: number;
 
-    expiryDate?: Date;
+      expiryDate?: Date;
 
-    manufacturingDate?: Date;
+      manufacturingDate?: Date;
 
-    purchaseBillId?: string;
+      purchaseBillId?: string;
 
-    barcode?: string;
-  }) {
-    return this.batchResolveService.resolve(data);
+      barcode?: string;
+    },
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return this.batchResolveService.resolve(
+      data,
+      prisma,
+    );
   }
 
   async findAll() {
@@ -48,14 +56,16 @@ export class BatchService {
         item: true,
         barcodes: true,
       },
+
       orderBy: [
         {
           item: {
-            name: 'asc',
+            name: "asc",
           },
         },
+
         {
-          batchNo: 'asc',
+          batchNo: "asc",
         },
       ],
     });
@@ -63,18 +73,22 @@ export class BatchService {
 
   async findOne(id: string) {
     const batch =
-      await this.batchSearchService.findById(id);
+      await this.batchSearchService.findById(
+        id,
+      );
 
     if (!batch) {
       throw new NotFoundException(
-        'Batch not found',
+        "Batch not found",
       );
     }
 
     return batch;
   }
 
-  async findByBarcode(barcode: string) {
+  async findByBarcode(
+    barcode: string,
+  ) {
     return this.batchSearchService.findByBarcode(
       barcode,
     );
@@ -88,11 +102,13 @@ export class BatchService {
 
   async remove(id: string) {
     const batch =
-      await this.batchSearchService.findById(id);
+      await this.batchSearchService.findById(
+        id,
+      );
 
     if (!batch) {
       throw new NotFoundException(
-        'Batch not found',
+        "Batch not found",
       );
     }
 
@@ -100,6 +116,7 @@ export class BatchService {
       where: {
         id,
       },
+
       data: {
         isActive: false,
       },

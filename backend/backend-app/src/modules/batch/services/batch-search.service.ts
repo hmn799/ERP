@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class BatchSearchService {
@@ -17,11 +18,11 @@ export class BatchSearchService {
       orderBy: [
         {
           item: {
-            name: 'asc',
+            name: "asc",
           },
         },
         {
-          batchNo: 'asc',
+          batchNo: "asc",
         },
       ],
     });
@@ -50,10 +51,10 @@ export class BatchSearchService {
       },
       orderBy: [
         {
-          expiryDate: 'asc',
+          expiryDate: "asc",
         },
         {
-          batchNo: 'asc',
+          batchNo: "asc",
         },
       ],
     });
@@ -78,22 +79,33 @@ export class BatchSearchService {
     return record?.batch ?? null;
   }
 
-  async findMatchingBatch(data: {
-    itemId: string;
-    purchaseRate: number;
-    mrp: number;
-    expiryDate?: Date;
-    manufacturingDate?: Date;
-  }) {
-    return this.prisma.batch.findFirst({
+  async findMatchingBatch(
+    data: {
+      itemId: string;
+      purchaseRate: number;
+      mrp: number;
+      expiryDate?: Date;
+      manufacturingDate?: Date;
+    },
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.batch.findFirst({
       where: {
         itemId: data.itemId,
+
         purchaseRate: data.purchaseRate,
+
         mrp: data.mrp,
-        expiryDate: data.expiryDate,
-        manufacturingDate: data.manufacturingDate,
+
+        expiryDate:
+          data.expiryDate,
+
+        manufacturingDate:
+          data.manufacturingDate,
+
         isActive: true,
       },
+
       include: {
         barcodes: true,
       },

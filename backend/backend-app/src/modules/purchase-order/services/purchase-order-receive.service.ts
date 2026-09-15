@@ -48,9 +48,7 @@ export class PurchaseOrderReceiveService {
       );
     }
 
-    if (
-      dto.items.length === 0
-    ) {
+    if (dto.items.length === 0) {
       throw new Error(
         'No items received',
       );
@@ -68,16 +66,14 @@ export class PurchaseOrderReceiveService {
 
       if (!poItem) {
         throw new Error(
-          `Purchase Order Item not found`,
+          'Purchase Order Item not found',
         );
       }
 
       const pending =
         Number(poItem.pendingQty);
 
-      if (
-        receiveItem.qtyReceived <= 0
-      ) {
+      if (receiveItem.qtyReceived <= 0) {
         throw new Error(
           'Invalid received quantity',
         );
@@ -138,45 +134,14 @@ export class PurchaseOrderReceiveService {
           ),
       });
     }
-        let billNo = dto.billNo;
-
-    if (!billNo) {
-      const lastBill =
-        await this.prisma.purchaseBill.findFirst({
-          orderBy: {
-            createdAt: 'desc',
-          },
-        });
-
-      let nextNumber = 1001;
-
-      if (
-        lastBill &&
-        lastBill.billNo
-      ) {
-        const number = Number(
-          lastBill.billNo.replace(
-            'PB',
-            '',
-          ),
-        );
-
-        if (!isNaN(number)) {
-          nextNumber =
-            number + 1;
-        }
-      }
-
-      billNo =
-        `PB${nextNumber}`;
-    }
 
     const purchaseDto: CreatePurchaseDto = {
-      billNo,
-
       billDate:
-        dto.billDate ??
-        new Date(),
+        dto.billDate
+          ? new Date(
+              dto.billDate as unknown as string,
+            )
+          : new Date(),
 
       supplierId:
         purchaseOrder.supplierId,
@@ -191,15 +156,24 @@ export class PurchaseOrderReceiveService {
         dto.invoiceNo,
 
       invoiceDate:
-        dto.invoiceDate,
+        dto.invoiceDate
+          ? new Date(
+              dto.invoiceDate as unknown as string,
+            )
+          : undefined,
 
       items:
         purchaseItems,
     };
 
     const purchaseBill =
-      await this.purchaseSaveService.savePurchase(
-        purchaseDto,
+      await this.prisma.$transaction(
+        (tx) =>
+          this.purchaseSaveService.savePurchase(
+            purchaseDto,
+            undefined,
+            tx,
+          ),
       );
 
     return {
@@ -207,6 +181,6 @@ export class PurchaseOrderReceiveService {
         'Purchase Order received successfully',
 
       purchaseBill,
-          };
+    };
   }
 }

@@ -1,41 +1,47 @@
-import { PrismaClient } from '@prisma/client';
-import * as bcrypt from 'bcrypt';
+import { PrismaClient } from "@prisma/client";
+import * as bcrypt from "bcrypt";
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Starting ERP Seed...');
+  console.log("Starting ERP Seed...");
+
+  // ==========================
+  // Roles
+  // ==========================
 
   const adminRole = await prisma.role.upsert({
-    where: { name: 'Admin' },
+    where: { name: "Admin" },
     update: {},
     create: {
-      name: 'Admin',
+      name: "Admin",
     },
   });
 
-  const staffRole = await prisma.role.upsert({
-    where: { name: 'Staff' },
+  await prisma.role.upsert({
+    where: { name: "Staff" },
     update: {},
     create: {
-      name: 'Staff',
+      name: "Staff",
     },
   });
+
+  // ==========================
+  // Permissions
+  // ==========================
 
   const permissions = [
-    'CREATE_SALE',
-    'EDIT_SALE',
-    'DELETE_SALE',
+    "CREATE_SALE",
+    "EDIT_SALE",
+    "DELETE_SALE",
 
-    'CREATE_PURCHASE',
-    'EDIT_PURCHASE',
-    'DELETE_PURCHASE',
+    "CREATE_PURCHASE",
+    "EDIT_PURCHASE",
+    "DELETE_PURCHASE",
 
-    'VIEW_PROFIT',
-
-    'CHANGE_RATE',
-
-    'MANAGE_USERS',
+    "VIEW_PROFIT",
+    "CHANGE_RATE",
+    "MANAGE_USERS",
   ];
 
   for (const code of permissions) {
@@ -67,22 +73,63 @@ async function main() {
     });
   }
 
-  const hashedPassword = await bcrypt.hash('admin123', 10);
+  // ==========================
+  // Admin User
+  // ==========================
+
+  const passwordHash = await bcrypt.hash(
+    "admin123",
+    10,
+  );
 
   await prisma.user.upsert({
     where: {
-      username: 'admin',
+      username: "admin",
     },
     update: {},
     create: {
-      username: 'admin',
-      passwordHash: hashedPassword,
-      fullName: 'System Administrator',
+      username: "admin",
+      passwordHash,
+      fullName: "System Administrator",
       roleId: adminRole.id,
     },
   });
 
-  console.log('ERP Seed Completed');
+  // ==========================
+  // Document Series
+  // ==========================
+
+  const series = [
+  ["PB", "Purchase Bill"],
+  ["SB", "Sales Bill"],
+  ["PO", "Purchase Order"],
+  ["PR", "Purchase Return"],
+  ["SR", "Sales Return"],
+  ["ST", "Stock Transfer"],
+  ["BATCH", "Batch Number"],
+] as const;
+
+  for (const [documentType, name] of series) {
+    await prisma.documentSeries.upsert({
+      where: {
+        documentType,
+      },
+      update: {},
+      create: {
+        documentType,
+        name,
+        prefix: documentType,
+        suffix: null,
+        padding: 6,
+        currentNumber: 0,
+        resetYearly: false,
+        financialYear: null,
+        isActive: true,
+      },
+    });
+  }
+
+  console.log("ERP Seed Completed");
 }
 
 main()

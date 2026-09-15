@@ -93,10 +93,26 @@ export class PartyPriceService {
   }
 
   async findByCustomer(customerId: string) {
+    const now = new Date();
+
     return this.prisma.partyPrice.findMany({
       where: {
         customerId,
         isActive: true,
+        AND: [
+          {
+            OR: [
+              { effectiveFrom: null },
+              { effectiveFrom: { lte: now } },
+            ],
+          },
+          {
+            OR: [
+              { effectiveTo: null },
+              { effectiveTo: { gte: now } },
+            ],
+          },
+        ],
       },
       include: {
         item: true,

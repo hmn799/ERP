@@ -1,20 +1,24 @@
-import { Module } from '@nestjs/common';
+import { Module } from "@nestjs/common";
 
-import { PurchaseController } from './purchase.controller';
-import { PurchaseService } from './purchase.service';
+import { PurchaseController } from "./purchase.controller";
+import { PurchaseService } from "./purchase.service";
 
-import { PrismaModule } from '../prisma/prisma.module';
-import { LedgerModule } from '../ledger/ledger.module';
-import { BatchModule } from '../batch/batch.module';
-import { WarehouseModule } from '../warehouse/warehouse.module';
+import { PrismaModule } from "../prisma/prisma.module";
+import { LedgerModule } from "../ledger/ledger.module";
+import { BatchModule } from "../batch/batch.module";
+import { WarehouseModule } from "../warehouse/warehouse.module";
 
-import { PurchaseSaveService } from './services/purchase-save.service';
-import { PurchaseStockService } from './services/purchase-stock.service';
-import { PurchaseGstService } from './services/purchase-gst.service';
+import { PurchaseSaveService } from "./services/purchase-save.service";
+import { PurchaseStockService } from "./services/purchase-stock.service";
+import { PurchaseGstService } from "./services/purchase-gst.service";
 
-import { DocumentNumberModule } from '../../core/document-number/document-number.module';
-import { InventoryReversalService } from './services/inventory-reversal.service';
-import { PurchaseEditService } from './services/purchase-edit.service';
+import { DocumentNumberModule } from "../../core/document-number/document-number.module";
+
+import { InventoryReversalService } from "./services/inventory-reversal.service";
+import { PurchaseEditService } from "./services/purchase-edit.service";
+import { PurchaseListService } from "./services/purchase-list.service";
+import { PurchaseCancellationService } from "./services/purchase-cancellation.service";
+
 @Module({
   imports: [
     PrismaModule,
@@ -30,11 +34,20 @@ import { PurchaseEditService } from './services/purchase-edit.service';
 
   providers: [
     PurchaseService,
+
     PurchaseSaveService,
+
     PurchaseStockService,
+
     PurchaseGstService,
+
     InventoryReversalService,
-     PurchaseEditService,
+
+    PurchaseEditService,
+
+    PurchaseListService,
+
+    PurchaseCancellationService,
   ],
 
   exports: [

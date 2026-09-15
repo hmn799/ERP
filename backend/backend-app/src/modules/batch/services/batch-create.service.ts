@@ -1,10 +1,11 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 
-import { PrismaService } from '../../prisma/prisma.service';
+import { PrismaService } from "../../prisma/prisma.service";
 
-import { DocumentNumberService } from '../../../core/document-number/document-number.service';
+import { DocumentNumberService } from "../../../core/document-number/document-number.service";
 
-import { BatchBarcodeService } from './batch-barcode.service';
+import { BatchBarcodeService } from "./batch-barcode.service";
 
 @Injectable()
 export class BatchCreateService {
@@ -16,42 +17,47 @@ export class BatchCreateService {
     private readonly barcodeService: BatchBarcodeService,
   ) {}
 
-  async createBatch(data: {
-    itemId: string;
+  async createBatch(
+    data: {
+      itemId: string;
 
-    purchaseRate: number;
+      purchaseRate: number;
 
-    retailRate: number;
+      retailRate: number;
 
-    wholesaleRate: number;
+      wholesaleRate: number;
 
-    distributorRate: number;
+      distributorRate: number;
 
-    mrp: number;
+      mrp: number;
 
-    expiryDate?: Date;
+      expiryDate?: Date;
 
-    manufacturingDate?: Date;
+      manufacturingDate?: Date;
 
-    purchaseBillId?: string;
+      purchaseBillId?: string;
 
-    barcode?: string;
-  }) {
+      barcode?: string;
+    },
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
     const batchNo =
       await this.documentNumberService.next(
         "BATCH",
       );
 
     const batch =
-      await this.prisma.batch.create({
+      await prisma.batch.create({
         data: {
           batchNo,
 
           itemId: data.itemId,
 
-          purchaseRate: data.purchaseRate,
+          purchaseRate:
+            data.purchaseRate,
 
-          retailRate: data.retailRate,
+          retailRate:
+            data.retailRate,
 
           wholesaleRate:
             data.wholesaleRate,
@@ -72,9 +78,6 @@ export class BatchCreateService {
 
           purchaseBillId:
             data.purchaseBillId,
-
-          lastPurchaseDate:
-            new Date(),
         },
       });
 
@@ -82,6 +85,7 @@ export class BatchCreateService {
       await this.barcodeService.createPrimaryBarcode(
         batch.id,
         data.barcode,
+        prisma,
       );
     }
 

@@ -21,15 +21,21 @@ export class SalesService {
     return this.prisma.salesBill.findMany({
       include: {
         customer: true,
+
         salesman: true,
+
         warehouse: true,
+
         items: {
           include: {
             item: true,
             batch: true,
           },
         },
+
+        payments: true,
       },
+
       orderBy: {
         createdAt: 'desc',
       },
@@ -41,16 +47,22 @@ export class SalesService {
       where: {
         id,
       },
+
       include: {
         customer: true,
+
         salesman: true,
+
         warehouse: true,
+
         items: {
           include: {
             item: true,
             batch: true,
           },
         },
+
+        payments: true,
       },
     });
   }

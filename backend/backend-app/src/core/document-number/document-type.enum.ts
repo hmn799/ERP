@@ -7,6 +7,8 @@ export enum DocumentType {
 
   SALES_INVOICE = 'SI',
 
+  SALES_BILL = 'SB',
+
   PURCHASE_RETURN = 'PR',
 
   SALES_RETURN = 'SR',

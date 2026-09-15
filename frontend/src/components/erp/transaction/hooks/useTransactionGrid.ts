@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 
@@ -43,9 +43,10 @@ function createEmptyRow(): TransactionRowModel {
 }
 
 export function useTransactionGrid() {
-  const [rows, setRows] = useState<TransactionRowModel[]>([
-    createEmptyRow(),
-  ]);
+  const [rows, setRows] =
+    useState<TransactionRowModel[]>([
+      createEmptyRow(),
+    ]);
 
   function addRow() {
     setRows((prev) => [
@@ -67,25 +68,27 @@ export function useTransactionGrid() {
   }
 
   function updateField(
-  index: number,
-  field: keyof TransactionRowModel,
-  value: string | number,
-) {
-  setRows((prev) =>
-    prev.map((row, i) => {
-      if (i !== index) {
-        return row;
-      }
+    index: number,
+    field: keyof TransactionRowModel,
+    value: string | number,
+  ) {
+    setRows((prev) =>
+      prev.map((row, i) => {
+        if (i !== index) {
+          return row;
+        }
 
-      const updatedRow = {
-        ...row,
-        [field]: value,
-      };
+        const updatedRow = {
+          ...row,
+          [field]: value,
+        };
 
-      return calculatePurchaseRow(updatedRow);
-    }),
-  );
-}
+        return calculatePurchaseRow(
+          updatedRow,
+        );
+      }),
+    );
+  }
 
   function updateRow(
     index: number,
@@ -98,21 +101,27 @@ export function useTransactionGrid() {
     );
   }
 
+  function setLoadedRows(
+    loadedRows: TransactionRowModel[],
+  ) {
+    setRows(
+      loadedRows.length
+        ? loadedRows
+        : [createEmptyRow()],
+    );
+  }
+
   function resetRows() {
     setRows([createEmptyRow()]);
   }
 
   return {
     rows,
-
     addRow,
-
     removeRow,
-
     updateField,
-
     updateRow,
-
+    setLoadedRows,
     resetRows,
   };
 }

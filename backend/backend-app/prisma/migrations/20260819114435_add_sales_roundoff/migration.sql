@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "SalesBill" ADD COLUMN     "finalPayable" DECIMAL(14,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "roundOff" DECIMAL(14,2) NOT NULL DEFAULT 0;

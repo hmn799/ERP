@@ -1,15 +1,17 @@
-import { Module } from '@nestjs/common';
+import { Module } from "@nestjs/common";
 
-import { PrismaModule } from '../prisma/prisma.module';
-import { LedgerModule } from '../ledger/ledger.module';
+import { PrismaModule } from "../prisma/prisma.module";
+import { LedgerModule } from "../ledger/ledger.module";
+import { DocumentNumberModule } from "../../core/document-number/document-number.module";
 
-import { PurchaseReturnController } from './purchase-return.controller';
-import { PurchaseReturnService } from './purchase-return.service';
+import { PurchaseReturnController } from "./purchase-return.controller";
+import { PurchaseReturnService } from "./purchase-return.service";
 
 @Module({
   imports: [
     PrismaModule,
     LedgerModule,
+    DocumentNumberModule,
   ],
 
   controllers: [
@@ -17,6 +19,10 @@ import { PurchaseReturnService } from './purchase-return.service';
   ],
 
   providers: [
+    PurchaseReturnService,
+  ],
+
+  exports: [
     PurchaseReturnService,
   ],
 })

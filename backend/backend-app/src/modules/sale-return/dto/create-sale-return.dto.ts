@@ -1,15 +1,42 @@
+import {
+  IsArray,
+  IsDateString,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
+
+import { Type } from 'class-transformer';
+
 import { CreateSaleReturnItemDto } from './create-sale-return-item.dto';
+import { CreateSaleReturnPaymentDto } from './create-sale-return-payment.dto';
 
 export class CreateSaleReturnDto {
-  returnNo: string;
+  @IsOptional()
+  @IsString()
+  returnNo!: string;
 
-  returnDate: Date;
+  @IsDateString()
+  returnDate!: string;
 
-  salesBillId: string;
+  @IsString()
+  salesBillId!: string;
 
+  @IsOptional()
+  @IsString()
   customerId?: string;
 
-  warehouseId: string;
+  @IsString()
+  warehouseId!: string;
 
-  items: CreateSaleReturnItemDto[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateSaleReturnItemDto)
+  items!: CreateSaleReturnItemDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CreateSaleReturnPaymentDto)
+  payments?: CreateSaleReturnPaymentDto[];
 }

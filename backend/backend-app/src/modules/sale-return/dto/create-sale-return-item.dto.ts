@@ -1,11 +1,25 @@
+import {
+  IsNumber,
+  IsString,
+  Min,
+} from 'class-validator';
+
 export class CreateSaleReturnItemDto {
-  itemId: string;
+  @IsString()
+  itemId!: string;
 
-  batchId: string;
+  @IsString()
+  batchId!: string;
 
-  qty: number;
+  @IsNumber()
+  @Min(0.01)
+  qty!: number;
 
-  saleRate: number;
+  @IsNumber()
+  @Min(0)
+  saleRate!: number;
 
-  gstPercent: number;
+  @IsNumber()
+  @Min(0)
+  gstPercent!: number;
 }

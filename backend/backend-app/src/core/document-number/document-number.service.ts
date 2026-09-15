@@ -4,6 +4,8 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 
+import { Prisma } from '@prisma/client';
+
 import { PrismaService } from '../../modules/prisma/prisma.service';
 
 import { CreateDocumentSeriesDto } from './dto/create-document-series.dto';
@@ -142,38 +144,48 @@ export class DocumentNumberService {
   ) {
     return this.prisma.$transaction(
       async (tx) => {
-        const series =
-          await tx.documentSeries.findUnique({
-            where: {
-              documentType,
-            },
-          });
-
-        if (!series) {
-          throw new NotFoundException(
-            `Document Series '${documentType}' not found.`,
-          );
-        }
-
-        const nextNumber =
-          series.currentNumber + 1;
-
-        await tx.documentSeries.update({
-          where: {
-            id: series.id,
-          },
-          data: {
-            currentNumber: nextNumber,
-          },
-        });
-
-        return this.formatDocumentNumber(
-          series.prefix,
-          nextNumber,
-          series.padding,
-          series.suffix,
+        return this.nextInTransaction(
+          documentType,
+          tx,
         );
       },
+    );
+  }
+
+  async nextInTransaction(
+    documentType: string,
+    tx: Prisma.TransactionClient,
+  ) {
+    const series =
+      await tx.documentSeries.findUnique({
+        where: {
+          documentType,
+        },
+      });
+
+    if (!series) {
+      throw new NotFoundException(
+        `Document Series '${documentType}' not found.`,
+      );
+    }
+
+    const updatedSeries =
+      await tx.documentSeries.update({
+        where: {
+          id: series.id,
+        },
+        data: {
+          currentNumber: {
+            increment: 1,
+          },
+        },
+      });
+
+    return this.formatDocumentNumber(
+      updatedSeries.prefix,
+      updatedSeries.currentNumber,
+      updatedSeries.padding,
+      updatedSeries.suffix,
     );
   }
 

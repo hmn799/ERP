@@ -1,9 +1,13 @@
 import {
   Injectable,
   NotFoundException,
-} from '@nestjs/common';
+} from "@nestjs/common";
 
-import { PrismaService } from '../../prisma/prisma.service';
+import {
+  Prisma,
+} from "@prisma/client";
+
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class InventoryReversalService {
@@ -16,9 +20,13 @@ export class InventoryReversalService {
     itemId: string,
     batchId: string,
     qty: number,
+    tx?: Prisma.TransactionClient,
   ) {
+    const db =
+      tx ?? this.prisma;
+
     const stock =
-      await this.prisma.warehouseStock.findUnique({
+      await db.warehouseStock.findUnique({
         where: {
           warehouseId_itemId_batchId: {
             warehouseId,
@@ -30,20 +38,24 @@ export class InventoryReversalService {
 
     if (!stock) {
       throw new NotFoundException(
-        'Warehouse stock not found.',
+        "Warehouse stock not found.",
       );
     }
 
-    if (Number(stock.quantity) < qty) {
+    if (
+      Number(stock.quantity) <
+      qty
+    ) {
       throw new Error(
-        'Cannot reverse more stock than available.',
+        "Cannot reverse more stock than available.",
       );
     }
 
-    return this.prisma.warehouseStock.update({
+    return db.warehouseStock.update({
       where: {
         id: stock.id,
       },
+
       data: {
         quantity: {
           decrement: qty,
@@ -54,21 +66,40 @@ export class InventoryReversalService {
 
   async reverseStockLedger(
     purchaseBillId: string,
+    tx?: Prisma.TransactionClient,
   ) {
-    return this.prisma.stockLedger.deleteMany({
+    const db =
+      tx ?? this.prisma;
+
+    return db.stockLedger.deleteMany({
       where: {
-        referenceType: 'PURCHASE',
-        referenceId: purchaseBillId,
+        referenceId:
+          purchaseBillId,
+
+        referenceType:
+          "PURCHASE",
       },
     });
   }
 
   async reversePurchaseLedger(
     purchaseBillId: string,
+    tx?: Prisma.TransactionClient,
   ) {
-    // Placeholder.
-    // We'll replace this with proper ledger reversal
-    // when we implement accounting transactions.
-    return purchaseBillId;
+    const db =
+      tx ?? this.prisma;
+
+    return db.ledgerEntry.deleteMany({
+      where: {
+        referenceId:
+          purchaseBillId,
+
+        referenceType:
+          "PURCHASE",
+
+        transactionType:
+          "PURCHASE",
+      },
+    });
   }
 }

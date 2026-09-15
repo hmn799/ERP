@@ -1,5 +1,7 @@
-import { Injectable } from '@nestjs/common';
-import { PrismaService } from '../../prisma/prisma.service';
+import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
+
+import { PrismaService } from "../../prisma/prisma.service";
 
 @Injectable()
 export class BatchBarcodeService {
@@ -7,8 +9,11 @@ export class BatchBarcodeService {
     private readonly prisma: PrismaService,
   ) {}
 
-  async findBarcode(barcode: string) {
-    return this.prisma.batchBarcode.findUnique({
+  async findBarcode(
+    barcode: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.batchBarcode.findUnique({
       where: {
         barcode,
       },
@@ -25,10 +30,11 @@ export class BatchBarcodeService {
   async createPrimaryBarcode(
     batchId: string,
     barcode: string,
+    prisma: Prisma.TransactionClient = this.prisma,
   ) {
     if (!barcode) return;
 
-    return this.prisma.batchBarcode.create({
+    return prisma.batchBarcode.create({
       data: {
         batchId,
         barcode,
@@ -40,11 +46,12 @@ export class BatchBarcodeService {
   async createAlternateBarcode(
     batchId: string,
     barcode: string,
+    prisma: Prisma.TransactionClient = this.prisma,
   ) {
     if (!barcode) return;
 
     const exists =
-      await this.prisma.batchBarcode.findUnique({
+      await prisma.batchBarcode.findUnique({
         where: {
           barcode,
         },
@@ -54,7 +61,7 @@ export class BatchBarcodeService {
       return exists;
     }
 
-    return this.prisma.batchBarcode.create({
+    return prisma.batchBarcode.create({
       data: {
         batchId,
         barcode,
@@ -63,13 +70,16 @@ export class BatchBarcodeService {
     });
   }
 
-  async getBarcodes(batchId: string) {
-    return this.prisma.batchBarcode.findMany({
+  async getBarcodes(
+    batchId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.batchBarcode.findMany({
       where: {
         batchId,
       },
       orderBy: {
-        isPrimary: 'desc',
+        isPrimary: "desc",
       },
     });
   }

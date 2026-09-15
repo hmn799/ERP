@@ -1,262 +1,400 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from "@nestjs/common";
+import { Prisma } from "@prisma/client";
 
-import { PrismaService } from '../../prisma/prisma.service';
-import { LedgerService } from '../../ledger/ledger.service';
+import { PrismaService } from "../../prisma/prisma.service";
+import { LedgerService } from "../../ledger/ledger.service";
 
-import { PurchaseStockService } from './purchase-stock.service';
-import { PurchaseGstService } from './purchase-gst.service';
+import { PurchaseStockService } from "./purchase-stock.service";
+import { PurchaseGstService } from "./purchase-gst.service";
 
-import { CreatePurchaseDto } from '../dto/create-purchase.dto';
-import { DocumentNumberService } from '../../../core/document-number/document-number.service';
-import { DocumentType } from '../../../core/document-number/document-type.enum';
-import { BatchService } from '../../batch/batch.service';
-import { WarehouseStockService } from '../../warehouse/services/warehouse-stock.service';
+import { CreatePurchaseDto } from "../dto/create-purchase.dto";
+
+import { DocumentNumberService } from "../../../core/document-number/document-number.service";
+import { DocumentType } from "../../../core/document-number/document-type.enum";
+
+import { BatchService } from "../../batch/batch.service";
+
+import { WarehouseStockService } from "../../warehouse/services/warehouse-stock.service";
 
 @Injectable()
 export class PurchaseSaveService {
   constructor(
-  private readonly prisma: PrismaService,
+    private readonly prisma: PrismaService,
 
-  private readonly stockService: PurchaseStockService,
+    private readonly stockService: PurchaseStockService,
 
-  private readonly gstService: PurchaseGstService,
+    private readonly gstService: PurchaseGstService,
 
-  private readonly ledgerService: LedgerService,
+    private readonly ledgerService: LedgerService,
 
-  private readonly documentNumberService: DocumentNumberService,
+    private readonly documentNumberService: DocumentNumberService,
 
-  private readonly batchService: BatchService,
+    private readonly batchService: BatchService,
 
-  private readonly warehouseStockService: WarehouseStockService,
-) {}
+    private readonly warehouseStockService: WarehouseStockService,
+  ) {}
 
   async savePurchase(
-  dto: CreatePurchaseDto,
-  purchaseBillId?: string,
-) {
+    dto: CreatePurchaseDto,
+    purchaseBillId?: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
     let grossAmount = 0;
+
     let totalCgst = 0;
+
     let totalSgst = 0;
+
     let totalIgst = 0;
 
-    const itemCalculations = dto.items.map((item) => {
-      const calc = this.gstService.calculateItem(
-        item.qty,
-        item.purchaseRate,
-        item.discountPercent,
-        item.gstPercent,
+    const itemCalculations =
+      dto.items.map((item) => {
+        const calc =
+          this.gstService.calculateItem(
+            item.qty,
+            item.purchaseRate,
+            item.discountPercent,
+            item.gstPercent,
+          );
+
+        grossAmount +=
+          calc.grossAmount;
+
+        totalCgst +=
+          calc.cgstAmount;
+
+        totalSgst +=
+          calc.sgstAmount;
+
+        totalIgst +=
+          calc.igstAmount;
+
+        return calc;
+      });
+
+    const billCalc =
+      this.gstService.calculateBill(
+        grossAmount,
+
+        dto.billDiscountPercent ||
+          0,
+
+        totalCgst,
+
+        totalSgst,
+
+        totalIgst,
       );
 
-      grossAmount += calc.grossAmount;
-      totalCgst += calc.cgstAmount;
-      totalSgst += calc.sgstAmount;
-      totalIgst += calc.igstAmount;
+    let purchaseBill;
 
-      return calc;
-    });
+    if (!purchaseBillId) {
+      purchaseBill =
+        await prisma.purchaseBill.create({
+          data: {
+            billNo:
+              await this.documentNumberService.nextInTransaction(
+                DocumentType.PURCHASE_BILL,
+                prisma,
+              ),
 
-    const billCalc = this.gstService.calculateBill(
-      grossAmount,
-      dto.billDiscountPercent || 0,
-      totalCgst,
-      totalSgst,
-      totalIgst,
-    );
+            billDate:
+              dto.billDate,
 
-   let purchaseBill;
+            supplierId:
+              dto.supplierId,
 
-if (!purchaseBillId) {
-  purchaseBill = await this.prisma.purchaseBill.create({
-    data: {
-      billNo: await this.documentNumberService.next(
-        DocumentType.PURCHASE_BILL,
-      ),
+            warehouseId:
+              dto.warehouseId,
 
-      billDate: dto.billDate,
+            purchaseOrderId:
+              dto.purchaseOrderId,
 
-      supplierId: dto.supplierId,
+            invoiceNo:
+              dto.invoiceNo,
 
-      warehouseId: dto.warehouseId,
+            invoiceDate:
+              dto.invoiceDate,
 
-      purchaseOrderId: dto.purchaseOrderId,
+            grossAmount,
 
-      invoiceNo: dto.invoiceNo,
+            discountAmount:
+              billCalc.discountAmount,
 
-      invoiceDate: dto.invoiceDate,
+            taxableAmount:
+              billCalc.taxableAmount,
 
-      grossAmount,
+            cgstAmount:
+              totalCgst,
 
-      discountAmount: billCalc.discountAmount,
+            sgstAmount:
+              totalSgst,
 
-      taxableAmount: billCalc.taxableAmount,
+            igstAmount:
+              totalIgst,
 
-      cgstAmount: totalCgst,
+            netAmount:
+              billCalc.netAmount,
+          },
+        });
+    } else {
+      purchaseBill =
+        await prisma.purchaseBill.update({
+          where: {
+            id: purchaseBillId,
+          },
 
-      sgstAmount: totalSgst,
+          data: {
+            billDate:
+              dto.billDate,
 
-      igstAmount: totalIgst,
+            supplierId:
+              dto.supplierId,
 
-      netAmount: billCalc.netAmount,
-    },
-  });
-} else {
-  purchaseBill = await this.prisma.purchaseBill.update({
-    where: {
-      id: purchaseBillId,
-    },
+            warehouseId:
+              dto.warehouseId,
 
-    data: {
-      billDate: dto.billDate,
+            purchaseOrderId:
+              dto.purchaseOrderId,
 
-      supplierId: dto.supplierId,
+            invoiceNo:
+              dto.invoiceNo,
 
-      warehouseId: dto.warehouseId,
+            invoiceDate:
+              dto.invoiceDate,
 
-      purchaseOrderId: dto.purchaseOrderId,
+            grossAmount,
 
-      invoiceNo: dto.invoiceNo,
+            discountAmount:
+              billCalc.discountAmount,
 
-      invoiceDate: dto.invoiceDate,
+            taxableAmount:
+              billCalc.taxableAmount,
 
-      grossAmount,
+            cgstAmount:
+              totalCgst,
 
-      discountAmount: billCalc.discountAmount,
+            sgstAmount:
+              totalSgst,
 
-      taxableAmount: billCalc.taxableAmount,
+            igstAmount:
+              totalIgst,
 
-      cgstAmount: totalCgst,
+            netAmount:
+              billCalc.netAmount,
+          },
+        });
+    }
 
-      sgstAmount: totalSgst,
-
-      igstAmount: totalIgst,
-
-      netAmount: billCalc.netAmount,
-    },
-  });
-}
-
-    for (let i = 0; i < dto.items.length; i++) {
+    for (
+      let i = 0;
+      i < dto.items.length;
+      i++
+    ) {
       const item = dto.items[i];
-      const calc = itemCalculations[i];
+
+      const calc =
+        itemCalculations[i];
 
       const batchResult =
-  await this.batchService.resolveBatch({
-    itemId: item.itemId,
+        await this.batchService.resolveBatch(
+          {
+            itemId:
+              item.itemId,
 
-    purchaseRate: item.purchaseRate,
+            purchaseRate:
+              item.purchaseRate,
 
-    retailRate: item.retailRate,
+            retailRate:
+              item.retailRate,
 
-    wholesaleRate: item.wholesaleRate,
+            wholesaleRate:
+              item.wholesaleRate,
 
-    distributorRate: item.distributorRate,
+            distributorRate:
+              item.distributorRate,
 
-    mrp: item.mrp,
+            mrp:
+              item.mrp,
 
-    expiryDate: item.expiryDate,
+            expiryDate:
+              item.expiryDate,
 
-    manufacturingDate: undefined,
+            manufacturingDate:
+              undefined,
 
-    purchaseBillId: purchaseBill.id,
+            purchaseBillId:
+              purchaseBill.id,
 
-    barcode: item.barcode,
-  });
+            barcode:
+              item.barcode,
+          },
 
-const batch = batchResult.batch;
+          prisma,
+        );
 
-await this.warehouseStockService.increaseStock(
-  dto.warehouseId,
-  item.itemId,
-  batch.id,
-  item.qty,
-);
+      const batch =
+        batchResult.batch;
 
-await this.prisma.purchaseBillItem.create({
-  data: {
-    purchaseBillId: purchaseBill.id,
+      await this.warehouseStockService.increaseStock(
+        dto.warehouseId,
 
-    itemId: item.itemId,
-    batchId: batch.id,
+        item.itemId,
 
-    qty: item.qty,
+        batch.id,
 
-    purchaseRate: item.purchaseRate,
+        item.qty,
 
-    discountPercent: item.discountPercent,
-    gstPercent: item.gstPercent,
+        prisma,
+      );
 
-    taxableAmount: calc.taxableAmount,
+      await prisma.purchaseBillItem.create({
+        data: {
+          purchaseBillId:
+            purchaseBill.id,
 
-    cgstAmount: calc.cgstAmount,
-    sgstAmount: calc.sgstAmount,
-    igstAmount: calc.igstAmount,
+          itemId:
+            item.itemId,
 
-    netAmount: calc.netAmount,
-  },
-});
+          batchId:
+            batch.id,
+
+          qty:
+            item.qty,
+
+          purchaseRate:
+            item.purchaseRate,
+
+          discountPercent:
+            item.discountPercent,
+
+          gstPercent:
+            item.gstPercent,
+
+          taxableAmount:
+            calc.taxableAmount,
+
+          cgstAmount:
+            calc.cgstAmount,
+
+          sgstAmount:
+            calc.sgstAmount,
+
+          igstAmount:
+            calc.igstAmount,
+
+          netAmount:
+            calc.netAmount,
+        },
+      });
 
       await this.stockService.postStock(
         item.itemId,
+
         batch.id,
+
         dto.warehouseId,
+
         item.qty,
+
         purchaseBill.id,
+
+        prisma,
       );
     }
 
     await this.ledgerService.postPurchase(
       purchaseBill.supplierId,
-      Number(purchaseBill.netAmount),
+
+      Number(
+        purchaseBill.netAmount,
+      ),
+
       purchaseBill.id,
+
+      prisma,
     );
 
-    // Link Purchase Order if this Purchase was created from one
+    // =====================================
+    // PURCHASE ORDER LINKING
+    // =====================================
+
     if (dto.purchaseOrderId) {
-      const poItems = await this.prisma.purchaseOrderItem.findMany({
-        where: {
-          purchaseOrderId: dto.purchaseOrderId,
-        },
-      });
+      const poItems =
+        await prisma.purchaseOrderItem.findMany({
+          where: {
+            purchaseOrderId:
+              dto.purchaseOrderId,
+          },
+        });
 
-      for (const receivedItem of dto.items) {
-        const poItem = poItems.find(
-          (x) => x.itemId === receivedItem.itemId,
-        );
+      for (
+        const receivedItem of dto.items
+      ) {
+        const poItem =
+          poItems.find(
+            (x) =>
+              x.itemId ===
+              receivedItem.itemId,
+          );
 
-        if (!poItem) continue;
+        if (!poItem) {
+          continue;
+        }
 
         const qtyReceived =
-          Number(poItem.qtyReceived) + Number(receivedItem.qty);
+          Number(
+            poItem.qtyReceived,
+          ) +
+          Number(
+            receivedItem.qty,
+          );
 
         const pendingQty =
-          Number(poItem.qtyOrdered) - qtyReceived;
+          Number(
+            poItem.qtyOrdered,
+          ) -
+          qtyReceived;
 
-        await this.prisma.purchaseOrderItem.update({
+        await prisma.purchaseOrderItem.update({
           where: {
             id: poItem.id,
           },
+
           data: {
             qtyReceived,
-            pendingQty,
+
+            pendingQty:
+              Math.max(
+                pendingQty,
+                0,
+              ),
           },
         });
       }
 
-      const remaining = await this.prisma.purchaseOrderItem.count({
-        where: {
-          purchaseOrderId: dto.purchaseOrderId,
-          pendingQty: {
-            gt: 0,
-          },
-        },
-      });
+      const remaining =
+        await prisma.purchaseOrderItem.count({
+          where: {
+            purchaseOrderId:
+              dto.purchaseOrderId,
 
-      await this.prisma.purchaseOrder.update({
+            pendingQty: {
+              gt: 0,
+            },
+          },
+        });
+
+      await prisma.purchaseOrder.update({
         where: {
           id: dto.purchaseOrderId,
         },
+
         data: {
-          status: remaining > 0 ? 'PARTIAL' : 'COMPLETED',
+          status:
+            remaining > 0
+              ? "PARTIAL"
+              : "COMPLETED",
         },
       });
     }
