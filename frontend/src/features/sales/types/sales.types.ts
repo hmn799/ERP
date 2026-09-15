@@ -142,6 +142,19 @@ export interface SalesResponse {
   updatedAt?: string;
 }
 
+export interface HeldSale {
+  id: string;
+
+  holdName?: string | null;
+  customerId?: string | null;
+  warehouseId: string;
+
+  payload: CreateSalesDto;
+
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface SalesListItem {
   id: string;
 

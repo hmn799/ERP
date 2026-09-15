@@ -17,13 +17,16 @@ import SalesItemsGrid, {
 import {
   createCustomer,
   createSale,
+  deleteHeldSale,
   getBatches,
   getCustomerPartyPrices,
   getCustomerLedger,
   getCustomers,
+  getHeldSales,
   getItemLookup,
   getSaleById,
   getWarehouses,
+  holdSale,
   saveCustomerPartyPrice,
   updateSale,
 } from "../services/sales.service";
@@ -34,6 +37,7 @@ import type {
 
 import {
   CustomerLookup,
+  HeldSale,
   SalesBatchLookup,
   SalesItemLookup,
   WarehouseLookup,
@@ -202,6 +206,24 @@ const [originalRows, setOriginalRows] =
     useState(false);
 
   const [error, setError] =
+    useState<string | null>(null);
+
+  /*
+   * =====================================================
+   * HELD BILLS
+   * =====================================================
+   */
+
+  const [heldSales, setHeldSales] =
+    useState<HeldSale[]>([]);
+
+  const [holding, setHolding] =
+    useState(false);
+
+  const [recallOpen, setRecallOpen] =
+    useState(false);
+
+  const [holdError, setHoldError] =
     useState<string | null>(null);
 
   /*
@@ -2122,6 +2144,297 @@ setRows(
 
   /*
    * =====================================================
+   * HELD BILLS
+   * =====================================================
+   */
+
+  async function refreshHeldSales() {
+    try {
+      const held = await getHeldSales();
+
+      setHeldSales(held);
+    } catch (err) {
+      console.error(
+        "Failed to load held bills:",
+        err,
+      );
+    }
+  }
+
+  useEffect(() => {
+    if (isEditMode) {
+      return;
+    }
+
+    refreshHeldSales();
+  }, [isEditMode]);
+
+  function resetBillForm() {
+    setCustomerId("");
+
+    setIsCredit(false);
+
+    setBillDiscountPercent(0);
+
+    setRoundOff(0);
+
+    setShortAmount(0);
+
+    setRows([]);
+
+    setOriginalRows([]);
+
+    setActiveRowIndex(null);
+
+    setBillDate(
+      getTodayDateTime(),
+    );
+
+    if (warehouses.length === 1) {
+      setWarehouseId(
+        warehouses[0].id,
+      );
+    }
+  }
+
+  async function handleHoldBill() {
+    setHoldError(null);
+
+    if (!warehouseId) {
+      setHoldError(
+        "Select a warehouse before holding the bill.",
+      );
+
+      return;
+    }
+
+    const completeRows = rows.filter(
+      (row) =>
+        row.itemId &&
+        row.batchId &&
+        Number(row.qty) > 0,
+    );
+
+    if (completeRows.length === 0) {
+      setHoldError(
+        "Add at least one item before holding the bill.",
+      );
+
+      return;
+    }
+
+    const customerName =
+      customers.find(
+        (customer) =>
+          customer.id === customerId,
+      )?.name ?? "Walk-in";
+
+    const holdName =
+      `${customerName} - ${new Date().toLocaleTimeString(
+        [],
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+        },
+      )}`;
+
+    setHolding(true);
+
+    try {
+      await holdSale({
+        holdName,
+
+        billDate: new Date(
+          billDate,
+        ).toISOString(),
+
+        customerId:
+          customerId || undefined,
+
+        warehouseId,
+
+        isCredit,
+
+        billDiscountPercent,
+
+        roundOff,
+
+        shortAmount,
+
+        items: completeRows.map(
+          (row) => ({
+            itemId: row.itemId,
+            batchId: row.batchId,
+            qty: row.qty,
+            saleRate: Number(
+              row.saleRate,
+            ),
+            discountPercent:
+              row.discountPercent,
+            gstPercent:
+              row.gstPercent,
+          }),
+        ),
+      });
+
+      resetBillForm();
+
+      await refreshHeldSales();
+    } catch (err) {
+      console.error(err);
+
+      setHoldError(
+        err instanceof Error
+          ? err.message
+          : "Failed to hold the bill.",
+      );
+    } finally {
+      setHolding(false);
+    }
+  }
+
+  function recallHeldSale(
+    held: HeldSale,
+  ) {
+    const payload = held.payload;
+
+    setCustomerId(
+      payload.customerId ?? "",
+    );
+
+    setWarehouseId(
+      payload.warehouseId,
+    );
+
+    setIsCredit(
+      Boolean(payload.isCredit),
+    );
+
+    setBillDiscountPercent(
+      getNumber(
+        payload.billDiscountPercent,
+      ),
+    );
+
+    setRoundOff(
+      getNumber(payload.roundOff),
+    );
+
+    setShortAmount(
+      getNumber(
+        payload.shortAmount,
+      ),
+    );
+
+    const loadedRows: SalesGridRow[] =
+      payload.items.map((item) => ({
+        itemId: item.itemId,
+        batchId: item.batchId,
+        qty: getNumber(item.qty),
+        saleRate: getNumber(
+          item.saleRate,
+        ),
+        discountPercent: getNumber(
+          item.discountPercent,
+        ),
+        gstPercent: getNumber(
+          item.gstPercent,
+        ),
+      }));
+
+    setRows(loadedRows);
+    setOriginalRows([]);
+
+    setActiveRowIndex(
+      loadedRows.length > 0
+        ? 0
+        : null,
+    );
+
+    setRecallOpen(false);
+    setHoldError(null);
+
+    deleteHeldSale(held.id)
+      .then(refreshHeldSales)
+      .catch((err) =>
+        console.error(
+          "Failed to remove held bill after recall:",
+          err,
+        ),
+      );
+  }
+
+  async function discardHeldSale(
+    id: string,
+  ) {
+    try {
+      await deleteHeldSale(id);
+
+      await refreshHeldSales();
+    } catch (err) {
+      console.error(
+        "Failed to discard held bill:",
+        err,
+      );
+    }
+  }
+
+  /*
+   * =====================================================
+   * HOLD / RECALL KEYBOARD
+   * =====================================================
+   */
+
+  useEffect(() => {
+    if (isEditMode || paymentOpen) {
+      return;
+    }
+
+    function handleHoldRecallKeyDown(
+      event: KeyboardEvent,
+    ) {
+      if (event.key === "F6") {
+        event.preventDefault();
+
+        handleHoldBill();
+
+        return;
+      }
+
+      if (event.key === "F7") {
+        event.preventDefault();
+
+        setRecallOpen((current) => !current);
+      }
+    }
+
+    window.addEventListener(
+      "keydown",
+      handleHoldRecallKeyDown,
+    );
+
+    return () => {
+      window.removeEventListener(
+        "keydown",
+        handleHoldRecallKeyDown,
+      );
+    };
+  }, [
+    isEditMode,
+    paymentOpen,
+    warehouseId,
+    rows,
+    customerId,
+    billDate,
+    isCredit,
+    billDiscountPercent,
+    roundOff,
+    shortAmount,
+    customers,
+  ]);
+
+  /*
+   * =====================================================
    * PAYMENT KEYBOARD
    * =====================================================
    */
@@ -2283,6 +2596,42 @@ setRows(
       {isEditMode && (
         <div className="rounded-md border border-blue-200 bg-blue-50 p-3 text-sm font-medium text-blue-800">
           Editing Sale: {billNo}
+        </div>
+      )}
+
+      {!isEditMode && (
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              disabled={holding}
+              onClick={handleHoldBill}
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {holding
+                ? "Holding..."
+                : "Hold Bill (F6)"}
+            </button>
+
+            <button
+              type="button"
+              onClick={() =>
+                setRecallOpen(true)
+              }
+              className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-50"
+            >
+              Recall (F7)
+              {heldSales.length > 0
+                ? ` (${heldSales.length})`
+                : ""}
+            </button>
+          </div>
+
+          {holdError && (
+            <div className="text-sm text-red-600">
+              {holdError}
+            </div>
+          )}
         </div>
       )}
 
@@ -3243,6 +3592,112 @@ setRows(
               </div>
             </div>
 
+          </div>
+        </div>
+      )}
+
+      {/* =====================================================
+          RECALL HELD BILLS
+          ===================================================== */}
+
+      {recallOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="flex max-h-[85vh] w-full max-w-2xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b px-6 py-4">
+              <h2 className="text-xl font-bold">
+                Held Bills
+              </h2>
+
+              <button
+                type="button"
+                onClick={() =>
+                  setRecallOpen(false)
+                }
+                className="rounded-lg px-3 py-1 text-2xl text-gray-500 hover:bg-gray-100"
+              >
+                ×
+              </button>
+            </div>
+
+            <div className="overflow-y-auto p-6">
+              {heldSales.length === 0 ? (
+                <div className="py-8 text-center text-sm text-gray-500">
+                  No bills are currently on hold.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {heldSales.map((held) => {
+                    const itemCount =
+                      held.payload.items
+                        ?.length ?? 0;
+
+                    const total =
+                      held.payload.items?.reduce(
+                        (sum, item) =>
+                          sum +
+                          getNumber(item.qty) *
+                            getNumber(
+                              item.saleRate,
+                            ),
+                        0,
+                      ) ?? 0;
+
+                    return (
+                      <div
+                        key={held.id}
+                        className="flex items-center justify-between rounded-xl border p-4"
+                      >
+                        <div>
+                          <div className="font-semibold">
+                            {held.holdName ||
+                              "Held Bill"}
+                          </div>
+
+                          <div className="text-xs text-gray-500">
+                            {itemCount} item
+                            {itemCount === 1
+                              ? ""
+                              : "s"}{" "}
+                            &middot; ₹
+                            {total.toFixed(2)}{" "}
+                            &middot;{" "}
+                            {new Date(
+                              held.updatedAt,
+                            ).toLocaleString()}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2">
+                          <button
+                            type="button"
+                            onClick={() =>
+                              recallHeldSale(
+                                held,
+                              )
+                            }
+                            className="rounded-md bg-black px-3 py-1.5 text-sm font-medium text-white hover:bg-gray-800"
+                          >
+                            Recall
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() =>
+                              discardHeldSale(
+                                held.id,
+                              )
+                            }
+                            className="rounded-md border border-red-200 px-3 py-1.5 text-sm font-medium text-red-600 hover:bg-red-50"
+                          >
+                            Discard
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}

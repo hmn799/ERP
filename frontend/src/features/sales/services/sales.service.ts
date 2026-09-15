@@ -3,6 +3,7 @@ import {
   CreateSalesDto,
   CustomerLedgerEntry,
   CustomerLookup,
+  HeldSale,
   SalesBatchLookup,
   SalesItemLookup,
   SalesListItem,
@@ -162,6 +163,46 @@ export async function updateSale(
   }
 
   return data as SalesResponse;
+}
+
+/*
+ * =====================================================
+ * HELD BILLS
+ * =====================================================
+ */
+
+export function getHeldSales() {
+  return get<HeldSale[]>(
+    `${API_URL}/sales/holds`,
+  );
+}
+
+export function holdSale(
+  dto: CreateSalesDto & { holdName?: string },
+) {
+  return post<HeldSale>(
+    `${API_URL}/sales/holds`,
+    dto,
+  );
+}
+
+export async function deleteHeldSale(
+  id: string,
+) {
+  const response = await fetch(
+    `${API_URL}/sales/holds/${id}`,
+    { method: "DELETE" },
+  );
+
+  if (!response.ok) {
+    const data = await response
+      .json()
+      .catch(() => ({}));
+
+    throw new Error(
+      JSON.stringify(data, null, 2),
+    );
+  }
 }
 
 /*
