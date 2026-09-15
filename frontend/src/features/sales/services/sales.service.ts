@@ -11,6 +11,8 @@ import {
   WarehouseLookup,
 } from "../types/sales.types";
 
+import { getStoredToken } from "@/api/token";
+
 export interface CustomerPartyPrice {
   id: string;
   itemId: string;
@@ -21,6 +23,36 @@ export interface CustomerPartyPrice {
 const API_URL =
   process.env.NEXT_PUBLIC_API_URL ??
   "http://localhost:3000";
+
+function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+
+  return token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+}
+
+function friendlyMessage(data: unknown): string {
+  if (
+    data &&
+    typeof data === "object" &&
+    "message" in data
+  ) {
+    const message = (
+      data as { message: unknown }
+    ).message;
+
+    if (typeof message === "string") {
+      return message;
+    }
+
+    if (Array.isArray(message)) {
+      return message.join(", ");
+    }
+  }
+
+  return JSON.stringify(data, null, 2);
+}
 
 /*
  * =====================================================
@@ -33,13 +65,14 @@ async function get<T>(
 ): Promise<T> {
   const response = await fetch(url, {
     cache: "no-store",
+    headers: authHeaders(),
   });
 
   const data = await response.json();
 
   if (!response.ok) {
     throw new Error(
-      JSON.stringify(data, null, 2),
+      friendlyMessage(data),
     );
   }
 
@@ -60,6 +93,7 @@ async function post<T>(
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders(),
     },
     body: JSON.stringify(body),
   });
@@ -68,7 +102,7 @@ async function post<T>(
 
   if (!response.ok) {
     throw new Error(
-      JSON.stringify(data, null, 2),
+      friendlyMessage(data),
     );
   }
 
@@ -89,6 +123,7 @@ async function put<T>(
     method: "PUT",
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders(),
     },
     body: JSON.stringify(body),
   });
@@ -97,7 +132,7 @@ async function put<T>(
 
   if (!response.ok) {
     throw new Error(
-      JSON.stringify(data, null, 2),
+      friendlyMessage(data),
     );
   }
 
@@ -189,6 +224,7 @@ export async function updateSale(
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders(),
       },
       body: JSON.stringify(dto),
     },
@@ -198,7 +234,7 @@ export async function updateSale(
 
   if (!response.ok) {
     throw new Error(
-      JSON.stringify(data, null, 2),
+      friendlyMessage(data),
     );
   }
 
@@ -240,7 +276,7 @@ export async function deleteHeldSale(
       .catch(() => ({}));
 
     throw new Error(
-      JSON.stringify(data, null, 2),
+      friendlyMessage(data),
     );
   }
 }
@@ -332,6 +368,7 @@ export async function saveCustomerPartyPrice(
     method: existingPrice ? "PATCH" : "POST",
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders(),
     },
     body: JSON.stringify(
       existingPrice
@@ -348,7 +385,7 @@ export async function saveCustomerPartyPrice(
   const data = await response.json();
 
   if (!response.ok) {
-    throw new Error(JSON.stringify(data, null, 2));
+    throw new Error(friendlyMessage(data));
   }
 
   return data as CustomerPartyPrice;

@@ -6,12 +6,17 @@ import {
   Post,
   Put,
   Query,
+  UseGuards,
 } from "@nestjs/common";
 
 import { PurchaseService } from "./purchase.service";
 
 import { CreatePurchaseDto } from "./dto/create-purchase.dto";
 import { PurchaseListQueryDto } from "./dto/purchase-list-query.dto";
+
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { PermissionsGuard } from "../auth/guards/permissions.guard";
+import { RequirePermissions } from "../auth/decorators/require-permissions.decorator";
 
 @Controller("purchases")
 export class PurchaseController {
@@ -42,6 +47,8 @@ export class PurchaseController {
   }
 
   @Post(":id/cancel")
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions("DELETE_PURCHASE")
   cancel(
     @Param("id") id: string,
   ) {

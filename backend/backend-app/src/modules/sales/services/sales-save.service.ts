@@ -23,7 +23,10 @@ export class SalesSaveService {
     private readonly documentNumberService: DocumentNumberService,
   ) {}
 
-  async saveSales(dto: CreateSalesDto) {
+  async saveSales(
+    dto: CreateSalesDto,
+    permissions: string[] = [],
+  ) {
     if (!dto.billDate) {
       throw new Error(
         'Bill date is required',
@@ -62,6 +65,7 @@ export class SalesSaveService {
           await this.calculationService.calculate(
             dto,
             tx,
+            permissions,
           );
 
         const {

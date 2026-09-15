@@ -6,11 +6,16 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from "@nestjs/common";
 
 import { PurchaseReturnService } from "./purchase-return.service";
 
 import { CreatePurchaseReturnDto } from "./dto/create-purchase-return.dto";
+
+import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
+import { PermissionsGuard } from "../auth/guards/permissions.guard";
+import { RequirePermissions } from "../auth/decorators/require-permissions.decorator";
 
 @Controller("purchase-returns")
 export class PurchaseReturnController {
@@ -74,6 +79,8 @@ export class PurchaseReturnController {
   // =========================================================
 
   @Post(":id/cancel")
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions("DELETE_PURCHASE")
   cancel(
     @Param("id") id: string,
   ) {

@@ -41,6 +41,7 @@ async function main() {
 
     "VIEW_PROFIT",
     "CHANGE_RATE",
+    "APPLY_DISCOUNT",
     "MANAGE_USERS",
   ];
 

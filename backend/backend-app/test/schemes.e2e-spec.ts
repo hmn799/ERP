@@ -126,7 +126,11 @@ describe('Scheme engine (e2e)', () => {
     });
   }
 
-  async function purchase(itemId: string, qty: number) {
+  async function purchase(
+    itemId: string,
+    qty: number,
+    retailRate = 80,
+  ) {
     const res = await request(server)
       .post('/api/purchases')
       .send({
@@ -139,7 +143,7 @@ describe('Scheme engine (e2e)', () => {
             batchNo: 'BATCH-1',
             qty,
             purchaseRate: 50,
-            retailRate: 80,
+            retailRate,
             wholesaleRate: 70,
             distributorRate: 60,
             mrp: 100,
@@ -272,7 +276,7 @@ describe('Scheme engine (e2e)', () => {
   it('DISCOUNT scheme: stacks an automatic percentage on top of the submitted discount', async () => {
     const suffix = Date.now().toString(36);
     const item = await createItem(`DISC-${suffix}`);
-    const batchId = await purchase(item.id, 20);
+    const batchId = await purchase(item.id, 20, 100);
 
     await request(server)
       .post('/api/schemes')

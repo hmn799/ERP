@@ -1,8 +1,13 @@
 "use client";
 
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+
+import { useAuth } from "@/providers/AuthProvider";
 
 import {
   Bell,
@@ -12,6 +17,11 @@ import {
 } from "lucide-react";
 
 export default function AppHeader() {
+  const router = useRouter();
+  const { user, logout } = useAuth();
+
+  const [menuOpen, setMenuOpen] = useState(false);
+
   return (
     <header className="sticky top-0 z-50 border-b bg-background">
 
@@ -50,14 +60,51 @@ export default function AppHeader() {
             <Settings className="h-5 w-5" />
           </Button>
 
-          <Button
-            variant="ghost"
-            className="gap-2"
-          >
-            <UserCircle2 className="h-5 w-5" />
+          {user ? (
+            <div className="relative">
+              <Button
+                variant="ghost"
+                className="gap-2"
+                onClick={() =>
+                  setMenuOpen((current) => !current)
+                }
+              >
+                <UserCircle2 className="h-5 w-5" />
 
-            Administrator
-          </Button>
+                {user.fullName}
+              </Button>
+
+              {menuOpen && (
+                <div className="absolute right-0 z-50 mt-1 w-48 rounded-md border bg-background p-2 shadow-md">
+                  <div className="px-2 py-1 text-xs text-muted-foreground">
+                    {user.roleName}
+                  </div>
+
+                  <button
+                    type="button"
+                    className="w-full rounded px-2 py-1.5 text-left text-sm hover:bg-muted"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      logout();
+                      router.push("/login");
+                    }}
+                  >
+                    Log out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Button
+              variant="ghost"
+              className="gap-2"
+              onClick={() => router.push("/login")}
+            >
+              <UserCircle2 className="h-5 w-5" />
+
+              Log in
+            </Button>
+          )}
 
         </div>
 

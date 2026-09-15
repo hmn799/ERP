@@ -1,4 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import {
+  ForbiddenException,
+  Injectable,
+} from '@nestjs/common';
 
 import { Prisma } from '@prisma/client';
 
@@ -22,7 +25,32 @@ export class SalesCalculationService {
   async calculate(
     dto: CreateSalesDto,
     tx: Prisma.TransactionClient,
+    permissions: string[] = [],
   ) {
+    // =====================================================
+    // DISCOUNT PERMISSION
+    //
+    // Checked against what the cashier actually submitted,
+    // before scheme expansion - a scheme's own automatic
+    // discount is not a manual action and never needs this.
+    // =====================================================
+
+    const manualDiscountRequested =
+      Number(dto.billDiscountPercent || 0) > 0 ||
+      dto.items.some(
+        (item) =>
+          Number(item.discountPercent || 0) > 0,
+      );
+
+    if (
+      manualDiscountRequested &&
+      !permissions.includes('APPLY_DISCOUNT')
+    ) {
+      throw new ForbiddenException(
+        'Applying a discount requires the APPLY_DISCOUNT permission.',
+      );
+    }
+
     // =====================================================
     // CUSTOMER
     // =====================================================
@@ -231,6 +259,15 @@ export class SalesCalculationService {
         suppliedRate !== undefined &&
         Math.abs(suppliedRate - batchRate) >
           0.000001;
+
+      if (
+        hasManualOverride &&
+        !permissions.includes('CHANGE_RATE')
+      ) {
+        throw new ForbiddenException(
+          'Overriding the sale rate requires the CHANGE_RATE permission.',
+        );
+      }
 
       const fallbackRate =
         batchRate > 0

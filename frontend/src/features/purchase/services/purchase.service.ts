@@ -4,6 +4,16 @@ const API_URL =
 
 import { PurchaseListItem } from "../types/purchase-list.types";
 
+import { getStoredToken } from "@/api/token";
+
+function authHeaders(): Record<string, string> {
+  const token = getStoredToken();
+
+  return token
+    ? { Authorization: `Bearer ${token}` }
+    : {};
+}
+
 /* =========================================================
    PURCHASE LIST
 ========================================================= */
@@ -230,6 +240,7 @@ async function get<T>(
 ): Promise<T> {
   const response = await fetch(url, {
     cache: "no-store",
+    headers: authHeaders(),
   });
 
   if (!response.ok) {
@@ -250,6 +261,7 @@ async function post<T>(
 
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders(),
     },
 
     body: JSON.stringify(body),
@@ -284,6 +296,7 @@ async function put<T>(
 
     headers: {
       "Content-Type": "application/json",
+      ...authHeaders(),
     },
 
     body: JSON.stringify(body),

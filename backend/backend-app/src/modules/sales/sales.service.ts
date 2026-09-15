@@ -15,8 +15,14 @@ export class SalesService {
     private readonly calculationService: SalesCalculationService,
   ) {}
 
-  async create(dto: CreateSalesDto) {
-    return this.salesSaveService.saveSales(dto);
+  async create(
+    dto: CreateSalesDto,
+    permissions: string[] = [],
+  ) {
+    return this.salesSaveService.saveSales(
+      dto,
+      permissions,
+    );
   }
 
   /*
@@ -30,10 +36,14 @@ export class SalesService {
    * =====================================================
    */
 
-  async preview(dto: CreateSalesDto) {
+  async preview(
+    dto: CreateSalesDto,
+    permissions: string[] = [],
+  ) {
     const result = await this.calculationService.calculate(
       dto,
       this.prisma,
+      permissions,
     );
 
     return {

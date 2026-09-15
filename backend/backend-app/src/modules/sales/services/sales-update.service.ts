@@ -23,6 +23,7 @@ export class SalesUpdateService {
   async updateSales(
     salesBillId: string,
     dto: CreateSalesDto,
+    permissions: string[] = [],
   ) {
     if (!salesBillId?.trim()) {
       throw new Error(
@@ -120,6 +121,7 @@ export class SalesUpdateService {
           await this.calculationService.calculate(
             dto,
             tx,
+            permissions,
           );
 
         const {

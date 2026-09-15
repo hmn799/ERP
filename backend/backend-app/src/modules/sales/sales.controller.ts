@@ -6,6 +6,7 @@ import {
   Param,
   Post,
   Put,
+  UseGuards,
 } from '@nestjs/common';
 
 import { SalesService } from './sales.service';
@@ -18,6 +19,10 @@ import { SalesUpdateService } from './services/sales-update.service';
 import { HeldSaleService } from './services/held-sale.service';
 import { SaveHeldSaleDto } from './dto/save-held-sale.dto';
 
+import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/types/auth-user.type';
+
 @Controller('sales')
 export class SalesController {
  constructor(
@@ -28,17 +33,27 @@ export class SalesController {
 ) {}
 
   @Post()
+  @UseGuards(OptionalJwtAuthGuard)
   create(
     @Body() dto: CreateSalesDto,
+    @CurrentUser() user?: AuthUser,
   ) {
-    return this.salesService.create(dto);
+    return this.salesService.create(
+      dto,
+      user?.permissions,
+    );
   }
 
   @Post('preview')
+  @UseGuards(OptionalJwtAuthGuard)
   preview(
     @Body() dto: CreateSalesDto,
+    @CurrentUser() user?: AuthUser,
   ) {
-    return this.salesService.preview(dto);
+    return this.salesService.preview(
+      dto,
+      user?.permissions,
+    );
   }
 
   @Post('holds')
@@ -76,13 +91,16 @@ export class SalesController {
   }
 
   @Put(':id')
+  @UseGuards(OptionalJwtAuthGuard)
 update(
   @Param('id') id: string,
   @Body() dto: CreateSalesDto,
+  @CurrentUser() user?: AuthUser,
 ) {
   return this.salesUpdateService.updateSales(
     id,
     dto,
+    user?.permissions,
   );
 }
 

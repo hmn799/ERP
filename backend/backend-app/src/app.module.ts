@@ -30,6 +30,7 @@ import { PriceListModule } from './modules/price-list/price-list.module';
 import { ItemPriceModule } from './modules/item-price/item-price.module';
 import { PartyPriceModule } from './modules/party-price/party-price.module';
 import { SchemeModule } from './modules/scheme/scheme.module';
+import { AuthModule } from './modules/auth/auth.module';
 @Module({
   imports: [
     PrismaModule,
@@ -59,6 +60,7 @@ import { SchemeModule } from './modules/scheme/scheme.module';
      ItemPriceModule,
      PartyPriceModule,
      SchemeModule,
+     AuthModule,
 
   ],
   controllers: [AppController],

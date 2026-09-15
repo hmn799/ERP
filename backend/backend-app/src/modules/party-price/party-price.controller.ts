@@ -6,11 +6,16 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 
 import { PartyPriceService } from './party-price.service';
 import { CreatePartyPriceDto } from './dto/create-party-price.dto';
 import { UpdatePartyPriceDto } from './dto/update-party-price.dto';
+
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 
 @Controller('party-price')
 export class PartyPriceController {
@@ -19,6 +24,8 @@ export class PartyPriceController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('CHANGE_RATE')
   create(
     @Body() createPartyPriceDto: CreatePartyPriceDto,
   ) {
@@ -52,6 +59,8 @@ export class PartyPriceController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('CHANGE_RATE')
   update(
     @Param('id') id: string,
     @Body() updatePartyPriceDto: UpdatePartyPriceDto,
