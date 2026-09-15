@@ -96,6 +96,11 @@ export const NAVIGATION: NavigationGroup[] = [
         href: ROUTES.PRICE_LISTS,
       },
       {
+        id: "schemes",
+        title: "Schemes",
+        href: ROUTES.SCHEMES,
+      },
+      {
         id: "warehouses",
         title: "Warehouses",
         href: ROUTES.WAREHOUSES,

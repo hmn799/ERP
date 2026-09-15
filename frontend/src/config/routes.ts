@@ -11,6 +11,7 @@ export const ROUTES = {
   UNITS: "/masters/units",
   GST_SLABS: "/masters/gst-slabs",
   PRICE_LISTS: "/masters/price-lists",
+  SCHEMES: "/masters/schemes",
   WAREHOUSES: "/masters/warehouses",
 
   // Transactions

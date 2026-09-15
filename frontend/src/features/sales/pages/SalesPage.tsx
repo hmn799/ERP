@@ -27,12 +27,14 @@ import {
   getSaleById,
   getWarehouses,
   holdSale,
+  previewSale,
   saveCustomerPartyPrice,
   updateSale,
 } from "../services/sales.service";
 
 import type {
   CustomerPartyPrice,
+  SalesPreview,
 } from "../services/sales.service";
 
 import {
@@ -225,6 +227,15 @@ const [originalRows, setOriginalRows] =
 
   const [holdError, setHoldError] =
     useState<string | null>(null);
+
+  /*
+   * =====================================================
+   * SCHEME PREVIEW
+   * =====================================================
+   */
+
+  const [schemePreview, setSchemePreview] =
+    useState<SalesPreview | null>(null);
 
   /*
    * =====================================================
@@ -2169,6 +2180,110 @@ setRows(
     refreshHeldSales();
   }, [isEditMode]);
 
+  /*
+   * =====================================================
+   * SCHEME PREVIEW
+   *
+   * Debounced call to the server-side pricing/scheme
+   * engine so the cashier sees scheme-granted free items
+   * and the real total before checkout. Purely informational
+   * - the actual save always recomputes schemes itself.
+   * =====================================================
+   */
+
+  useEffect(() => {
+    const completeRows = rows.filter(
+      (row) =>
+        row.itemId &&
+        row.batchId &&
+        Number(row.qty) > 0,
+    );
+
+    if (!warehouseId || completeRows.length === 0) {
+      setSchemePreview(null);
+
+      return;
+    }
+
+    let cancelled = false;
+
+    const timer = setTimeout(async () => {
+      try {
+        const preview = await previewSale({
+          billDate: new Date(
+            billDate,
+          ).toISOString(),
+
+          customerId: customerId || undefined,
+
+          warehouseId,
+
+          isCredit,
+
+          billDiscountPercent,
+
+          roundOff,
+
+          shortAmount,
+
+          items: completeRows.map((row) => ({
+            itemId: row.itemId,
+            batchId: row.batchId,
+            qty: row.qty,
+            saleRate: Number(row.saleRate),
+            discountPercent: row.discountPercent,
+            gstPercent: row.gstPercent,
+          })),
+        });
+
+        if (!cancelled) {
+          setSchemePreview(preview);
+        }
+      } catch (err) {
+        if (!cancelled) {
+          setSchemePreview(null);
+        }
+
+        console.error(
+          "Scheme preview failed:",
+          err,
+        );
+      }
+    }, 400);
+
+    return () => {
+      cancelled = true;
+
+      clearTimeout(timer);
+    };
+  }, [
+    rows,
+    warehouseId,
+    customerId,
+    billDate,
+    isCredit,
+    billDiscountPercent,
+    roundOff,
+    shortAmount,
+  ]);
+
+  const schemeFreeLines = (
+    schemePreview?.items ?? []
+  ).filter((line) => {
+    const enteredRow = rows.find(
+      (row) =>
+        row.itemId === line.itemId &&
+        row.batchId === line.batchId,
+    );
+
+    const enteredQty = enteredRow
+      ? Number(enteredRow.qty)
+      : 0;
+
+    return line.freeQty > 0 &&
+      line.qty > enteredQty;
+  });
+
   function resetBillForm() {
     setCustomerId("");
 
@@ -2702,6 +2817,29 @@ setRows(
           quickSetQty
         }
       />
+
+      {/* =====================================================
+          SCHEME PREVIEW
+          ===================================================== */}
+
+      {schemeFreeLines.length > 0 && (
+        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-800">
+          <span className="font-semibold">
+            Scheme applied:
+          </span>{" "}
+          {schemeFreeLines
+            .map((line) => {
+              const itemName =
+                items.find(
+                  (entry) =>
+                    entry.id === line.itemId,
+                )?.name ?? line.itemId;
+
+              return `+${line.freeQty} ${itemName} free`;
+            })
+            .join(", ")}
+        </div>
+      )}
 
       {/* =====================================================
           TOTALS

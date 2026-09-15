@@ -29,6 +29,7 @@ import { SettingsModule } from './modules/settings/settings.module';
 import { PriceListModule } from './modules/price-list/price-list.module';
 import { ItemPriceModule } from './modules/item-price/item-price.module';
 import { PartyPriceModule } from './modules/party-price/party-price.module';
+import { SchemeModule } from './modules/scheme/scheme.module';
 @Module({
   imports: [
     PrismaModule,
@@ -57,6 +58,7 @@ import { PartyPriceModule } from './modules/party-price/party-price.module';
      PriceListModule,
      ItemPriceModule,
      PartyPriceModule,
+     SchemeModule,
 
   ],
   controllers: [AppController],

@@ -133,6 +133,46 @@ export function createSale(
   );
 }
 
+export interface SalesPreviewItem {
+  itemId: string;
+  batchId: string;
+  qty: number;
+  freeQty: number;
+  schemeId: string | null;
+  saleRate: number;
+  discountPercent: number;
+  gstPercent: number;
+  taxableAmount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  netAmount: number;
+}
+
+export interface SalesPreview {
+  items: SalesPreviewItem[];
+  grossAmount: number;
+  itemDiscountAmount: number;
+  billDiscountAmount: number;
+  taxableAmount: number;
+  cgstAmount: number;
+  sgstAmount: number;
+  igstAmount: number;
+  netAmount: number;
+  roundOff: number;
+  shortAmount: number;
+  finalPayable: number;
+}
+
+export function previewSale(
+  dto: CreateSalesDto,
+) {
+  return post<SalesPreview>(
+    `${API_URL}/sales/preview`,
+    dto,
+  );
+}
+
 /*
  * =====================================================
  * UPDATE SALE

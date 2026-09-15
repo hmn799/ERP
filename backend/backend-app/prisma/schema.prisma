@@ -38,6 +38,12 @@ enum BatchCreationReason {
   MANUAL
 }
 
+enum SchemeType {
+  QUANTITY
+  FREE_ITEM
+  DISCOUNT
+}
+
 model Company {
   id        String   @id @default(cuid())
   name      String
@@ -199,6 +205,9 @@ model Item {
   partyPrices        PartyPrice[]
 
   priceHistory PriceHistory[]
+
+  triggeredSchemes Scheme[] @relation("SchemeTriggerItem")
+  freeItemSchemes  Scheme[] @relation("SchemeFreeItem")
 }
 
 model Warehouse {
@@ -558,6 +567,55 @@ model PartyPrice {
   @@index([isActive])
 }
 
+model Scheme {
+  id String @id @default(cuid())
+
+  name String
+
+  schemeType SchemeType
+
+  /*
+   * Item that triggers the scheme when sold.
+   */
+  itemId String
+  item   Item   @relation("SchemeTriggerItem", fields: [itemId], references: [id])
+
+  /*
+   * QUANTITY scheme (e.g. 10+1):
+   * every buyQty of the trigger item sold gives freeQty
+   * of the SAME item free.
+   */
+  buyQty  Decimal? @db.Decimal(10, 2)
+  freeQty Decimal? @db.Decimal(10, 2)
+
+  /*
+   * FREE_ITEM scheme:
+   * buying buyQty of the trigger item gives freeQty of
+   * freeItemId free (a different item).
+   */
+  freeItemId String?
+  freeItem   Item?   @relation("SchemeFreeItem", fields: [freeItemId], references: [id])
+
+  /*
+   * DISCOUNT scheme:
+   * flat percentage off the trigger item's line.
+   */
+  discountPercent Decimal? @db.Decimal(5, 2)
+
+  isActive Boolean @default(true)
+
+  effectiveFrom DateTime?
+  effectiveTo   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  salesBillItems SalesBillItem[]
+
+  @@index([itemId])
+  @@index([isActive])
+}
+
 model Customer {
   id            String @id @default(cuid())
   customerCode  String @unique
@@ -762,6 +820,21 @@ model SalesBillItem {
   batch           Batch     @relation(fields: [batchId], references: [id])
   item            Item      @relation(fields: [itemId], references: [id])
   salesBill       SalesBill @relation(fields: [salesBillId], references: [id])
+
+  /*
+   * Scheme applied to this line, if any.
+   *
+   * freeQty is the portion of qty (out of the total qty
+   * on this line) that is free because of the scheme -
+   * it still reduces stock but contributes zero taxable
+   * value. A line created purely as a FREE_ITEM giveaway
+   * has freeQty == qty.
+   */
+  schemeId String?
+  scheme   Scheme? @relation(fields: [schemeId], references: [id])
+  freeQty  Decimal @default(0) @db.Decimal(14, 2)
+
+  @@index([schemeId])
 }
 
 model SaleReturn {

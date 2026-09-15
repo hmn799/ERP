@@ -34,6 +34,13 @@ export class SalesController {
     return this.salesService.create(dto);
   }
 
+  @Post('preview')
+  preview(
+    @Body() dto: CreateSalesDto,
+  ) {
+    return this.salesService.preview(dto);
+  }
+
   @Post('holds')
   hold(
     @Body() dto: SaveHeldSaleDto,

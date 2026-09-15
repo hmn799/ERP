@@ -3,6 +3,7 @@ import { Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 import { LedgerModule } from '../ledger/ledger.module';
 import { DocumentNumberModule } from '../../core/document-number/document-number.module';
+import { SchemeModule } from '../scheme/scheme.module';
 
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
@@ -20,6 +21,7 @@ import { HeldSaleService } from './services/held-sale.service';
     PrismaModule,
     LedgerModule,
     DocumentNumberModule,
+    SchemeModule,
   ],
 
   controllers: [

@@ -8,6 +8,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 
 import { SalesStockService } from './sales-stock.service';
 import { SalesGstService } from './sales-gst.service';
+import { SchemeEngineService } from '../../scheme/scheme-engine.service';
 
 @Injectable()
 export class SalesCalculationService {
@@ -15,6 +16,7 @@ export class SalesCalculationService {
     private readonly prisma: PrismaService,
     private readonly stockService: SalesStockService,
     private readonly gstService: SalesGstService,
+    private readonly schemeEngine: SchemeEngineService,
   ) {}
 
   async calculate(
@@ -68,8 +70,24 @@ export class SalesCalculationService {
     let grossAmount = 0;
     let totalItemDiscount = 0;
 
+    // =====================================================
+    // SCHEME EXPANSION
+    //
+    // Adds free quantity to QUANTITY-scheme lines, injects
+    // new lines for FREE_ITEM schemes, and stacks DISCOUNT
+    // schemes onto the submitted discount. See scheme-engine
+    // for the full rules.
+    // =====================================================
+
+    const expandedItems =
+      await this.schemeEngine.applySchemes(
+        dto.items,
+        dto.warehouseId,
+        tx,
+      );
+
     for (
-      const item of dto.items
+      const item of expandedItems
     ) {
       if (
         item.qty <= 0
@@ -239,11 +257,18 @@ export class SalesCalculationService {
 
       /*
        * A zero rate is only acceptable when
-       * the cashier explicitly supplied zero.
+       * the cashier explicitly supplied zero, or
+       * the line is entirely a scheme giveaway -
+       * a free item has no billable rate to enforce.
        */
+      const isFullyFreeLine =
+        (item.freeQty || 0) >= item.qty &&
+        item.qty > 0;
+
       if (
         saleRate === 0 &&
-        !hasManualOverride
+        !hasManualOverride &&
+        !isFullyFreeLine
       ) {
         throw new Error(
           `No sale rate configured for batch ${batch.batchNo}. Enter a sale rate before saving the sale.`,
@@ -291,11 +316,19 @@ export class SalesCalculationService {
 
       // ===================================================
       // ITEM CALCULATION
+      //
+      // Billable qty excludes the scheme free portion -
+      // a fully free line (freeQty === qty) taxes to zero
+      // while still shipping and deducting full stock.
       // ===================================================
+
+      const billableQty =
+        item.qty -
+        (item.freeQty || 0);
 
       const calc =
         this.gstService.calculateItem(
-          item.qty,
+          billableQty,
           saleRate,
           item.discountPercent ||
             0,
@@ -314,6 +347,8 @@ export class SalesCalculationService {
         saleRate,
         gstPercent,
         calc,
+        freeQty: item.freeQty || 0,
+        schemeId: item.schemeId,
       });
     }
 

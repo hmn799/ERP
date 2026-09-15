@@ -441,6 +441,13 @@ export class SalesUpdateService {
 
               netAmount:
                 row.finalNetAmount,
+
+              freeQty:
+                row.freeQty || 0,
+
+              schemeId:
+                row.schemeId ||
+                undefined,
             },
           });
 

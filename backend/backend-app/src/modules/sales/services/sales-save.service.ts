@@ -370,6 +370,13 @@ export class SalesSaveService {
 
               netAmount:
                 row.finalNetAmount,
+
+              freeQty:
+                row.freeQty || 0,
+
+              schemeId:
+                row.schemeId ||
+                undefined,
             },
           });
 
