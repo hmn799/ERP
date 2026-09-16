@@ -246,6 +246,11 @@ export const NAVIGATION: NavigationGroup[] = [
         href: ROUTES.SETTINGS,
       },
       {
+        id: "shortcuts",
+        title: "Shortcuts",
+        href: ROUTES.SHORTCUTS,
+      },
+      {
         id: "document-series",
         title: "Document Series",
         href: ROUTES.DOCUMENT_SERIES,

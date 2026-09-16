@@ -73,6 +73,7 @@ export class AuthService {
         id: user.id,
         username: user.username,
         fullName: user.fullName,
+        roleId: user.roleId,
         roleName: user.role.name,
         permissions,
       },

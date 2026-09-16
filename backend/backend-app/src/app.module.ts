@@ -31,6 +31,8 @@ import { ItemPriceModule } from './modules/item-price/item-price.module';
 import { PartyPriceModule } from './modules/party-price/party-price.module';
 import { SchemeModule } from './modules/scheme/scheme.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ShortcutModule } from './modules/shortcut/shortcut.module';
+import { RoleModule } from './modules/role/role.module';
 @Module({
   imports: [
     PrismaModule,
@@ -61,6 +63,8 @@ import { AuthModule } from './modules/auth/auth.module';
      PartyPriceModule,
      SchemeModule,
      AuthModule,
+     ShortcutModule,
+     RoleModule,
 
   ],
   controllers: [AppController],

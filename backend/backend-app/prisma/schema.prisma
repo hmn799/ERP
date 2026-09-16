@@ -73,6 +73,7 @@ model Role {
   updatedAt   DateTime         @updatedAt
   permissions RolePermission[]
   users       User[]
+  shortcuts   RoleShortcut[]
 }
 
 model Permission {
@@ -105,6 +106,56 @@ model User {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   role         Role     @relation(fields: [roleId], references: [id])
+}
+
+/*
+ * =====================================================
+ * SHORTCUT REGISTRY
+ *
+ * Shortcut is the global definition of one action: its
+ * default key, its current (rebindable) key, and whether
+ * it's globally enabled. RoleShortcut is only needed to
+ * EXCLUDE a role from a shortcut that is otherwise
+ * globally enabled - no row means "eligible" by default,
+ * so most roles need no rows at all.
+ * =====================================================
+ */
+
+model Shortcut {
+  id String @id @default(cuid())
+
+  actionCode String @unique
+  label      String
+  category   String?
+
+  defaultKey String
+  currentKey String
+
+  isEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  roleOverrides RoleShortcut[]
+
+  @@index([isEnabled])
+}
+
+model RoleShortcut {
+  id String @id @default(cuid())
+
+  roleId     String
+  shortcutId String
+
+  isEnabled Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  role     Role     @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  shortcut Shortcut @relation(fields: [shortcutId], references: [id], onDelete: Cascade)
+
+  @@unique([roleId, shortcutId])
 }
 
 model GSTSlab {

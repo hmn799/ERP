@@ -2,6 +2,7 @@ export interface AuthUser {
   id: string;
   username: string;
   fullName: string;
+  roleId: string;
   roleName: string;
   permissions: string[];
 }

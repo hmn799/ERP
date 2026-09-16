@@ -8,6 +8,9 @@ import {
 
 import { useRouter } from "next/navigation";
 
+import { useShortcut } from "@/hooks/useShortcut";
+import { useEffectiveShortcuts } from "@/hooks/useEffectiveShortcuts";
+
 import SalesHeader from "../components/SalesHeader";
 
 import SalesItemsGrid, {
@@ -2563,56 +2566,43 @@ setRows(
   /*
    * =====================================================
    * HOLD / RECALL KEYBOARD
+   *
+   * Driven by the shortcut registry (HOLD_BILL /
+   * RECALL_BILL) rather than a hardcoded key check, so an
+   * admin can rebind or disable either one from
+   * /admin/shortcuts.
    * =====================================================
    */
 
-  useEffect(() => {
-    if (isEditMode || paymentOpen) {
-      return;
-    }
+  useShortcut(
+    "HOLD_BILL",
+    () => handleHoldBill(),
+    { enabled: !isEditMode && !paymentOpen },
+  );
 
-    function handleHoldRecallKeyDown(
-      event: KeyboardEvent,
-    ) {
-      if (event.key === "F6") {
-        event.preventDefault();
+  useShortcut(
+    "RECALL_BILL",
+    () => setRecallOpen((current) => !current),
+    { enabled: !isEditMode && !paymentOpen },
+  );
 
-        handleHoldBill();
+  const { data: effectiveShortcuts } =
+    useEffectiveShortcuts();
 
-        return;
-      }
-
-      if (event.key === "F7") {
-        event.preventDefault();
-
-        setRecallOpen((current) => !current);
-      }
-    }
-
-    window.addEventListener(
-      "keydown",
-      handleHoldRecallKeyDown,
+  function shortcutKeyLabel(
+    actionCode: string,
+    fallback: string,
+  ) {
+    const shortcut = effectiveShortcuts?.find(
+      (s) => s.actionCode === actionCode,
     );
 
-    return () => {
-      window.removeEventListener(
-        "keydown",
-        handleHoldRecallKeyDown,
-      );
-    };
-  }, [
-    isEditMode,
-    paymentOpen,
-    warehouseId,
-    rows,
-    customerId,
-    billDate,
-    isCredit,
-    billDiscountPercent,
-    roundOff,
-    shortAmount,
-    customers,
-  ]);
+    if (!shortcut || !shortcut.enabled) {
+      return null;
+    }
+
+    return shortcut.key || fallback;
+  }
 
   /*
    * =====================================================
@@ -2791,7 +2781,17 @@ setRows(
             >
               {holding
                 ? "Holding..."
-                : "Hold Bill (F6)"}
+                : `Hold Bill${
+                    shortcutKeyLabel(
+                      "HOLD_BILL",
+                      "F6",
+                    )
+                      ? ` (${shortcutKeyLabel(
+                          "HOLD_BILL",
+                          "F6",
+                        )})`
+                      : ""
+                  }`}
             </button>
 
             <button
@@ -2801,7 +2801,16 @@ setRows(
               }
               className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm font-medium hover:bg-gray-50"
             >
-              Recall (F7)
+              Recall
+              {shortcutKeyLabel(
+                "RECALL_BILL",
+                "F7",
+              )
+                ? ` (${shortcutKeyLabel(
+                    "RECALL_BILL",
+                    "F7",
+                  )})`
+                : ""}
               {heldSales.length > 0
                 ? ` (${heldSales.length})`
                 : ""}

@@ -43,6 +43,7 @@ async function main() {
     "CHANGE_RATE",
     "APPLY_DISCOUNT",
     "MANAGE_USERS",
+    "MANAGE_SETTINGS",
   ];
 
   for (const code of permissions) {
@@ -126,6 +127,47 @@ async function main() {
         resetYearly: false,
         financialYear: null,
         isActive: true,
+      },
+    });
+  }
+
+  // ==========================
+  // Shortcut Registry
+  // ==========================
+
+  const shortcuts = [
+    ["NEW_BILL", "New Bill", "Billing", "F8"],
+    ["HOLD_BILL", "Hold Bill", "Billing", "F6"],
+    ["RECALL_BILL", "Recall Bill", "Billing", "F7"],
+    ["SAVE_BILL", "Save Bill", "Billing", "F12"],
+    ["MODIFY_BILL", "Modify Bill", "Billing", "Ctrl+M"],
+    ["SALE_RETURN", "Sale Return", "Billing", "Ctrl+R"],
+    ["BATCH_SELECTION", "Batch Selection", "Billing", "Ctrl+B"],
+    ["ITEM_INFO", "Item Info", "Billing", "Ctrl+I"],
+    ["PURCHASE", "Purchase / Stock Receive", "Transactions", "F9"],
+    ["RECEIPT_PAYMENT", "Receipt / Payment", "Accounts", "F10"],
+    ["LEDGER", "Ledger Open", "Accounts", "F11"],
+    ["OUTSTANDING", "Outstanding", "Accounts", "Ctrl+O"],
+    ["DEBIT_NOTE", "Debit Note", "Accounts", "Ctrl+D"],
+    ["REPORTS", "Reports", "Reports", "Ctrl+Alt+R"],
+  ] as const;
+
+  for (const [
+    actionCode,
+    label,
+    category,
+    defaultKey,
+  ] of shortcuts) {
+    await prisma.shortcut.upsert({
+      where: { actionCode },
+      update: {},
+      create: {
+        actionCode,
+        label,
+        category,
+        defaultKey,
+        currentKey: defaultKey,
+        isEnabled: true,
       },
     });
   }
