@@ -51,11 +51,11 @@ export class CreatePurchaseItemDto {
 
   @IsOptional()
   @IsDateString()
-  expiryDate?: Date;
+  expiryDate?: string;
 
   @IsOptional()
   @IsDateString()
-  manufacturingDate?: Date;
+  manufacturingDate?: string;
 
   @IsNumber()
   @Min(0)

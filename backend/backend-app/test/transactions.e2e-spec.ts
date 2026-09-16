@@ -441,4 +441,22 @@ describe('Core transactions (e2e)', () => {
       saleRes.body.billNo,
     );
   });
+
+  it('accepts a batch expiry date on a purchase (regression: IsDateString + Date-typed field)', async () => {
+    const payload = purchasePayload({ qty: 4, purchaseRate: 61, mrp: 121 });
+    (payload.items[0] as any).expiryDate = '2027-12-31';
+
+    const res = await request(server)
+      .post('/api/purchases')
+      .send(payload)
+      .expect(201);
+
+    const detail = await request(server)
+      .get(`/api/purchases/${res.body.id}`)
+      .expect(200);
+
+    expect(detail.body.items[0].batch.expiryDate).toContain(
+      '2027-12-31',
+    );
+  });
 });

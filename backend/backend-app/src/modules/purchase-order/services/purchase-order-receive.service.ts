@@ -114,11 +114,7 @@ export class PurchaseOrderReceiveService {
           receiveItem.mrp ?? 0,
 
         expiryDate:
-          receiveItem.expiryDate
-            ? new Date(
-                receiveItem.expiryDate,
-              )
-            : undefined,
+          receiveItem.expiryDate,
 
         barcode:
           receiveItem.barcode,

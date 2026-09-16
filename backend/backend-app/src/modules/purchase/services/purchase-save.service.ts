@@ -218,7 +218,9 @@ export class PurchaseSaveService {
               item.mrp,
 
             expiryDate:
-              item.expiryDate,
+              item.expiryDate
+                ? new Date(item.expiryDate)
+                : undefined,
 
             manufacturingDate:
               undefined,

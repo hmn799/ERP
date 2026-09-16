@@ -31,6 +31,16 @@ export class LedgerController {
     return this.ledgerService.createPayment(dto);
   }
 
+  @Get('receipts')
+  listReceipts() {
+    return this.ledgerService.listReceipts();
+  }
+
+  @Get('payments')
+  listPayments() {
+    return this.ledgerService.listPayments();
+  }
+
   @Get('customer/:id')
   customerLedger(
     @Param('id') id: string,

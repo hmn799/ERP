@@ -1,4 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import {
+  BadRequestException,
+  Injectable,
+} from "@nestjs/common";
 
 import { Prisma } from "@prisma/client";
 
@@ -141,6 +144,16 @@ export class LedgerService {
     dto: CreateReceiptDto,
     prisma: Prisma.TransactionClient = this.prisma,
   ) {
+    const customer = await prisma.customer.findUnique({
+      where: { id: dto.customerId },
+    });
+
+    if (!customer) {
+      throw new BadRequestException(
+        "Invalid customer.",
+      );
+    }
+
     return prisma.ledgerEntry.create({
       data: {
         transactionDate: dto.receiptDate,
@@ -166,6 +179,16 @@ export class LedgerService {
     dto: CreatePaymentDto,
     prisma: Prisma.TransactionClient = this.prisma,
   ) {
+    const supplier = await prisma.supplier.findUnique({
+      where: { id: dto.supplierId },
+    });
+
+    if (!supplier) {
+      throw new BadRequestException(
+        "Invalid supplier.",
+      );
+    }
+
     return prisma.ledgerEntry.create({
       data: {
         transactionDate: dto.paymentDate,
@@ -181,6 +204,76 @@ export class LedgerService {
         remarks: dto.remarks,
       },
     });
+  }
+
+  // =========================================================
+  // LIST RECEIPTS
+  // =========================================================
+
+  async listReceipts() {
+    const rows = await this.prisma.ledgerEntry.findMany({
+      where: { transactionType: "RECEIPT" },
+      orderBy: { transactionDate: "desc" },
+    });
+
+    const customers = await this.prisma.customer.findMany({
+      where: {
+        id: { in: rows.map((row) => row.partyId) },
+      },
+      select: { id: true, name: true, customerCode: true },
+    });
+
+    const customerMap = new Map(
+      customers.map((customer) => [customer.id, customer]),
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      date: row.transactionDate,
+      customerId: row.partyId,
+      customerName:
+        customerMap.get(row.partyId)?.name ??
+        "Unknown customer",
+      customerCode:
+        customerMap.get(row.partyId)?.customerCode ?? "",
+      amount: Number(row.creditAmount),
+      remarks: row.remarks,
+    }));
+  }
+
+  // =========================================================
+  // LIST PAYMENTS
+  // =========================================================
+
+  async listPayments() {
+    const rows = await this.prisma.ledgerEntry.findMany({
+      where: { transactionType: "PAYMENT" },
+      orderBy: { transactionDate: "desc" },
+    });
+
+    const suppliers = await this.prisma.supplier.findMany({
+      where: {
+        id: { in: rows.map((row) => row.partyId) },
+      },
+      select: { id: true, name: true, supplierCode: true },
+    });
+
+    const supplierMap = new Map(
+      suppliers.map((supplier) => [supplier.id, supplier]),
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      date: row.transactionDate,
+      supplierId: row.partyId,
+      supplierName:
+        supplierMap.get(row.partyId)?.name ??
+        "Unknown supplier",
+      supplierCode:
+        supplierMap.get(row.partyId)?.supplierCode ?? "",
+      amount: Number(row.debitAmount),
+      remarks: row.remarks,
+    }));
   }
 
   // =========================================================

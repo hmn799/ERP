@@ -35,11 +35,11 @@ export class CreatePartyPriceDto {
 
   @IsOptional()
   @IsDateString()
-  effectiveFrom?: Date;
+  effectiveFrom?: string;
 
   @IsOptional()
   @IsDateString()
-  effectiveTo?: Date;
+  effectiveTo?: string;
 
   @IsOptional()
   @IsBoolean()
