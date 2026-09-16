@@ -838,6 +838,78 @@ async deadStockReport() {
   });
 }
 
+/*
+ * =====================================================
+ * SALES TREND
+ *
+ * Net sales grouped by calendar day for the last `days`
+ * days, including days with zero sales, oldest first -
+ * backs the dashboard sales chart.
+ * =====================================================
+ */
+
+async salesTrend(days: number) {
+  const safeDays =
+    Number.isFinite(days) && days > 0
+      ? Math.min(days, 90)
+      : 14;
+
+  // Anchor to UTC midnight (not local midnight) so day
+  // keys line up with billDate.toISOString().slice(0, 10).
+  const todayUtc = new Date(
+    `${new Date().toISOString().slice(0, 10)}T00:00:00.000Z`,
+  );
+
+  const since = new Date(todayUtc);
+  since.setUTCDate(
+    since.getUTCDate() - (safeDays - 1),
+  );
+
+  const bills =
+    await this.prisma.salesBill.findMany({
+      where: {
+        billDate: { gte: since },
+      },
+      select: {
+        billDate: true,
+        netAmount: true,
+      },
+    });
+
+  const totalsByDay = new Map<string, number>();
+
+  for (const bill of bills) {
+    const key = bill.billDate
+      .toISOString()
+      .slice(0, 10);
+
+    totalsByDay.set(
+      key,
+      (totalsByDay.get(key) ?? 0) +
+        Number(bill.netAmount),
+    );
+  }
+
+  const result: { date: string; sales: number }[] =
+    [];
+
+  for (let i = 0; i < safeDays; i++) {
+    const day = new Date(since);
+    day.setUTCDate(day.getUTCDate() + i);
+
+    const key = day.toISOString().slice(0, 10);
+
+    result.push({
+      date: key,
+      sales: Number(
+        (totalsByDay.get(key) ?? 0).toFixed(2),
+      ),
+    });
+  }
+
+  return result;
+}
+
 async dashboard() {
   const salesBills =
     await this.prisma.salesBill.findMany();

@@ -139,6 +139,15 @@ dashboard() {
   return this.reportsService.dashboard();
 }
 
+@Get('sales-trend')
+salesTrend(
+  @Query('days') days?: string,
+) {
+  return this.reportsService.salesTrend(
+    days ? Number(days) : 14,
+  );
+}
+
 @Get('sales-register')
 salesRegister() {
   return this.reportsService.salesRegister();

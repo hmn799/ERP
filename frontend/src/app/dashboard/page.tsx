@@ -1,21 +1,11 @@
 import ERPLayout from "@/layouts/ERPLayout";
 
-export default function DashboardPage() {
+import DashboardPage from "@/features/dashboard/pages/DashboardPage";
+
+export default function Page() {
   return (
     <ERPLayout>
-
-      <div className="space-y-4">
-
-        <h1 className="text-3xl font-bold">
-          ERP Dashboard
-        </h1>
-
-        <p className="text-muted-foreground">
-          Welcome to your ERP System.
-        </p>
-
-      </div>
-
+      <DashboardPage />
     </ERPLayout>
   );
 }
