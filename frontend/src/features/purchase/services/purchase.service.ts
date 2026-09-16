@@ -152,6 +152,14 @@ export interface CreatePurchaseDto {
 
   billDiscountPercent?: number;
 
+  /*
+   * Whether every item's purchaseRate on this bill is entered tax-
+   * inclusive or tax-exclusive (default). The backend always
+   * converts to, and stores, a tax-exclusive rate - this is purely
+   * an input convention for this one bill.
+   */
+  taxMode?: "EXCLUSIVE" | "INCLUSIVE";
+
   items: PurchaseItemDto[];
 }
 

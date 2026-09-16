@@ -3,8 +3,11 @@ import {
   TransactionTotals,
 } from "@/components/erp/transaction/transaction.types";
 
+import { PurchaseTaxMode } from "./purchase.calculator";
+
 export function calculatePurchaseTotals(
   rows: TransactionRowModel[],
+  taxMode: PurchaseTaxMode = "EXCLUSIVE",
 ): TransactionTotals {
   const totals: TransactionTotals = {
     totalQty: 0,
@@ -33,8 +36,13 @@ export function calculatePurchaseTotals(
 
     totals.totalFreeQty += row.freeQty;
 
+    const effectiveRate =
+      taxMode === "INCLUSIVE" && row.gstPercent > 0
+        ? row.purchaseRate / (1 + row.gstPercent / 100)
+        : row.purchaseRate;
+
     totals.grossAmount +=
-      row.qty * row.purchaseRate;
+      row.qty * effectiveRate;
 
     totals.taxableAmount +=
       row.taxableAmount;

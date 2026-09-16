@@ -4,7 +4,10 @@ import { useState } from "react";
 
 import { TransactionRowModel } from "../transaction.types";
 
-import { calculatePurchaseRow } from "@/core/pricing/purchase.calculator";
+import {
+  calculatePurchaseRow,
+  PurchaseTaxMode,
+} from "@/core/pricing/purchase.calculator";
 
 function createEmptyRow(): TransactionRowModel {
   return {
@@ -42,7 +45,9 @@ function createEmptyRow(): TransactionRowModel {
   };
 }
 
-export function useTransactionGrid() {
+export function useTransactionGrid(
+  taxMode: PurchaseTaxMode = "EXCLUSIVE",
+) {
   const [rows, setRows] =
     useState<TransactionRowModel[]>([
       createEmptyRow(),
@@ -85,8 +90,23 @@ export function useTransactionGrid() {
 
         return calculatePurchaseRow(
           updatedRow,
+          taxMode,
         );
       }),
+    );
+  }
+
+  /*
+   * Re-derives every row's tax fields under the current taxMode -
+   * called when the bill-level Inclusive/Exclusive toggle changes,
+   * so already-entered rows update immediately rather than only on
+   * their next edit.
+   */
+  function recalculateAll() {
+    setRows((prev) =>
+      prev.map((row) =>
+        calculatePurchaseRow(row, taxMode),
+      ),
     );
   }
 
@@ -123,5 +143,6 @@ export function useTransactionGrid() {
     updateRow,
     setLoadedRows,
     resetRows,
+    recalculateAll,
   };
 }

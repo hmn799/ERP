@@ -1,6 +1,7 @@
 import {
   IsArray,
   IsDate,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -42,6 +43,17 @@ export class CreatePurchaseDto {
   @IsOptional()
   @IsNumber()
   billDiscountPercent?: number;
+
+  /*
+   * Whether every item's purchaseRate on this bill is entered tax-
+   * inclusive or tax-exclusive (default). Purely an input
+   * convention - purchaseRate is always converted to, and stored
+   * as, a tax-exclusive rate before anything else in the app sees
+   * it.
+   */
+  @IsOptional()
+  @IsIn(['EXCLUSIVE', 'INCLUSIVE'])
+  taxMode?: 'EXCLUSIVE' | 'INCLUSIVE';
 
   @IsArray()
   @ValidateNested({ each: true })

@@ -65,6 +65,7 @@ interface PurchaseResponse {
   invoiceNo?: string | null;
 
   status?: string;
+  taxMode?: string;
 
   items: PurchaseItemResponse[];
 }
@@ -109,8 +110,12 @@ export default function PurchasePage({
   const [error, setError] =
     useState("");
 
+  const [taxMode, setTaxMode] = useState<
+    "EXCLUSIVE" | "INCLUSIVE"
+  >("EXCLUSIVE");
+
   const transaction =
-    useTransactionGrid();
+    useTransactionGrid(taxMode);
 
   const isEditMode =
     Boolean(purchaseId);
@@ -119,9 +124,23 @@ export default function PurchasePage({
     status === "CANCELLED";
 
   const totals = useMemo(
-    () => calculatePurchaseTotals(transaction.rows),
-    [transaction.rows],
+    () =>
+      calculatePurchaseTotals(
+        transaction.rows,
+        taxMode,
+      ),
+    [transaction.rows, taxMode],
   );
+
+  /*
+   * Switching the toggle re-derives every already-entered row's tax
+   * fields under the new mode, so the preview stays accurate without
+   * requiring the operator to re-touch each row.
+   */
+  useEffect(() => {
+    transaction.recalculateAll();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [taxMode]);
 
   useEffect(() => {
     if (!purchaseId) {
@@ -167,9 +186,37 @@ export default function PurchasePage({
           purchase.invoiceNo ?? "",
         );
 
+        const loadedTaxMode =
+          purchase.taxMode === "INCLUSIVE"
+            ? "INCLUSIVE"
+            : "EXCLUSIVE";
+
+        setTaxMode(loadedTaxMode);
+
         const loadedRows: TransactionRowModel[] =
           purchase.items.map(
-            (item: PurchaseItemResponse) => ({
+            (item: PurchaseItemResponse) => {
+              // The stored rate is always tax-exclusive
+              // (see purchase-save.service.ts). If this bill
+              // was originally entered inclusive, convert it
+              // back to the inclusive figure the operator
+              // would recognize, so editing round-trips.
+              const storedRate = Number(
+                item.purchaseRate ?? 0,
+              );
+
+              const gstPercent = Number(
+                item.gstPercent ?? 0,
+              );
+
+              const displayRate =
+                loadedTaxMode === "INCLUSIVE" &&
+                gstPercent > 0
+                  ? storedRate *
+                    (1 + gstPercent / 100)
+                  : storedRate;
+
+              return {
               id: crypto.randomUUID(),
 
               barcode:
@@ -202,10 +249,7 @@ export default function PurchasePage({
                   item.freeQty ?? 0,
                 ),
 
-              purchaseRate:
-                Number(
-                  item.purchaseRate ?? 0,
-                ),
+              purchaseRate: displayRate,
 
               retailRate:
                 Number(
@@ -261,7 +305,8 @@ export default function PurchasePage({
                 Number(
                   item.netAmount ?? 0,
                 ),
-            }),
+              };
+            },
           );
 
         transaction.setLoadedRows(
@@ -372,6 +417,8 @@ export default function PurchasePage({
       invoiceNo,
 
       billDiscountPercent: 0,
+
+      taxMode,
 
       items,
     };
@@ -533,6 +580,7 @@ export default function PurchasePage({
         warehouseId={warehouseId}
         billDate={billDate}
         invoiceNo={invoiceNo}
+        taxMode={taxMode}
         onSupplierChange={
           setSupplierId
         }
@@ -544,6 +592,9 @@ export default function PurchasePage({
         }
         onInvoiceNoChange={
           setInvoiceNo
+        }
+        onTaxModeChange={
+          setTaxMode
         }
       />
 

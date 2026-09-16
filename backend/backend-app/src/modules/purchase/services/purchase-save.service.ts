@@ -39,6 +39,28 @@ export class PurchaseSaveService {
     purchaseBillId?: string,
     prisma: Prisma.TransactionClient = this.prisma,
   ) {
+    const taxMode = dto.taxMode ?? 'EXCLUSIVE';
+
+    /*
+     * When the bill is entered tax-inclusive, every purchaseRate is
+     * converted to its tax-exclusive equivalent right here, once -
+     * everything downstream (this calculation, the batch's stored
+     * cost basis, the line item's stored rate) then works exactly
+     * as it always has, with no other code needing to know which
+     * mode the bill was entered in.
+     */
+    const toExclusiveRate = (
+      rate: number,
+      gstPercent: number,
+    ) => {
+      if (taxMode !== 'INCLUSIVE') return rate;
+
+      const gst = Number(gstPercent) || 0;
+      if (gst <= 0) return rate;
+
+      return Number((rate / (1 + gst / 100)).toFixed(4));
+    };
+
     let grossAmount = 0;
 
     let totalCgst = 0;
@@ -49,10 +71,15 @@ export class PurchaseSaveService {
 
     const itemCalculations =
       dto.items.map((item) => {
+        const effectiveRate = toExclusiveRate(
+          item.purchaseRate,
+          item.gstPercent,
+        );
+
         const calc =
           this.gstService.calculateItem(
             item.qty,
-            item.purchaseRate,
+            effectiveRate,
             item.discountPercent,
             item.gstPercent,
           );
@@ -69,7 +96,7 @@ export class PurchaseSaveService {
         totalIgst +=
           calc.igstAmount;
 
-        return calc;
+        return { ...calc, effectiveRate };
       });
 
     const billCalc =
@@ -115,6 +142,8 @@ export class PurchaseSaveService {
 
             invoiceDate:
               dto.invoiceDate,
+
+            taxMode,
 
             grossAmount,
 
@@ -163,6 +192,8 @@ export class PurchaseSaveService {
             invoiceDate:
               dto.invoiceDate,
 
+            taxMode,
+
             grossAmount,
 
             discountAmount:
@@ -203,7 +234,7 @@ export class PurchaseSaveService {
               item.itemId,
 
             purchaseRate:
-              item.purchaseRate,
+              calc.effectiveRate,
 
             retailRate:
               item.retailRate,
@@ -265,7 +296,7 @@ export class PurchaseSaveService {
             item.qty,
 
           purchaseRate:
-            item.purchaseRate,
+            calc.effectiveRate,
 
           discountPercent:
             item.discountPercent,

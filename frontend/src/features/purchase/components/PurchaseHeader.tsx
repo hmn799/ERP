@@ -20,11 +20,15 @@ interface Props {
   warehouseId: string;
   billDate: string;
   invoiceNo: string;
+  taxMode: "EXCLUSIVE" | "INCLUSIVE";
 
   onSupplierChange(value: string): void;
   onWarehouseChange(value: string): void;
   onBillDateChange(value: string): void;
   onInvoiceNoChange(value: string): void;
+  onTaxModeChange(
+    value: "EXCLUSIVE" | "INCLUSIVE",
+  ): void;
 }
 
 function Field({
@@ -55,10 +59,12 @@ export default function PurchaseHeader({
   warehouseId,
   billDate,
   invoiceNo,
+  taxMode,
   onSupplierChange,
   onWarehouseChange,
   onBillDateChange,
   onInvoiceNoChange,
+  onTaxModeChange,
 }: Props) {
   const [suppliers, setSuppliers] =
     useState<SupplierLookup[]>([]);
@@ -126,7 +132,7 @@ export default function PurchaseHeader({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
         <Field label="Invoice No.">
           <Input
             className={inputClass}
@@ -188,6 +194,27 @@ export default function PurchaseHeader({
                 {warehouse.name}
               </option>
             ))}
+          </select>
+        </Field>
+
+        <Field label="GST Mode">
+          <select
+            className={inputClass}
+            value={taxMode}
+            onChange={(event) =>
+              onTaxModeChange(
+                event.target.value as
+                  | "EXCLUSIVE"
+                  | "INCLUSIVE",
+              )
+            }
+          >
+            <option value="EXCLUSIVE">
+              Exclusive (rate + GST)
+            </option>
+            <option value="INCLUSIVE">
+              Inclusive (rate includes GST)
+            </option>
           </select>
         </Field>
       </div>
