@@ -39,6 +39,7 @@ import { AuditModule } from './modules/audit/audit.module';
 import { BackupModule } from './modules/backup/backup.module';
 import { MonitoringModule } from './modules/monitoring/monitoring.module';
 import { GlobalExceptionFilter } from './core/monitoring/global-exception.filter';
+import { AnalyticsModule } from './modules/analytics/analytics.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -46,6 +47,7 @@ import { GlobalExceptionFilter } from './core/monitoring/global-exception.filter
     AuditModule,
     BackupModule,
     MonitoringModule,
+    AnalyticsModule,
     SupplierModule,
     PurchaseModule,
     RouteModule,

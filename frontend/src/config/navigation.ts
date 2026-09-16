@@ -222,6 +222,12 @@ export const NAVIGATION: NavigationGroup[] = [
         title: "GST Report",
         href: ROUTES.GST_REPORT,
       },
+      {
+        id: "analytics",
+        title: "Advanced Analytics",
+        href: ROUTES.ANALYTICS,
+        permission: "VIEW_PROFIT",
+      },
     ],
   },
 

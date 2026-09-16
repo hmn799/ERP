@@ -38,6 +38,7 @@ export const ROUTES = {
   STOCK_REPORT: "/reports/stock",
   PROFIT_REPORT: "/reports/profit",
   GST_REPORT: "/reports/gst",
+  ANALYTICS: "/reports/analytics",
   DASHBOARD_REPORT: "/reports/dashboard",
 
   // Administration
