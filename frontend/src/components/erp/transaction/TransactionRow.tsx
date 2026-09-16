@@ -191,6 +191,8 @@ export default function TransactionRow({
       <td className="p-1">
         <Input
           ref={batchRef}
+          data-row-index={index}
+          data-field="batch"
           value={row.batchNo ?? ""}
           onChange={(event) =>
             onChange(

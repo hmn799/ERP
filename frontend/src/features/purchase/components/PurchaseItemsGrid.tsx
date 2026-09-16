@@ -130,8 +130,33 @@ export default function PurchaseItemsGrid({
     };
   }
 
+  /*
+   * Focuses the Batch field of the row at `index` so the cursor
+   * flow (Barcode -> Batch -> Qty -> ...) continues into the row
+   * that was just filled by the search bar, instead of leaving
+   * focus stuck on the search bar itself. Waits a frame because
+   * the row's own state update (and, for a brand-new row, its DOM
+   * node) hasn't committed yet.
+   */
+  function focusRowBatch(index: number) {
+    requestAnimationFrame(() => {
+      const el = document.querySelector(
+        `input[data-row-index="${index}"][data-field="batch"]`,
+      ) as HTMLInputElement | null;
+
+      if (el) {
+        el.focus();
+        el.select();
+      } else {
+        searchRef.current?.focus();
+      }
+    });
+  }
+
   function addSelectedItem(item: ItemLookup) {
     setSearchError("");
+    setSearch("");
+    setShowResults(false);
 
     const existingIndex = rows.findIndex(
       (row) =>
@@ -146,12 +171,7 @@ export default function PurchaseItemsGrid({
         Number(rows[existingIndex].qty || 0) + 1,
       );
 
-      setSearch("");
-      setShowResults(false);
-
-      requestAnimationFrame(() => {
-        searchRef.current?.focus();
-      });
+      focusRowBatch(existingIndex);
 
       return;
     }
@@ -168,33 +188,26 @@ export default function PurchaseItemsGrid({
           ...createPurchaseRow(item),
         },
       );
-    } else {
-      addRow();
 
-      /*
-       * addRow() updates the parent state asynchronously.
-       * The normal empty row remains the safest place for
-       * manual entry; if no empty row exists, add a new row
-       * and let the user select it from the grid.
-       */
-      const nextIndex = rows.length;
+      focusRowBatch(emptyRowIndex);
 
-      requestAnimationFrame(() => {
-        if (rows[nextIndex]) {
-          updateRow(
-            nextIndex,
-            createPurchaseRow(item),
-          );
-        }
-      });
+      return;
     }
 
-    setSearch("");
-    setShowResults(false);
+    /*
+     * No empty row exists - append one and populate it. Both
+     * addRow() and updateRow() use React's functional setState
+     * form internally, so queuing them back-to-back here applies
+     * against the up-to-date state (not this stale `rows` closure)
+     * and is safe to do synchronously, without an intermediate
+     * requestAnimationFrame.
+     */
+    const nextIndex = rows.length;
 
-    requestAnimationFrame(() => {
-      searchRef.current?.focus();
-    });
+    addRow();
+    updateRow(nextIndex, createPurchaseRow(item));
+
+    focusRowBatch(nextIndex);
   }
 
   function handleSearchKeyDown(
