@@ -3,12 +3,16 @@ import {
   Get,
   Param,
   Query,
+  UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
 
 import { ReportsService } from './reports.service';
 
 import { SlowQueryInterceptor } from '../../core/monitoring/slow-query.interceptor';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 
 @Controller('reports')
 @UseInterceptors(SlowQueryInterceptor)
@@ -199,5 +203,19 @@ stockValuationReport() {
 @Get('stock-ageing-report')
 stockAgeingReport() {
   return this.reportsService.stockAgeingReport();
+}
+
+@Get('gstr1')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('VIEW_PROFIT')
+gstr1(@Query('month') month?: string) {
+  return this.reportsService.gstr1(month);
+}
+
+@Get('gstr3b')
+@UseGuards(JwtAuthGuard, PermissionsGuard)
+@RequirePermissions('VIEW_PROFIT')
+gstr3b(@Query('month') month?: string) {
+  return this.reportsService.gstr3b(month);
 }
 }

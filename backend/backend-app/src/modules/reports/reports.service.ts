@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { SettingsService } from '../settings/settings.service';
 
 @Injectable()
 export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly settingsService: SettingsService,
   ) {}
 
   /*
@@ -1521,5 +1523,360 @@ async stockAgeingReport() {
   );
 
   return result;
+}
+
+/*
+ * =====================================================
+ * GSTR-1 / GSTR-3B (filing-aid reports)
+ *
+ * These produce correctly-shaped, period-based GST return
+ * data from existing sales/purchase records so a business
+ * user or accountant can prepare a filing - they do not
+ * submit anything to the GSTN portal.
+ * =====================================================
+ */
+
+private monthRange(month?: string) {
+  const now = new Date();
+
+  const defaultMonth = `${now.getFullYear()}-${String(
+    now.getMonth() + 1,
+  ).padStart(2, '0')}`;
+
+  const [yearStr, monthStr] = (
+    month || defaultMonth
+  ).split('-');
+
+  const year = Number(yearStr);
+  const monthIndex = Number(monthStr) - 1;
+
+  const start = new Date(
+    Date.UTC(year, monthIndex, 1, 0, 0, 0),
+  );
+
+  const end = new Date(
+    Date.UTC(year, monthIndex + 1, 0, 23, 59, 59, 999),
+  );
+
+  return {
+    start,
+    end,
+    period: `${yearStr}-${monthStr}`,
+  };
+}
+
+private async companyGstProfile() {
+  const notes: string[] = [];
+
+  let gstin: string | null = null;
+  let legalName: string | null = null;
+
+  try {
+    gstin = await this.settingsService.getString(
+      'company.gstin',
+    );
+  } catch {
+    notes.push(
+      'Company GSTIN is not configured (Settings > company.gstin) - add it before filing.',
+    );
+  }
+
+  try {
+    legalName = await this.settingsService.getString(
+      'company.legalName',
+    );
+  } catch {
+    notes.push(
+      'Company legal name is not configured (Settings > company.legalName).',
+    );
+  }
+
+  return { gstin, legalName, notes };
+}
+
+async gstr1(month?: string) {
+  const { start, end, period } =
+    this.monthRange(month);
+
+  const company = await this.companyGstProfile();
+
+  const bills = await this.prisma.salesBill.findMany({
+    where: {
+      billDate: { gte: start, lte: end },
+    },
+    include: {
+      customer: true,
+      items: { include: { item: true } },
+    },
+    orderBy: { billDate: 'asc' },
+  });
+
+  const round2 = (value: number) =>
+    Number((value || 0).toFixed(2));
+
+  const b2b: any[] = [];
+  const b2cLarge: any[] = [];
+  const b2csMap = new Map<string, any>();
+  const hsnMap = new Map<string, any>();
+
+  let totalTaxableValue = 0;
+  let totalInvoiceValue = 0;
+  let totalTax = 0;
+
+  for (const bill of bills) {
+    const gstin = bill.customer?.gstin?.trim();
+    const isB2B = !!gstin;
+
+    const placeOfSupply =
+      bill.customer?.state?.trim() || 'UNKNOWN';
+
+    const invoiceValue = Number(bill.netAmount);
+    const taxableValue = Number(bill.taxableAmount);
+    const cgst = Number(bill.cgstAmount);
+    const sgst = Number(bill.sgstAmount);
+    const igst = Number(bill.igstAmount);
+    const isInterState = igst > 0;
+
+    totalTaxableValue += taxableValue;
+    totalInvoiceValue += invoiceValue;
+    totalTax += cgst + sgst + igst;
+
+    if (isB2B) {
+      b2b.push({
+        billNo: bill.billNo,
+        billDate: bill.billDate,
+        customerName: bill.customer!.name,
+        gstin,
+        placeOfSupply,
+        invoiceValue: round2(invoiceValue),
+        taxableValue: round2(taxableValue),
+        cgst: round2(cgst),
+        sgst: round2(sgst),
+        igst: round2(igst),
+      });
+    } else if (
+      isInterState &&
+      invoiceValue > 250000
+    ) {
+      b2cLarge.push({
+        billNo: bill.billNo,
+        billDate: bill.billDate,
+        placeOfSupply,
+        invoiceValue: round2(invoiceValue),
+        taxableValue: round2(taxableValue),
+        igst: round2(igst),
+      });
+    } else {
+      for (const line of bill.items) {
+        const ratePercent = Number(line.gstPercent);
+        const key = `${placeOfSupply}|${ratePercent}`;
+
+        if (!b2csMap.has(key)) {
+          b2csMap.set(key, {
+            placeOfSupply,
+            ratePercent,
+            taxableValue: 0,
+            cgst: 0,
+            sgst: 0,
+            igst: 0,
+          });
+        }
+
+        const bucket = b2csMap.get(key);
+        bucket.taxableValue += Number(
+          line.taxableAmount,
+        );
+        bucket.cgst += Number(line.cgstAmount);
+        bucket.sgst += Number(line.sgstAmount);
+        bucket.igst += Number(line.igstAmount);
+      }
+    }
+
+    for (const line of bill.items) {
+      const hsn =
+        line.item.hsnCode?.trim() || 'UNSPECIFIED';
+
+      if (!hsnMap.has(hsn)) {
+        hsnMap.set(hsn, {
+          hsnCode: hsn,
+          qty: 0,
+          taxableValue: 0,
+          cgst: 0,
+          sgst: 0,
+          igst: 0,
+        });
+      }
+
+      const bucket = hsnMap.get(hsn);
+      bucket.qty += Number(line.qty);
+      bucket.taxableValue += Number(
+        line.taxableAmount,
+      );
+      bucket.cgst += Number(line.cgstAmount);
+      bucket.sgst += Number(line.sgstAmount);
+      bucket.igst += Number(line.igstAmount);
+    }
+  }
+
+  return {
+    period,
+    company: {
+      gstin: company.gstin,
+      legalName: company.legalName,
+    },
+    summary: {
+      totalInvoices: bills.length,
+      totalTaxableValue: round2(totalTaxableValue),
+      totalTax: round2(totalTax),
+      totalInvoiceValue: round2(totalInvoiceValue),
+    },
+    b2b,
+    b2cLarge,
+    b2cSmall: Array.from(b2csMap.values()).map(
+      (row) => ({
+        ...row,
+        taxableValue: round2(row.taxableValue),
+        cgst: round2(row.cgst),
+        sgst: round2(row.sgst),
+        igst: round2(row.igst),
+      }),
+    ),
+    hsnSummary: Array.from(hsnMap.values()).map(
+      (row) => ({
+        ...row,
+        qty: round2(row.qty),
+        taxableValue: round2(row.taxableValue),
+        cgst: round2(row.cgst),
+        sgst: round2(row.sgst),
+        igst: round2(row.igst),
+      }),
+    ),
+    notes: [
+      ...company.notes,
+      'B2C (Large) requires an inter-state invoice over ₹2,50,000. This billing engine currently always computes CGST+SGST (IGST is not yet supported for sales), so this section will stay empty until inter-state billing is implemented.',
+      'Nil-rated, exempt, and export supplies are not tracked separately and are not included in this return.',
+      'HSN codes are optional on items in this system - lines from items without one are grouped under "UNSPECIFIED".',
+    ],
+  };
+}
+
+async gstr3b(month?: string) {
+  const { start, end, period } =
+    this.monthRange(month);
+
+  const company = await this.companyGstProfile();
+
+  const [salesAgg, purchaseAgg] = await Promise.all([
+    this.prisma.salesBillItem.aggregate({
+      where: {
+        salesBill: {
+          billDate: { gte: start, lte: end },
+        },
+      },
+      _sum: {
+        taxableAmount: true,
+        cgstAmount: true,
+        sgstAmount: true,
+        igstAmount: true,
+      },
+    }),
+
+    this.prisma.purchaseBillItem.aggregate({
+      where: {
+        purchaseBill: {
+          billDate: { gte: start, lte: end },
+          status: 'ACTIVE',
+        },
+      },
+      _sum: {
+        taxableAmount: true,
+        cgstAmount: true,
+        sgstAmount: true,
+        igstAmount: true,
+      },
+    }),
+  ]);
+
+  const round2 = (value: number) =>
+    Number((value || 0).toFixed(2));
+
+  const outwardTaxable = Number(
+    salesAgg._sum.taxableAmount || 0,
+  );
+  const outwardCgst = Number(
+    salesAgg._sum.cgstAmount || 0,
+  );
+  const outwardSgst = Number(
+    salesAgg._sum.sgstAmount || 0,
+  );
+  const outwardIgst = Number(
+    salesAgg._sum.igstAmount || 0,
+  );
+
+  const itcTaxable = Number(
+    purchaseAgg._sum.taxableAmount || 0,
+  );
+  const itcCgst = Number(
+    purchaseAgg._sum.cgstAmount || 0,
+  );
+  const itcSgst = Number(
+    purchaseAgg._sum.sgstAmount || 0,
+  );
+  const itcIgst = Number(
+    purchaseAgg._sum.igstAmount || 0,
+  );
+
+  const netCgst = outwardCgst - itcCgst;
+  const netSgst = outwardSgst - itcSgst;
+  const netIgst = outwardIgst - itcIgst;
+
+  return {
+    period,
+    company: {
+      gstin: company.gstin,
+      legalName: company.legalName,
+    },
+    section3_1OutwardSupplies: {
+      taxableOutwardSupplies: {
+        taxableValue: round2(outwardTaxable),
+        igst: round2(outwardIgst),
+        cgst: round2(outwardCgst),
+        sgst: round2(outwardSgst),
+      },
+      zeroRatedSupplies: { taxableValue: 0, igst: 0 },
+      otherOutwardSupplies: { taxableValue: 0 },
+      inwardSuppliesReverseCharge: {
+        taxableValue: 0,
+        igst: 0,
+        cgst: 0,
+        sgst: 0,
+      },
+      nonGstOutwardSupplies: { taxableValue: 0 },
+    },
+    section4EligibleItc: {
+      allOtherItc: {
+        taxableValue: round2(itcTaxable),
+        igst: round2(itcIgst),
+        cgst: round2(itcCgst),
+        sgst: round2(itcSgst),
+      },
+      itcReversed: { igst: 0, cgst: 0, sgst: 0 },
+      netEligibleItc: {
+        igst: round2(itcIgst),
+        cgst: round2(itcCgst),
+        sgst: round2(itcSgst),
+      },
+    },
+    section6_1TaxPayable: {
+      igst: round2(Math.max(0, netIgst)),
+      cgst: round2(Math.max(0, netCgst)),
+      sgst: round2(Math.max(0, netSgst)),
+    },
+    notes: [
+      ...company.notes,
+      'Zero-rated (export) supplies, nil-rated/exempt supplies, reverse-charge inward supplies, and ITC reversal are not tracked in this system and are reported as zero.',
+      'Tax payable is a simple output-minus-ITC calculation for the period - it does not account for any electronic cash/credit ledger balance carried from a prior period.',
+    ],
+  };
 }
 }

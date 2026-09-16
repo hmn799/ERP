@@ -145,6 +145,88 @@ export interface GstSummary {
   purchaseCount: number;
 }
 
+export interface Gstr1B2BRow {
+  billNo: string;
+  billDate: string;
+  customerName: string;
+  gstin: string;
+  placeOfSupply: string;
+  invoiceValue: number;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+}
+
+export interface Gstr1B2CLargeRow {
+  billNo: string;
+  billDate: string;
+  placeOfSupply: string;
+  invoiceValue: number;
+  taxableValue: number;
+  igst: number;
+}
+
+export interface Gstr1B2CSmallRow {
+  placeOfSupply: string;
+  ratePercent: number;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+}
+
+export interface Gstr1HsnRow {
+  hsnCode: string;
+  qty: number;
+  taxableValue: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+}
+
+export interface Gstr1Report {
+  period: string;
+  company: { gstin: string | null; legalName: string | null };
+  summary: {
+    totalInvoices: number;
+    totalTaxableValue: number;
+    totalTax: number;
+    totalInvoiceValue: number;
+  };
+  b2b: Gstr1B2BRow[];
+  b2cLarge: Gstr1B2CLargeRow[];
+  b2cSmall: Gstr1B2CSmallRow[];
+  hsnSummary: Gstr1HsnRow[];
+  notes: string[];
+}
+
+export interface Gstr3bTaxLine {
+  taxableValue: number;
+  igst: number;
+  cgst?: number;
+  sgst?: number;
+}
+
+export interface Gstr3bReport {
+  period: string;
+  company: { gstin: string | null; legalName: string | null };
+  section3_1OutwardSupplies: {
+    taxableOutwardSupplies: Gstr3bTaxLine;
+    zeroRatedSupplies: { taxableValue: number; igst: number };
+    otherOutwardSupplies: { taxableValue: number };
+    inwardSuppliesReverseCharge: Gstr3bTaxLine;
+    nonGstOutwardSupplies: { taxableValue: number };
+  };
+  section4EligibleItc: {
+    allOtherItc: Gstr3bTaxLine;
+    itcReversed: { igst: number; cgst: number; sgst: number };
+    netEligibleItc: { igst: number; cgst: number; sgst: number };
+  };
+  section6_1TaxPayable: { igst: number; cgst: number; sgst: number };
+  notes: string[];
+}
+
 export const ReportsService = {
   async getDashboard(): Promise<DashboardSummary> {
     const { data } = await apiClient.get(
@@ -250,6 +332,22 @@ export const ReportsService = {
   async getGstSummary(): Promise<GstSummary> {
     const { data } = await apiClient.get(
       "/reports/gst-summary",
+    );
+    return data;
+  },
+
+  async getGstr1(month?: string): Promise<Gstr1Report> {
+    const { data } = await apiClient.get(
+      "/reports/gstr1",
+      { params: month ? { month } : undefined },
+    );
+    return data;
+  },
+
+  async getGstr3b(month?: string): Promise<Gstr3bReport> {
+    const { data } = await apiClient.get(
+      "/reports/gstr3b",
+      { params: month ? { month } : undefined },
     );
     return data;
   },
