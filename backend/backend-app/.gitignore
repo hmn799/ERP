@@ -57,3 +57,7 @@ pids
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
 
 /generated/prisma
+
+# Database backups (contain real data - never commit)
+/backups
+/backups-test

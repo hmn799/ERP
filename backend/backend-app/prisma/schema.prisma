@@ -993,6 +993,30 @@ model LedgerEntry {
   createdAt DateTime @default(now())
 }
 
+model BackupRun {
+  id String @id @default(cuid())
+
+  status  String
+  trigger String
+
+  actorId   String?
+  actorName String?
+
+  fileName      String?
+  fileSizeBytes Int?
+  checksum      String?
+
+  restoreVerifiedAt DateTime?
+
+  errorMessage String?
+
+  startedAt  DateTime  @default(now())
+  finishedAt DateTime?
+
+  @@index([status])
+  @@index([startedAt])
+}
+
 model AuditLog {
   id String @id @default(cuid())
 

@@ -46,5 +46,6 @@ export const ROUTES = {
   SETTINGS: "/admin/settings",
   SHORTCUTS: "/admin/shortcuts",
   AUDIT_LOG: "/admin/audit-log",
+  BACKUPS: "/admin/backups",
   DOCUMENT_SERIES: "/admin/document-series",
 } as const;

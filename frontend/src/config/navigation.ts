@@ -257,6 +257,12 @@ export const NAVIGATION: NavigationGroup[] = [
         permission: "VIEW_AUDIT_LOG",
       },
       {
+        id: "backups",
+        title: "Backups",
+        href: ROUTES.BACKUPS,
+        permission: "MANAGE_BACKUPS",
+      },
+      {
         id: "document-series",
         title: "Document Series",
         href: ROUTES.DOCUMENT_SERIES,
