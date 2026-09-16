@@ -8,6 +8,8 @@ import {
   ItemLookup,
 } from "@/features/purchase/services/purchase.service";
 
+import { itemMatchesQuery } from "@/lib/item-search";
+
 interface Props {
   value: string;
   onSelect(item: ItemLookup): void;
@@ -75,26 +77,12 @@ export default function ERPItemLookup({
   ------------------------------------------------------- */
 
   const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-
-    if (!q) {
+    if (!search.trim()) {
       return [];
     }
 
     return allItems
-      .filter((item) => {
-        return (
-          item.name
-            .toLowerCase()
-            .includes(q) ||
-          item.itemCode
-            .toLowerCase()
-            .includes(q) ||
-          (item.barcode ?? "")
-            .toLowerCase()
-            .includes(q)
-        );
-      })
+      .filter((item) => itemMatchesQuery(item, search))
       .slice(0, 20);
   }, [allItems, search]);
 

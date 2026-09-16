@@ -293,6 +293,7 @@ export interface SalesItemLookup {
   name: string;
 
   barcode: string | null;
+  alternateBarcodes: string[];
 
   purchaseRate: number | string;
   retailRate: number | string;

@@ -14,6 +14,11 @@ import {
   ItemLookup,
 } from "@/features/purchase/services/purchase.service";
 
+import {
+  itemMatchesExactCode,
+  itemMatchesQuery,
+} from "@/lib/item-search";
+
 interface Props {
   rows: TransactionRowModel[];
 
@@ -80,24 +85,12 @@ export default function PurchaseItemsGrid({
   }, []);
 
   const results = useMemo(() => {
-    const query = search.trim().toLowerCase();
-
-    if (!query) {
+    if (!search.trim()) {
       return [];
     }
 
     return items
-      .filter((item) => {
-        const barcode = (item.barcode ?? "").toLowerCase();
-        const itemCode = (item.itemCode ?? "").toLowerCase();
-        const name = (item.name ?? "").toLowerCase();
-
-        return (
-          barcode.includes(query) ||
-          itemCode.includes(query) ||
-          name.includes(query)
-        );
-      })
+      .filter((item) => itemMatchesQuery(item, search))
       .slice(0, 12);
   }, [items, search]);
 
@@ -230,17 +223,14 @@ export default function PurchaseItemsGrid({
     }
 
     /*
-     * Barcode and item code are preferred as exact matches.
-     * This is important for barcode scanners because the
-     * scanner normally sends the complete barcode followed
-     * by Enter.
+     * Barcode (primary or alternate) and item code are preferred
+     * as exact matches. This is important for barcode scanners
+     * because the scanner normally sends the complete barcode
+     * followed by Enter.
      */
-    const exactMatch = items.find((item) => {
-      const barcode = (item.barcode ?? "").trim().toLowerCase();
-      const itemCode = (item.itemCode ?? "").trim().toLowerCase();
-
-      return barcode === query || itemCode === query;
-    });
+    const exactMatch = items.find((item) =>
+      itemMatchesExactCode(item, query),
+    );
 
     if (exactMatch) {
       addSelectedItem(exactMatch);
@@ -284,6 +274,18 @@ export default function PurchaseItemsGrid({
 
       gstPercent: Number(item.gstPercent ?? 0),
     });
+  }
+
+  /*
+   * Lets a row's own Barcode cell resolve an item directly (matches
+   * primary or alternate barcodes, or an item code) - completing
+   * Barcode -> Batch -> Qty -> ... entirely within the row, instead
+   * of requiring the separate search bar above the grid.
+   */
+  function resolveItemByCode(code: string) {
+    return items.find((item) =>
+      itemMatchesExactCode(item, code),
+    );
   }
 
   return (
@@ -451,6 +453,12 @@ export default function PurchaseItemsGrid({
               mode="purchase"
               onChange={updateField}
               onItemSelected={handleItemSelected}
+              onResolveBarcode={resolveItemByCode}
+              onBarcodeNotFound={() =>
+                setSearchError(
+                  "No item matches that barcode.",
+                )
+              }
               onDelete={removeRow}
             />
           ))}

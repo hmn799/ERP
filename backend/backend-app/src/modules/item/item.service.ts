@@ -198,6 +198,10 @@ export class ItemService {
         },
       },
 
+      // Not limited to the latest batch here (unlike the pricing
+      // lookup below) because every active batch's barcodes -
+      // primary or alternate - need to be searchable, not just the
+      // most recent one's.
       batches: {
         where: {
           isActive: true,
@@ -207,14 +211,16 @@ export class ItemService {
           createdAt: "desc",
         },
 
-        take: 1,
-
         select: {
           retailRate: true,
 
           wholesaleRate: true,
 
           distributorRate: true,
+
+          barcodes: {
+            select: { barcode: true },
+          },
         },
       },
     },
@@ -232,6 +238,19 @@ export class ItemService {
     name: item.name,
 
     barcode: item.barcode,
+
+    // Every barcode ever recorded against any active batch of this
+    // item (primary or alternate) - a batch accumulates more than
+    // one when the same stock gets re-scanned under a different
+    // label. Searched alongside the item's own `barcode` field so a
+    // previously-seen alternate barcode is still found by search.
+    alternateBarcodes: Array.from(
+      new Set(
+        item.batches.flatMap((batch) =>
+          batch.barcodes.map((b) => b.barcode),
+        ),
+      ),
+    ).filter((code) => code !== item.barcode),
 
     purchaseRate: Number(item.purchaseRate),
 

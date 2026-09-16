@@ -28,6 +28,17 @@ interface Props {
     item: ItemLookup,
   ): void;
 
+  /*
+   * Resolves a scanned/typed code against known items (primary or
+   * alternate barcodes, or item code) - lets the row's own Barcode
+   * cell drive item selection directly, purchase-mode only.
+   */
+  onResolveBarcode?(
+    code: string,
+  ): ItemLookup | undefined;
+
+  onBarcodeNotFound?(): void;
+
   onDelete(index: number): void;
 }
 
@@ -59,8 +70,13 @@ export default function TransactionRow({
   mode,
   onChange,
   onItemSelected,
+  onResolveBarcode,
+  onBarcodeNotFound,
   onDelete,
 }: Props) {
+  const barcodeRef =
+    useRef<HTMLInputElement>(null);
+
   const batchRef =
     useRef<HTMLInputElement>(null);
 
@@ -95,6 +111,34 @@ export default function TransactionRow({
     }
   }
 
+  function handleBarcodeKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (
+      mode !== "purchase" ||
+      event.key !== "Enter" ||
+      !onResolveBarcode
+    ) {
+      return;
+    }
+
+    event.preventDefault();
+
+    const code = row.barcode?.trim();
+
+    if (!code) {
+      return;
+    }
+
+    const item = onResolveBarcode(code);
+
+    if (item) {
+      handleItemSelected(item);
+    } else {
+      onBarcodeNotFound?.();
+    }
+  }
+
   function handlePurchaseEnter(
     event: React.KeyboardEvent<HTMLInputElement>,
     next:
@@ -122,6 +166,7 @@ export default function TransactionRow({
       {/* BARCODE */}
       <td className="p-1">
         <Input
+          ref={barcodeRef}
           value={row.barcode}
           onChange={(event) =>
             onChange(
@@ -130,6 +175,7 @@ export default function TransactionRow({
               event.target.value,
             )
           }
+          onKeyDown={handleBarcodeKeyDown}
         />
       </td>
 

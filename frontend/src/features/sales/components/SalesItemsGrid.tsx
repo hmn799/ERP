@@ -17,6 +17,8 @@ import {
   getWarehouseStocks,
 } from "../services/sales-stock.service";
 
+import { itemMatchesExactCode } from "@/lib/item-search";
+
 export interface SalesGridRow {
   itemId: string;
   batchId: string;
@@ -95,6 +97,7 @@ function getItemSearchText(
     item.itemCode,
     item.name,
     item.barcode ?? "",
+    ...(item.alternateBarcodes ?? []),
   ]
     .join(" ")
     .toLowerCase();
@@ -604,14 +607,11 @@ if (rowIndex !== null) {
       }
 
       const exactMatch =
-        items.find(
-          (item) =>
-            getItemSearchText(
-              item,
-            ) ===
-            search
-              .trim()
-              .toLowerCase(),
+        items.find((item) =>
+          itemMatchesExactCode(
+            item,
+            search,
+          ),
         );
 
       if (exactMatch) {

@@ -68,6 +68,14 @@ export interface ItemLookup {
 
   barcode: string | null;
 
+  /*
+   * Other barcodes recorded against this item's batches (e.g. the
+   * same stock re-scanned under a different supplier label) -
+   * matched during search so a previously-seen alternate barcode is
+   * still found, even though it isn't the item's primary barcode.
+   */
+  alternateBarcodes: string[];
+
   purchaseRate: number;
 
   retailRate: number;
