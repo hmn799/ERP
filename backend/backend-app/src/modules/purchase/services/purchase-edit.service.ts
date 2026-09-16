@@ -15,6 +15,8 @@ import { InventoryReversalService } from "./inventory-reversal.service";
 
 import { CreatePurchaseDto } from "../dto/create-purchase.dto";
 
+import { AuditService, AuditActor } from "../../audit/audit.service";
+
 @Injectable()
 export class PurchaseEditService {
   constructor(
@@ -25,11 +27,14 @@ export class PurchaseEditService {
 
     private readonly inventoryReversalService:
       InventoryReversalService,
+
+    private readonly auditService: AuditService,
   ) {}
 
   async editPurchase(
     purchaseBillId: string,
     dto: CreatePurchaseDto,
+    actor?: AuditActor,
   ) {
     return this.prisma.$transaction(
       async (
@@ -266,11 +271,30 @@ export class PurchaseEditService {
         // SAVE UPDATED PURCHASE
         // =====================================
 
-        return this.purchaseSaveService.savePurchase(
-          dto,
-          purchase.id,
-          tx,
-        );
+        const result =
+          await this.purchaseSaveService.savePurchase(
+            dto,
+            purchase.id,
+            tx,
+          );
+
+        // =====================================
+        // AUDIT: BILL EDIT
+        // =====================================
+
+        await this.auditService.record(tx, {
+          actorId: actor?.id,
+          actorName: actor?.name,
+          action: "PURCHASE_UPDATED",
+          entityType: "PurchaseBill",
+          entityId: purchase.id,
+          details: {
+            billNo: purchase.billNo,
+            netAmount: result.netAmount,
+          },
+        });
+
+        return result;
       },
     );
   }

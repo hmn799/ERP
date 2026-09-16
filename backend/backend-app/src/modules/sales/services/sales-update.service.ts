@@ -10,6 +10,7 @@ import { CreateSalesDto } from '../dto/create-sales.dto';
 
 import { SalesStockService } from './sales-stock.service';
 import { SalesCalculationService } from './sales-calculation.service';
+import { AuditService, AuditActor } from '../../audit/audit.service';
 
 @Injectable()
 export class SalesUpdateService {
@@ -18,12 +19,14 @@ export class SalesUpdateService {
     private readonly stockService: SalesStockService,
     private readonly calculationService: SalesCalculationService,
     private readonly ledgerService: LedgerService,
+    private readonly auditService: AuditService,
   ) {}
 
   async updateSales(
     salesBillId: string,
     dto: CreateSalesDto,
     permissions: string[] = [],
+    actor?: AuditActor,
   ) {
     if (!salesBillId?.trim()) {
       throw new Error(
@@ -126,6 +129,7 @@ export class SalesUpdateService {
 
         const {
           itemCalculations,
+          manualDiscountRequested,
           grossAmount,
           totalItemDiscount,
           billDiscountAmount,
@@ -517,6 +521,66 @@ export class SalesUpdateService {
             existingBill.id,
             tx,
           );
+        }
+
+        // =====================================================
+        // AUDIT: BILL EDIT / RATE OVERRIDE / MANUAL DISCOUNT
+        // =====================================================
+
+        await this.auditService.record(tx, {
+          actorId: actor?.id,
+          actorName: actor?.name,
+          action: 'SALE_UPDATED',
+          entityType: 'SalesBill',
+          entityId: existingBill.id,
+          details: {
+            billNo: existingBill.billNo,
+            netAmount,
+            itemCount: itemCalculations.length,
+          },
+        });
+
+        const overriddenItems = itemCalculations
+          .filter((row) => row.hasManualOverride)
+          .map((row) => ({
+            itemId: row.item.itemId,
+            batchId: row.item.batchId,
+            saleRate: row.saleRate,
+          }));
+
+        if (overriddenItems.length > 0) {
+          await this.auditService.record(tx, {
+            actorId: actor?.id,
+            actorName: actor?.name,
+            action: 'RATE_OVERRIDE',
+            entityType: 'SalesBill',
+            entityId: existingBill.id,
+            details: {
+              billNo: existingBill.billNo,
+              items: overriddenItems,
+            },
+          });
+        }
+
+        if (manualDiscountRequested) {
+          await this.auditService.record(tx, {
+            actorId: actor?.id,
+            actorName: actor?.name,
+            action: 'DISCOUNT_APPLIED',
+            entityType: 'SalesBill',
+            entityId: existingBill.id,
+            details: {
+              billNo: existingBill.billNo,
+              billDiscountPercent: dto.billDiscountPercent || 0,
+              itemDiscounts: itemCalculations
+                .filter((row) => Number(row.item.discountPercent || 0) > 0)
+                .map((row) => ({
+                  itemId: row.item.itemId,
+                  batchId: row.item.batchId,
+                  discountPercent: row.item.discountPercent,
+                })),
+            },
+          });
         }
 
         // =====================================================

@@ -17,6 +17,8 @@ import { PurchaseListQueryDto } from "./dto/purchase-list-query.dto";
 import { JwtAuthGuard } from "../auth/guards/jwt-auth.guard";
 import { PermissionsGuard } from "../auth/guards/permissions.guard";
 import { RequirePermissions } from "../auth/decorators/require-permissions.decorator";
+import { CurrentUser } from "../auth/decorators/current-user.decorator";
+import type { AuthUser } from "../auth/types/auth-user.type";
 
 @Controller("purchases")
 export class PurchaseController {
@@ -51,9 +53,11 @@ export class PurchaseController {
   @RequirePermissions("DELETE_PURCHASE")
   cancel(
     @Param("id") id: string,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.purchaseService.cancel(
       id,
+      { id: user.sub, name: user.fullName || user.username },
     );
   }
 

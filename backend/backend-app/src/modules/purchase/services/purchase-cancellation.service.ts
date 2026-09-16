@@ -7,15 +7,18 @@ import {
 import { Prisma } from "@prisma/client";
 
 import { PrismaService } from "../../prisma/prisma.service";
+import { AuditService, AuditActor } from "../../audit/audit.service";
 
 @Injectable()
 export class PurchaseCancellationService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
   ) {}
 
   async cancelPurchase(
     purchaseBillId: string,
+    actor?: AuditActor,
   ) {
     return this.prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
@@ -319,6 +322,22 @@ export class PurchaseCancellationService {
               status: "CANCELLED",
             },
           });
+
+        // =====================================
+        // AUDIT: CANCELLATION
+        // =====================================
+
+        await this.auditService.record(tx, {
+          actorId: actor?.id,
+          actorName: actor?.name,
+          action: "PURCHASE_CANCELLED",
+          entityType: "PurchaseBill",
+          entityId: purchase.id,
+          details: {
+            billNo: purchase.billNo,
+            netAmount: Number(purchase.netAmount),
+          },
+        });
 
         return {
           success: true,

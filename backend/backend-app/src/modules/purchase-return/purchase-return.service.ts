@@ -14,12 +14,15 @@ import { CreatePurchaseReturnDto } from "./dto/create-purchase-return.dto";
 import { DocumentNumberService } from "../../core/document-number/document-number.service";
 import { DocumentType } from "../../core/document-number/document-type.enum";
 
+import { AuditService, AuditActor } from "../audit/audit.service";
+
 @Injectable()
 export class PurchaseReturnService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly ledgerService: LedgerService,
     private readonly documentNumberService: DocumentNumberService,
+    private readonly auditService: AuditService,
   ) {}
 
   // =========================================================
@@ -579,7 +582,7 @@ export class PurchaseReturnService {
   // CANCEL PURCHASE RETURN
   // =========================================================
 
-  async cancel(id: string) {
+  async cancel(id: string, actor?: AuditActor) {
     return this.prisma.$transaction(
       async (tx) => {
         const purchaseReturn =
@@ -709,6 +712,22 @@ export class PurchaseReturnService {
           data: {
             status:
               "CANCELLED",
+          },
+        });
+
+        // -----------------------------------------------------
+        // AUDIT: CANCELLATION
+        // -----------------------------------------------------
+
+        await this.auditService.record(tx, {
+          actorId: actor?.id,
+          actorName: actor?.name,
+          action: "PURCHASE_RETURN_CANCELLED",
+          entityType: "PurchaseReturn",
+          entityId: purchaseReturn.id,
+          details: {
+            returnNo: purchaseReturn.returnNo,
+            netAmount: Number(purchaseReturn.netAmount),
           },
         });
 

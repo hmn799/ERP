@@ -16,6 +16,8 @@ import { UpdatePartyPriceDto } from './dto/update-party-price.dto';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
+import { CurrentUser } from '../auth/decorators/current-user.decorator';
+import type { AuthUser } from '../auth/types/auth-user.type';
 
 @Controller('party-price')
 export class PartyPriceController {
@@ -28,8 +30,12 @@ export class PartyPriceController {
   @RequirePermissions('CHANGE_RATE')
   create(
     @Body() createPartyPriceDto: CreatePartyPriceDto,
+    @CurrentUser() user: AuthUser,
   ) {
-    return this.partyPriceService.create(createPartyPriceDto);
+    return this.partyPriceService.create(
+      createPartyPriceDto,
+      { id: user.sub, name: user.fullName || user.username },
+    );
   }
 
   @Get()
@@ -64,10 +70,12 @@ export class PartyPriceController {
   update(
     @Param('id') id: string,
     @Body() updatePartyPriceDto: UpdatePartyPriceDto,
+    @CurrentUser() user: AuthUser,
   ) {
     return this.partyPriceService.update(
       id,
       updatePartyPriceDto,
+      { id: user.sub, name: user.fullName || user.username },
     );
   }
 

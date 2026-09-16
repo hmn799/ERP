@@ -11,6 +11,7 @@ import { PurchaseSaveService } from "./services/purchase-save.service";
 import { PurchaseEditService } from "./services/purchase-edit.service";
 import { PurchaseListService } from "./services/purchase-list.service";
 import { PurchaseCancellationService } from "./services/purchase-cancellation.service";
+import { AuditActor } from "../audit/audit.service";
 
 @Injectable()
 export class PurchaseService {
@@ -46,18 +47,22 @@ export class PurchaseService {
   async update(
     id: string,
     dto: CreatePurchaseDto,
+    actor?: AuditActor,
   ) {
     return this.purchaseEditService.editPurchase(
       id,
       dto,
+      actor,
     );
   }
 
   async cancel(
     id: string,
+    actor?: AuditActor,
   ) {
     return this.purchaseCancellationService.cancelPurchase(
       id,
+      actor,
     );
   }
 

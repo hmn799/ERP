@@ -386,6 +386,7 @@ export class SalesCalculationService {
         calc,
         freeQty: item.freeQty || 0,
         schemeId: item.schemeId,
+        hasManualOverride,
       });
     }
 
@@ -584,6 +585,8 @@ export class SalesCalculationService {
       warehouse,
 
       itemCalculations,
+
+      manualDiscountRequested,
 
       grossAmount,
       totalItemDiscount,

@@ -251,6 +251,12 @@ export const NAVIGATION: NavigationGroup[] = [
         href: ROUTES.SHORTCUTS,
       },
       {
+        id: "audit-log",
+        title: "Audit Log",
+        href: ROUTES.AUDIT_LOG,
+        permission: "VIEW_AUDIT_LOG",
+      },
+      {
         id: "document-series",
         title: "Document Series",
         href: ROUTES.DOCUMENT_SERIES,

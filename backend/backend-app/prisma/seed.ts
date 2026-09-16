@@ -44,6 +44,7 @@ async function main() {
     "APPLY_DISCOUNT",
     "MANAGE_USERS",
     "MANAGE_SETTINGS",
+    "VIEW_AUDIT_LOG",
   ];
 
   for (const code of permissions) {

@@ -33,9 +33,11 @@ import { SchemeModule } from './modules/scheme/scheme.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ShortcutModule } from './modules/shortcut/shortcut.module';
 import { RoleModule } from './modules/role/role.module';
+import { AuditModule } from './modules/audit/audit.module';
 @Module({
   imports: [
     PrismaModule,
+    AuditModule,
     SupplierModule,
     PurchaseModule,
     RouteModule,

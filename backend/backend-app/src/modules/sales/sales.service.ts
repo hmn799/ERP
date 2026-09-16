@@ -6,6 +6,7 @@ import { CreateSalesDto } from './dto/create-sales.dto';
 
 import { SalesSaveService } from './services/sales-save.service';
 import { SalesCalculationService } from './services/sales-calculation.service';
+import { AuditActor } from '../audit/audit.service';
 
 @Injectable()
 export class SalesService {
@@ -18,10 +19,12 @@ export class SalesService {
   async create(
     dto: CreateSalesDto,
     permissions: string[] = [],
+    actor?: AuditActor,
   ) {
     return this.salesSaveService.saveSales(
       dto,
       permissions,
+      actor,
     );
   }
 

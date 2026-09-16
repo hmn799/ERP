@@ -993,6 +993,25 @@ model LedgerEntry {
   createdAt DateTime @default(now())
 }
 
+model AuditLog {
+  id String @id @default(cuid())
+
+  actorId   String?
+  actorName String?
+
+  action     String
+  entityType String
+  entityId   String?
+
+  details Json?
+
+  createdAt DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId])
+  @@index([createdAt])
+}
+
 model PurchaseOrder {
   id String @id @default(cuid())
 

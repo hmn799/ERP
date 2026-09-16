@@ -41,6 +41,9 @@ export class SalesController {
     return this.salesService.create(
       dto,
       user?.permissions,
+      user
+        ? { id: user.sub, name: user.fullName || user.username }
+        : undefined,
     );
   }
 
@@ -101,6 +104,9 @@ update(
     id,
     dto,
     user?.permissions,
+    user
+      ? { id: user.sub, name: user.fullName || user.username }
+      : undefined,
   );
 }
 

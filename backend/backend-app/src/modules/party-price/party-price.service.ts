@@ -11,13 +11,19 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreatePartyPriceDto } from './dto/create-party-price.dto';
 import { UpdatePartyPriceDto } from './dto/update-party-price.dto';
 
+import { AuditService, AuditActor } from '../audit/audit.service';
+
 @Injectable()
 export class PartyPriceService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly auditService: AuditService,
   ) {}
 
-  async create(dto: CreatePartyPriceDto) {
+  async create(
+    dto: CreatePartyPriceDto,
+    actor?: AuditActor,
+  ) {
     await this.validateCreate(dto);
 
     return this.prisma.$transaction(async (tx) => {
@@ -45,6 +51,19 @@ export class PartyPriceService {
         include: {
           customer: true,
           item: true,
+        },
+      });
+
+      await this.auditService.record(tx, {
+        actorId: actor?.id,
+        actorName: actor?.name,
+        action: 'PARTY_PRICE_SET',
+        entityType: 'PartyPrice',
+        entityId: partyPrice.id,
+        details: {
+          customerId: partyPrice.customerId,
+          itemId: partyPrice.itemId,
+          salePrice: partyPrice.salePrice,
         },
       });
 
@@ -144,6 +163,7 @@ export class PartyPriceService {
     async update(
     id: string,
     dto: UpdatePartyPriceDto,
+    actor?: AuditActor,
   ) {
     const existing =
       await this.prisma.partyPrice.findUnique({
@@ -158,7 +178,7 @@ export class PartyPriceService {
 
     await this.validateUpdate(existing, dto);
 
-    return this.prisma.partyPrice.update({
+    const updated = await this.prisma.partyPrice.update({
       where: { id },
       data: {
         salePrice:
@@ -193,6 +213,22 @@ export class PartyPriceService {
         item: true,
       },
     });
+
+    await this.auditService.record(this.prisma, {
+      actorId: actor?.id,
+      actorName: actor?.name,
+      action: 'PARTY_PRICE_UPDATED',
+      entityType: 'PartyPrice',
+      entityId: updated.id,
+      details: {
+        customerId: updated.customerId,
+        itemId: updated.itemId,
+        salePrice: updated.salePrice,
+        previousSalePrice: existing.salePrice,
+      },
+    });
+
+    return updated;
   }
 
   async remove(id: string) {
