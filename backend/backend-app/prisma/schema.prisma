@@ -1017,6 +1017,27 @@ model BackupRun {
   @@index([startedAt])
 }
 
+model SystemAlert {
+  id String @id @default(cuid())
+
+  category String
+  severity String
+
+  message String
+  source  String?
+  details Json?
+
+  acknowledgedAt     DateTime?
+  acknowledgedById   String?
+  acknowledgedByName String?
+
+  createdAt DateTime @default(now())
+
+  @@index([category])
+  @@index([severity])
+  @@index([createdAt])
+}
+
 model AuditLog {
   id String @id @default(cuid())
 

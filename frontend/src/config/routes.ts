@@ -47,5 +47,6 @@ export const ROUTES = {
   SHORTCUTS: "/admin/shortcuts",
   AUDIT_LOG: "/admin/audit-log",
   BACKUPS: "/admin/backups",
+  MONITORING: "/admin/monitoring",
   DOCUMENT_SERIES: "/admin/document-series",
 } as const;

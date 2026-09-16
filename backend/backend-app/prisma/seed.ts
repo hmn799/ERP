@@ -46,6 +46,7 @@ async function main() {
     "MANAGE_SETTINGS",
     "VIEW_AUDIT_LOG",
     "MANAGE_BACKUPS",
+    "VIEW_MONITORING",
   ];
 
   for (const code of permissions) {

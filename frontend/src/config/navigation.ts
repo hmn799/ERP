@@ -263,6 +263,12 @@ export const NAVIGATION: NavigationGroup[] = [
         permission: "MANAGE_BACKUPS",
       },
       {
+        id: "monitoring",
+        title: "Monitoring",
+        href: ROUTES.MONITORING,
+        permission: "VIEW_MONITORING",
+      },
+      {
         id: "document-series",
         title: "Document Series",
         href: ROUTES.DOCUMENT_SERIES,

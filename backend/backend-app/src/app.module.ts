@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { APP_FILTER } from '@nestjs/core';
 import { ScheduleModule } from '@nestjs/schedule';
 
 import { AppController } from './app.controller';
@@ -36,12 +37,15 @@ import { ShortcutModule } from './modules/shortcut/shortcut.module';
 import { RoleModule } from './modules/role/role.module';
 import { AuditModule } from './modules/audit/audit.module';
 import { BackupModule } from './modules/backup/backup.module';
+import { MonitoringModule } from './modules/monitoring/monitoring.module';
+import { GlobalExceptionFilter } from './core/monitoring/global-exception.filter';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
     PrismaModule,
     AuditModule,
     BackupModule,
+    MonitoringModule,
     SupplierModule,
     PurchaseModule,
     RouteModule,
@@ -74,6 +78,12 @@ import { BackupModule } from './modules/backup/backup.module';
 
   ],
   controllers: [AppController],
-  providers: [AppService],
+  providers: [
+    AppService,
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+  ],
 })
 export class AppModule {}

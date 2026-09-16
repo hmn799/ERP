@@ -3,11 +3,15 @@ import {
   Get,
   Param,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 
 import { ReportsService } from './reports.service';
 
+import { SlowQueryInterceptor } from '../../core/monitoring/slow-query.interceptor';
+
 @Controller('reports')
+@UseInterceptors(SlowQueryInterceptor)
 export class ReportsController {
   constructor(
     private readonly reportsService: ReportsService,

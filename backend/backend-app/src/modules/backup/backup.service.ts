@@ -16,6 +16,7 @@ import { PrismaClient } from '@prisma/client';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { AuditService, AuditActor } from '../audit/audit.service';
+import { MonitoringService } from '../monitoring/monitoring.service';
 
 import { QueryBackupRunsDto } from './dto/query-backup-runs.dto';
 import {
@@ -38,6 +39,7 @@ export class BackupService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly auditService: AuditService,
+    private readonly monitoringService: MonitoringService,
   ) {}
 
   private backupDir(): string {
@@ -180,6 +182,14 @@ export class BackupService {
         entityId: run.id,
         details: { trigger, error: message },
       });
+
+      await this.monitoringService.recordAlert(
+        'BACKUP_FAILURE',
+        'CRITICAL',
+        `Backup failed (${trigger}): ${message}`,
+        { runId: run.id, trigger },
+        'backup-service',
+      );
 
       throw error;
     }
