@@ -990,7 +990,66 @@ model LedgerEntry {
 
   remarks String?
 
+  // Set only on RECEIPT/PAYMENT entries that were collected into or
+  // paid out of a bank account - what bank reconciliation matches
+  // against. Left null for cash and for non-money-movement entries
+  // (SALE, PURCHASE, etc.).
+  bankAccountId String?
+
   createdAt DateTime @default(now())
+
+  @@index([bankAccountId])
+}
+
+model BankAccount {
+  id String @id @default(cuid())
+
+  name          String
+  bankName      String
+  accountNumber String
+  ifscCode      String?
+
+  openingBalance Decimal @default(0) @db.Decimal(14, 2)
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  transactions BankTransaction[]
+
+  @@index([isActive])
+}
+
+model BankTransaction {
+  id String @id @default(cuid())
+
+  bankAccountId String
+  bankAccount   BankAccount @relation(fields: [bankAccountId], references: [id])
+
+  transactionDate DateTime
+  description     String
+  referenceNo     String?
+
+  debitAmount  Decimal @default(0) @db.Decimal(14, 2)
+  creditAmount Decimal @default(0) @db.Decimal(14, 2)
+
+  // UNMATCHED | MATCHED | IGNORED
+  status String @default("UNMATCHED")
+
+  // Loose reference to LedgerEntry.id, not a relation - matches this
+  // schema's existing style for LedgerEntry's own party/reference
+  // fields.
+  matchedLedgerEntryId String?
+
+  // MANUAL | IMPORTED
+  source String @default("MANUAL")
+
+  createdAt DateTime @default(now())
+
+  @@index([bankAccountId])
+  @@index([status])
+  @@index([transactionDate])
 }
 
 model BackupRun {

@@ -167,6 +167,8 @@ export class LedgerService {
         creditAmount: dto.amount,
 
         remarks: dto.remarks,
+
+        bankAccountId: dto.bankAccountId,
       },
     });
   }
@@ -202,6 +204,8 @@ export class LedgerService {
         creditAmount: 0,
 
         remarks: dto.remarks,
+
+        bankAccountId: dto.bankAccountId,
       },
     });
   }
@@ -238,6 +242,7 @@ export class LedgerService {
         customerMap.get(row.partyId)?.customerCode ?? "",
       amount: Number(row.creditAmount),
       remarks: row.remarks,
+      bankAccountId: row.bankAccountId,
     }));
   }
 
@@ -273,6 +278,7 @@ export class LedgerService {
         supplierMap.get(row.partyId)?.supplierCode ?? "",
       amount: Number(row.debitAmount),
       remarks: row.remarks,
+      bankAccountId: row.bankAccountId,
     }));
   }
 

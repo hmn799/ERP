@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 
 import CustomerService from "@/services/customer/customer.service";
 import LedgerService from "@/services/ledger/ledger.service";
+import BankAccountService from "@/services/bank/bank-account.service";
 
 import type { CreateReceiptDto } from "../../types/ledger.types";
 
@@ -33,12 +34,19 @@ export default function ReceiptForm({
     queryFn: CustomerService.getAll,
   });
 
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ["bank-accounts"],
+    queryFn: BankAccountService.getAll,
+    retry: false,
+  });
+
   const [customerId, setCustomerId] = useState("");
   const [amount, setAmount] = useState("");
   const [receiptDate, setReceiptDate] = useState(
     () => new Date().toISOString().slice(0, 10),
   );
   const [remarks, setRemarks] = useState("");
+  const [bankAccountId, setBankAccountId] = useState("");
 
   const [outstanding, setOutstanding] = useState<
     number | null
@@ -79,6 +87,7 @@ export default function ReceiptForm({
             receiptDate,
           ).toISOString(),
           remarks: remarks || undefined,
+          bankAccountId: bankAccountId || undefined,
         });
       }}
     >
@@ -139,6 +148,27 @@ export default function ReceiptForm({
         placeholder="Remarks (optional)"
         onChange={(e) => setRemarks(e.target.value)}
       />
+
+      {bankAccounts.length > 0 && (
+        <select
+          value={bankAccountId}
+          disabled={loading}
+          onChange={(e) =>
+            setBankAccountId(e.target.value)
+          }
+          className="w-full rounded-md border px-3 py-2 text-sm"
+        >
+          <option value="">
+            Cash (not deposited to a bank account)
+          </option>
+
+          {bankAccounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name} - {account.bankName}
+            </option>
+          ))}
+        </select>
+      )}
     </form>
   );
 }

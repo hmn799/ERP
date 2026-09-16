@@ -22,4 +22,8 @@ export class CreateReceiptDto {
   @IsOptional()
   @IsString()
   remarks?: string;
+
+  @IsOptional()
+  @IsString()
+  bankAccountId?: string;
 }

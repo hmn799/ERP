@@ -6,6 +6,7 @@ export interface Receipt {
   customerCode: string;
   amount: number;
   remarks?: string | null;
+  bankAccountId?: string | null;
 }
 
 export interface CreateReceiptDto {
@@ -13,6 +14,7 @@ export interface CreateReceiptDto {
   amount: number;
   receiptDate: string;
   remarks?: string;
+  bankAccountId?: string;
 }
 
 export interface Payment {
@@ -23,6 +25,7 @@ export interface Payment {
   supplierCode: string;
   amount: number;
   remarks?: string | null;
+  bankAccountId?: string | null;
 }
 
 export interface CreatePaymentDto {
@@ -30,6 +33,7 @@ export interface CreatePaymentDto {
   amount: number;
   paymentDate: string;
   remarks?: string;
+  bankAccountId?: string;
 }
 
 export interface LedgerRow {

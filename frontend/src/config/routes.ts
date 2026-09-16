@@ -31,6 +31,7 @@ export const ROUTES = {
   RECEIPTS: "/accounts/receipts",
   PAYMENTS: "/accounts/payments",
   LEDGER: "/accounts/ledger",
+  BANK_RECONCILIATION: "/accounts/bank-reconciliation",
 
   // Reports
   SALES_REPORT: "/reports/sales",
@@ -49,5 +50,6 @@ export const ROUTES = {
   AUDIT_LOG: "/admin/audit-log",
   BACKUPS: "/admin/backups",
   MONITORING: "/admin/monitoring",
+  BANK_ACCOUNTS: "/admin/bank-accounts",
   DOCUMENT_SERIES: "/admin/document-series",
 } as const;

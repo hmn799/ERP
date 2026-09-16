@@ -189,6 +189,12 @@ export const NAVIGATION: NavigationGroup[] = [
         title: "Ledger",
         href: ROUTES.LEDGER,
       },
+      {
+        id: "bank-reconciliation",
+        title: "Bank Reconciliation",
+        href: ROUTES.BANK_RECONCILIATION,
+        permission: "MANAGE_BANK_RECONCILIATION",
+      },
     ],
   },
 
@@ -273,6 +279,12 @@ export const NAVIGATION: NavigationGroup[] = [
         title: "Monitoring",
         href: ROUTES.MONITORING,
         permission: "VIEW_MONITORING",
+      },
+      {
+        id: "bank-accounts",
+        title: "Bank Accounts",
+        href: ROUTES.BANK_ACCOUNTS,
+        permission: "MANAGE_BANK_RECONCILIATION",
       },
       {
         id: "document-series",

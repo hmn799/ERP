@@ -47,6 +47,7 @@ async function main() {
     "VIEW_AUDIT_LOG",
     "MANAGE_BACKUPS",
     "VIEW_MONITORING",
+    "MANAGE_BANK_RECONCILIATION",
   ];
 
   for (const code of permissions) {

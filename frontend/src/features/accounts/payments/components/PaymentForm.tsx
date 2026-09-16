@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 
 import SupplierService from "@/services/supplier/supplier.service";
 import LedgerService from "@/services/ledger/ledger.service";
+import BankAccountService from "@/services/bank/bank-account.service";
 
 import type { CreatePaymentDto } from "../../types/ledger.types";
 
@@ -33,12 +34,19 @@ export default function PaymentForm({
     queryFn: SupplierService.getAll,
   });
 
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ["bank-accounts"],
+    queryFn: BankAccountService.getAll,
+    retry: false,
+  });
+
   const [supplierId, setSupplierId] = useState("");
   const [amount, setAmount] = useState("");
   const [paymentDate, setPaymentDate] = useState(
     () => new Date().toISOString().slice(0, 10),
   );
   const [remarks, setRemarks] = useState("");
+  const [bankAccountId, setBankAccountId] = useState("");
 
   const [outstanding, setOutstanding] = useState<
     number | null
@@ -79,6 +87,7 @@ export default function PaymentForm({
             paymentDate,
           ).toISOString(),
           remarks: remarks || undefined,
+          bankAccountId: bankAccountId || undefined,
         });
       }}
     >
@@ -139,6 +148,27 @@ export default function PaymentForm({
         placeholder="Remarks (optional)"
         onChange={(e) => setRemarks(e.target.value)}
       />
+
+      {bankAccounts.length > 0 && (
+        <select
+          value={bankAccountId}
+          disabled={loading}
+          onChange={(e) =>
+            setBankAccountId(e.target.value)
+          }
+          className="w-full rounded-md border px-3 py-2 text-sm"
+        >
+          <option value="">
+            Cash (not paid from a bank account)
+          </option>
+
+          {bankAccounts.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.name} - {account.bankName}
+            </option>
+          ))}
+        </select>
+      )}
     </form>
   );
 }
