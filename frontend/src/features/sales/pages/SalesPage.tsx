@@ -19,6 +19,7 @@ import {
   createSale,
   deleteHeldSale,
   getBatches,
+  getCustomerBillingSummary,
   getCustomerPartyPrices,
   getCustomerLedger,
   getCustomers,
@@ -38,6 +39,7 @@ import type {
 } from "../services/sales.service";
 
 import {
+  CustomerBillingSummary,
   CustomerLookup,
   HeldSale,
   SalesBatchLookup,
@@ -199,6 +201,16 @@ const [originalRows, setOriginalRows] =
   const [
     customerLedgerLoading,
     setCustomerLedgerLoading,
+  ] = useState(false);
+
+  const [customerSummary, setCustomerSummary] =
+    useState<CustomerBillingSummary | null>(
+      null,
+    );
+
+  const [
+    customerSummaryLoading,
+    setCustomerSummaryLoading,
   ] = useState(false);
 
   const [loading, setLoading] =
@@ -670,6 +682,60 @@ setRows(
     }
 
     loadOutstanding();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [customerId]);
+
+  /*
+   * =====================================================
+   * PARTY DASHBOARD
+   *
+   * Total sales, top items, and purchase history for the
+   * selected customer.
+   * =====================================================
+   */
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCustomerSummary() {
+      if (!customerId) {
+        setCustomerSummary(null);
+        return;
+      }
+
+      try {
+        setCustomerSummaryLoading(true);
+
+        const summary =
+          await getCustomerBillingSummary(
+            customerId,
+          );
+
+        if (!cancelled) {
+          setCustomerSummary(summary);
+        }
+      } catch (err) {
+        console.error(
+          "Failed to load customer billing summary:",
+          err,
+        );
+
+        if (!cancelled) {
+          setCustomerSummary(null);
+        }
+      } finally {
+        if (!cancelled) {
+          setCustomerSummaryLoading(
+            false,
+          );
+        }
+      }
+    }
+
+    loadCustomerSummary();
 
     return () => {
       cancelled = true;
@@ -2764,6 +2830,12 @@ setRows(
         }
         customerLedgerLoading={
           customerLedgerLoading
+        }
+        customerSummary={
+          customerSummary
+        }
+        customerSummaryLoading={
+          customerSummaryLoading
         }
         onBillNoChange={
           setBillNo

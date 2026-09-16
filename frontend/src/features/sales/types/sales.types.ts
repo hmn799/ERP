@@ -142,6 +142,29 @@ export interface SalesResponse {
   updatedAt?: string;
 }
 
+export interface CustomerBillingSummaryTopItem {
+  itemId: string;
+  itemCode: string;
+  itemName: string;
+  qty: number;
+  value: number;
+}
+
+export interface CustomerBillingSummaryBill {
+  id: string;
+  billNo: string;
+  billDate: string;
+  netAmount: number;
+  itemCount: number;
+}
+
+export interface CustomerBillingSummary {
+  totalSales: number;
+  billCount: number;
+  topItems: CustomerBillingSummaryTopItem[];
+  purchaseHistory: CustomerBillingSummaryBill[];
+}
+
 export interface HeldSale {
   id: string;
 

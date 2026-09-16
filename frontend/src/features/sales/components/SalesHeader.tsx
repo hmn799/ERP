@@ -8,6 +8,7 @@ import {
 } from "react";
 
 import {
+  CustomerBillingSummary,
   CustomerLookup,
   WarehouseLookup,
 } from "../types/sales.types";
@@ -28,6 +29,9 @@ interface SalesHeaderProps {
 
   customerOutstanding?: number;
   customerLedgerLoading?: boolean;
+
+  customerSummary?: CustomerBillingSummary | null;
+  customerSummaryLoading?: boolean;
 
   onBillNoChange: (value: string) => void;
   onBillDateChange: (value: string) => void;
@@ -63,6 +67,8 @@ export default function SalesHeader({
   isEditMode = false,
   customerOutstanding = 0,
   customerLedgerLoading = false,
+  customerSummary = null,
+  customerSummaryLoading = false,
   onBillNoChange,
   onBillDateChange,
   onCustomerChange,
@@ -599,6 +605,109 @@ export default function SalesHeader({
                     )}
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* PARTY DASHBOARD */}
+
+            {selectedCustomer && (
+              <div className="mt-2 rounded border bg-gray-50 p-2 text-xs">
+                <div className="mb-2 flex items-center justify-between">
+                  <span className="font-semibold text-gray-700">
+                    Total Sales
+                  </span>
+
+                  <span className="font-semibold">
+                    {customerSummaryLoading
+                      ? "Loading..."
+                      : `₹${money(
+                          customerSummary?.totalSales ??
+                            0,
+                        )}`}
+                  </span>
+                </div>
+
+                {!customerSummaryLoading &&
+                  customerSummary && (
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <div className="mb-1 font-semibold text-gray-700">
+                          Top Items
+                        </div>
+
+                        {customerSummary.topItems
+                          .length === 0 ? (
+                          <div className="text-gray-400">
+                            No sales yet.
+                          </div>
+                        ) : (
+                          <ul className="space-y-0.5">
+                            {customerSummary.topItems.map(
+                              (item) => (
+                                <li
+                                  key={
+                                    item.itemId
+                                  }
+                                  className="flex justify-between gap-2"
+                                >
+                                  <span className="truncate">
+                                    {
+                                      item.itemName
+                                    }
+                                  </span>
+
+                                  <span className="shrink-0 text-gray-500">
+                                    x
+                                    {
+                                      item.qty
+                                    }
+                                  </span>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        )}
+                      </div>
+
+                      <div>
+                        <div className="mb-1 font-semibold text-gray-700">
+                          Purchase History
+                        </div>
+
+                        {customerSummary
+                          .purchaseHistory
+                          .length === 0 ? (
+                          <div className="text-gray-400">
+                            No bills yet.
+                          </div>
+                        ) : (
+                          <ul className="max-h-24 space-y-0.5 overflow-y-auto">
+                            {customerSummary.purchaseHistory.map(
+                              (bill) => (
+                                <li
+                                  key={bill.id}
+                                  className="flex justify-between gap-2"
+                                >
+                                  <span className="truncate">
+                                    {
+                                      bill.billNo
+                                    }
+                                  </span>
+
+                                  <span className="shrink-0 text-gray-500">
+                                    ₹
+                                    {money(
+                                      bill.netAmount,
+                                    )}
+                                  </span>
+                                </li>
+                              ),
+                            )}
+                          </ul>
+                        )}
+                      </div>
+                    </div>
+                  )}
               </div>
             )}
           </div>

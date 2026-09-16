@@ -8,6 +8,99 @@ export class ReportsService {
     private readonly prisma: PrismaService,
   ) {}
 
+  /*
+   * =====================================================
+   * CUSTOMER BILLING DASHBOARD
+   *
+   * Backs the party dashboard shown in the billing
+   * screen: total sales, top items bought, and purchase
+   * history (oldest first), scoped to one customer.
+   * =====================================================
+   */
+
+  async customerBillingSummary(
+    customerId: string,
+  ) {
+    const bills =
+      await this.prisma.salesBill.findMany({
+        where: { customerId },
+        include: {
+          items: {
+            include: { item: true },
+          },
+        },
+        orderBy: { billDate: 'asc' },
+      });
+
+    let totalSales = 0;
+
+    const itemMap = new Map<
+      string,
+      {
+        itemId: string;
+        itemCode: string;
+        itemName: string;
+        qty: number;
+        value: number;
+      }
+    >();
+
+    for (const bill of bills) {
+      totalSales += Number(bill.netAmount);
+
+      for (const line of bill.items) {
+        const existing = itemMap.get(
+          line.itemId,
+        );
+
+        if (existing) {
+          existing.qty += Number(line.qty);
+          existing.value += Number(
+            line.netAmount,
+          );
+        } else {
+          itemMap.set(line.itemId, {
+            itemId: line.itemId,
+            itemCode: line.item.itemCode,
+            itemName: line.item.name,
+            qty: Number(line.qty),
+            value: Number(line.netAmount),
+          });
+        }
+      }
+    }
+
+    const topItems = Array.from(
+      itemMap.values(),
+    )
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5)
+      .map((row) => ({
+        ...row,
+        qty: Number(row.qty.toFixed(2)),
+        value: Number(row.value.toFixed(2)),
+      }));
+
+    const purchaseHistory = bills.map(
+      (bill) => ({
+        id: bill.id,
+        billNo: bill.billNo,
+        billDate: bill.billDate,
+        netAmount: Number(bill.netAmount),
+        itemCount: bill.items.length,
+      }),
+    );
+
+    return {
+      totalSales: Number(
+        totalSales.toFixed(2),
+      ),
+      billCount: bills.length,
+      topItems,
+      purchaseHistory,
+    };
+  }
+
   async supplierOutstanding() {
     const suppliers =
       await this.prisma.supplier.findMany({

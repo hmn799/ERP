@@ -30,6 +30,15 @@ export class ReportsController {
     return this.reportsService.customerLedger(id);
   }
 
+  @Get('customer-billing-summary/:id')
+  customerBillingSummary(
+    @Param('id') id: string,
+  ) {
+    return this.reportsService.customerBillingSummary(
+      id,
+    );
+  }
+
   @Get('supplier-ledger/:id')
   supplierLedger(
     @Param('id') id: string,

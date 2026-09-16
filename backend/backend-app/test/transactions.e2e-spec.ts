@@ -380,4 +380,65 @@ describe('Core transactions (e2e)', () => {
 
     expect(new Set(billNos).size).toBe(attempts);
   });
+
+  it('customer billing summary reports total sales, top items, and purchase history', async () => {
+    const suffix = Date.now().toString(36);
+
+    const customer = await prisma.customer.create({
+      data: {
+        customerCode: `SUMCUST-${suffix}`,
+        name: `Summary Customer ${suffix}`,
+        customerGroup: 'RETAIL',
+        gstCategory: 'UNREGISTERED',
+      },
+    });
+
+    const purchaseRes = await request(server)
+      .post('/api/purchases')
+      .send(purchasePayload({ qty: 20, purchaseRate: 54, mrp: 104 }))
+      .expect(201);
+
+    const detail = await request(server)
+      .get(`/api/purchases/${purchaseRes.body.id}`)
+      .expect(200);
+
+    const batchId = detail.body.items[0].batchId;
+
+    const saleRes = await request(server)
+      .post('/api/sales')
+      .send({
+        billDate: new Date().toISOString(),
+        warehouseId,
+        customerId: customer.id,
+        items: [
+          {
+            itemId,
+            batchId,
+            qty: 3,
+            discountPercent: 0,
+            gstPercent: 18,
+            saleRate: 80,
+          },
+        ],
+        payments: [{ paymentMode: 'CASH', amount: 283.2 }],
+      })
+      .expect(201);
+
+    const summary = await request(server)
+      .get(`/api/reports/customer-billing-summary/${customer.id}`)
+      .expect(200);
+
+    expect(summary.body.billCount).toBe(1);
+    expect(Number(summary.body.totalSales)).toBeCloseTo(
+      Number(saleRes.body.netAmount),
+      2,
+    );
+    expect(summary.body.topItems).toHaveLength(1);
+    expect(summary.body.topItems[0].itemId).toBe(itemId);
+    expect(summary.body.topItems[0].qty).toBe(3);
+    expect(summary.body.purchaseHistory).toHaveLength(1);
+    expect(summary.body.purchaseHistory[0].billNo).toBe(
+      saleRes.body.billNo,
+    );
+  });
 });

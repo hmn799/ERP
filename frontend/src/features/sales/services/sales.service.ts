@@ -1,6 +1,7 @@
 import {
   CreateCustomerDto,
   CreateSalesDto,
+  CustomerBillingSummary,
   CustomerLedgerEntry,
   CustomerLookup,
   HeldSale,
@@ -307,6 +308,14 @@ export function getCustomerLedger(
 ) {
   return get<CustomerLedgerEntry[]>(
     `${API_URL}/ledger/customer/${customerId}`,
+  );
+}
+
+export function getCustomerBillingSummary(
+  customerId: string,
+) {
+  return get<CustomerBillingSummary>(
+    `${API_URL}/reports/customer-billing-summary/${customerId}`,
   );
 }
 
