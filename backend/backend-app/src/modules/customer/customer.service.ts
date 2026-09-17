@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
+import { Prisma } from "@prisma/client";
+
 import { PrismaService } from "../prisma/prisma.service";
 
 import { CreateCustomerDto } from "./dto/create-customer.dto";
@@ -11,41 +13,89 @@ export class CustomerService {
     private prisma: PrismaService,
   ) {}
 
-  create(dto: CreateCustomerDto) {
-    return this.prisma.customer.create({
-      data: {
-        customerCode: dto.customerCode,
-        name: dto.name,
+  async create(dto: CreateCustomerDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const customerCode =
+        dto.customerCode?.trim() ||
+        (await this.nextCustomerCode(tx));
 
-        customerGroup: dto.customerGroup,
-        priceLevel: dto.priceLevel,
-        priceListId: dto.priceListId,
+      return tx.customer.create({
+        data: {
+          customerCode,
+          name: dto.name,
 
-        gstCategory: dto.gstCategory,
-        gstin: dto.gstin,
+          customerGroup: dto.customerGroup,
+          priceLevel: dto.priceLevel,
+          priceListId: dto.priceListId,
 
-        mobile: dto.mobile,
-        email: dto.email,
+          gstCategory: dto.gstCategory,
+          gstin: dto.gstin,
 
-        address: dto.address,
-        city: dto.city,
-        state: dto.state,
-        pincode: dto.pincode,
+          mobile: dto.mobile,
+          email: dto.email,
 
-        openingBalance: dto.openingBalance ?? 0,
-        creditLimit: dto.creditLimit ?? 0,
+          address: dto.address,
+          city: dto.city,
+          state: dto.state,
+          pincode: dto.pincode,
 
-        routeId: dto.routeId,
-        salesmanId: dto.salesmanId,
+          openingBalance: dto.openingBalance ?? 0,
+          creditLimit: dto.creditLimit ?? 0,
 
-        isActive: dto.isActive ?? true,
+          routeId: dto.routeId,
+          salesmanId: dto.salesmanId,
+
+          isActive: dto.isActive ?? true,
+        },
+        include: {
+          priceList: true,
+          route: true,
+          salesman: true,
+        },
+      });
+    });
+  }
+
+  /*
+   * CUS00001, CUS00002, ... - based on the highest existing code
+   * that already matches this pattern, so legacy/manually-entered
+   * codes in other formats never disrupt numbering. Runs inside the
+   * caller's transaction so a concurrent create can't compute the
+   * same next number.
+   */
+  private async nextCustomerCode(
+    tx: Prisma.TransactionClient,
+  ) {
+    const customers = await tx.customer.findMany({
+      where: {
+        customerCode: {
+          startsWith: "CUS",
+        },
       },
-      include: {
-        priceList: true,
-        route: true,
-        salesman: true,
+      select: {
+        customerCode: true,
       },
     });
+
+    const maxNumber = customers.reduce(
+      (max, customer) => {
+        const match =
+          customer.customerCode.match(
+            /^CUS(\d+)$/,
+          );
+
+        const value = match
+          ? parseInt(match[1], 10)
+          : 0;
+
+        return Math.max(max, value);
+      },
+      0,
+    );
+
+    return `CUS${(maxNumber + 1)
+      .toString()
+      .padStart(5, "0")}`;
   }
 
   findAll() {

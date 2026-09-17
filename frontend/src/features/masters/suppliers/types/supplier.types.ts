@@ -27,7 +27,11 @@ export interface Supplier {
 }
 
 export interface CreateSupplierDto {
-  supplierCode: string;
+  /*
+   * Optional - when omitted, the backend generates one
+   * (SUP00001, SUP00002, ...).
+   */
+  supplierCode?: string;
 
   name: string;
 

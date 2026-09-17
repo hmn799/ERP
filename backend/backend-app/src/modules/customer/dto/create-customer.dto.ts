@@ -8,9 +8,15 @@ import {
 } from "class-validator";
 
 export class CreateCustomerDto {
+  /*
+   * Optional - when omitted, CustomerService.create() generates one
+   * (CUS00001, CUS00002, ...). Still accepted when supplied, so
+   * existing callers (e.g. bulk import) keep working unchanged.
+   */
+  @IsOptional()
   @IsString()
   @MaxLength(30)
-  customerCode: string;
+  customerCode?: string;
 
   @IsString()
   @MaxLength(150)

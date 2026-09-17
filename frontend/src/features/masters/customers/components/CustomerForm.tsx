@@ -21,7 +21,12 @@ interface PriceList {
 }
 
 export interface CustomerFormValues {
-  customerCode: string;
+  /*
+   * Optional - left out on create so the backend generates one
+   * (CUS00001, CUS00002, ...). Still editable once a customer
+   * exists, in case a typo needs fixing.
+   */
+  customerCode?: string;
 
   name: string;
 
@@ -110,13 +115,15 @@ export default function CustomerForm({
     PriceList[]
   >([]);
 
+  const isEditMode = Boolean(defaultValues);
+
   useEffect(() => {
     priceListService.getAll().then(setPriceLists);
   }, []);
 
   useEffect(() => {
     if (defaultValues) {
-      setCustomerCode(defaultValues.customerCode);
+      setCustomerCode(defaultValues.customerCode ?? "");
 
       setName(defaultValues.name);
 
@@ -161,7 +168,9 @@ export default function CustomerForm({
         e.preventDefault();
 
         onSubmit({
-          customerCode,
+          customerCode: isEditMode
+            ? customerCode
+            : undefined,
           name,
           customerGroup,
           priceLevel,
@@ -169,7 +178,7 @@ export default function CustomerForm({
           gstCategory,
           gstin,
           mobile,
-          email,
+          email: email || undefined,
           address,
           city,
           state,
@@ -182,16 +191,26 @@ export default function CustomerForm({
     >
       <div className="grid grid-cols-2 gap-4">
 
-        <div className="space-y-2">
-          <Label>Customer Code</Label>
-          <Input
-            value={customerCode}
-            disabled={loading}
-            onChange={(e) =>
-              setCustomerCode(e.target.value)
-            }
-          />
-        </div>
+        {isEditMode ? (
+          <div className="space-y-2">
+            <Label>Customer Code</Label>
+            <Input
+              value={customerCode}
+              disabled={loading}
+              onChange={(e) =>
+                setCustomerCode(e.target.value)
+              }
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>Customer Code</Label>
+            <Input
+              value="Generated automatically"
+              disabled
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label>Customer Name</Label>

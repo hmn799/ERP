@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/select";
 
 export interface SupplierFormValues {
-  supplierCode: string;
+  /*
+   * Optional - left out on create so the backend generates one
+   * (SUP00001, SUP00002, ...). Still editable once a supplier
+   * exists, in case a typo needs fixing.
+   */
+  supplierCode?: string;
 
   name: string;
 
@@ -80,9 +85,11 @@ export default function SupplierForm({
   const [isActive, setIsActive] =
     useState(true);
 
+  const isEditMode = Boolean(defaultValues);
+
   useEffect(() => {
     if (defaultValues) {
-      setSupplierCode(defaultValues.supplierCode);
+      setSupplierCode(defaultValues.supplierCode ?? "");
 
       setName(defaultValues.name);
 
@@ -130,12 +137,14 @@ export default function SupplierForm({
         e.preventDefault();
 
         onSubmit({
-          supplierCode,
+          supplierCode: isEditMode
+            ? supplierCode
+            : undefined,
           name,
           gstType,
           gstin,
           mobile,
-          email,
+          email: email || undefined,
           address,
           city,
           state,
@@ -147,16 +156,26 @@ export default function SupplierForm({
     >
       <div className="grid grid-cols-2 gap-4">
 
-        <div className="space-y-2">
-          <Label>Supplier Code</Label>
-          <Input
-            value={supplierCode}
-            disabled={loading}
-            onChange={(e) =>
-              setSupplierCode(e.target.value)
-            }
-          />
-        </div>
+        {isEditMode ? (
+          <div className="space-y-2">
+            <Label>Supplier Code</Label>
+            <Input
+              value={supplierCode}
+              disabled={loading}
+              onChange={(e) =>
+                setSupplierCode(e.target.value)
+              }
+            />
+          </div>
+        ) : (
+          <div className="space-y-2">
+            <Label>Supplier Code</Label>
+            <Input
+              value="Generated automatically"
+              disabled
+            />
+          </div>
+        )}
 
         <div className="space-y-2">
           <Label>Supplier Name</Label>

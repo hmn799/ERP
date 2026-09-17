@@ -16,7 +16,7 @@ export class SupplierService {
   async create(dto: CreateSupplierDto) {
     return this.prisma.$transaction(async (tx) => {
       const supplierCode =
-        dto.supplierCode ??
+        dto.supplierCode?.trim() ||
         (await this.nextSupplierCode(tx));
 
       return tx.supplier.create({

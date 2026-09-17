@@ -247,7 +247,11 @@ export interface CustomerLookup {
 }
 
 export interface CreateCustomerDto {
-  customerCode: string;
+  /*
+   * Optional - when omitted, the backend generates one
+   * (CUS00001, CUS00002, ...).
+   */
+  customerCode?: string;
   name: string;
   customerGroup: string;
 

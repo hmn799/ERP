@@ -791,34 +791,13 @@ setRows(
       creditLimit: number;
     },
   ) {
-    const numericCodes =
-      customers
-        .map(
-          (customer) =>
-            Number(
-              customer.customerCode,
-            ),
-        )
-        .filter(
-          (value) =>
-            Number.isFinite(value),
-        );
-
-    const nextCode =
-      numericCodes.length > 0
-        ? Math.max(
-            ...numericCodes,
-          ) + 1
-        : 1;
-
+    /*
+     * customerCode is left out - the backend generates one
+     * (CUS00001, CUS00002, ...), same as Masters and every other
+     * customer-creation path.
+     */
     const created =
       await createCustomer({
-        customerCode:
-          String(nextCode).padStart(
-            3,
-            "0",
-          ),
-
         name: data.name,
 
         customerGroup:
