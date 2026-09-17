@@ -23,7 +23,7 @@ const itemService = {
 
   async update(
     id: string,
-    dto: CreateItemDto,
+    dto: Partial<CreateItemDto>,
   ): Promise<Item> {
     const { data } = await apiClient.patch(
       `/items/${id}`,
