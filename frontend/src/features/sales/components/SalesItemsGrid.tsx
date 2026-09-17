@@ -1331,7 +1331,7 @@ if (rowIndex !== null) {
 
                       {/* QTY */}
 
-                      <td className="p-2 align-top">
+                      <td className="p-2 text-right align-top">
 
                         <input
                           type="number"
@@ -1363,7 +1363,7 @@ if (rowIndex !== null) {
 
                       {/* RATE */}
 
-                      <td className="p-2 align-top">
+                      <td className="p-2 text-right align-top">
 
                         <input
                           type="number"
