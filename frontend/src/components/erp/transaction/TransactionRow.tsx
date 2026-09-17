@@ -39,29 +39,32 @@ interface Props {
 
   onBarcodeNotFound?(): void;
 
+  /*
+   * Fires when Enter is pressed on the last field of the row
+   * (MRP) - lets the grid continue the flow onto the next row's
+   * own Barcode cell (creating one if this was the last row),
+   * so an operator can keep scanning/entering items back-to-back
+   * without ever leaving the grid.
+   */
+  onRowComplete?(index: number): void;
+
   onDelete(index: number): void;
 }
 
+/*
+ * Focuses synchronously, in the same tick as the keydown that
+ * triggered it - every ref here targets an input that already
+ * exists in the DOM (the whole row renders together up front), so
+ * there's no need to wait a tick. A setTimeout/rAF delay here would
+ * race against fast/scanner-speed typing: if the next character
+ * arrives before the deferred focus() runs, it lands in the field
+ * that's still focused instead of the one it was meant for.
+ */
 function focusAndSelect(
   ref: React.RefObject<HTMLInputElement | null>,
 ) {
-  window.setTimeout(() => {
-    ref.current?.focus();
-    ref.current?.select();
-  }, 0);
-}
-
-function focusPurchaseSearchField() {
-  window.setTimeout(() => {
-    const search = document.querySelector(
-      'input[aria-label="Scan barcode or search item"]',
-    ) as HTMLInputElement | null;
-
-    if (search) {
-      search.focus();
-      search.select();
-    }
-  }, 0);
+  ref.current?.focus();
+  ref.current?.select();
 }
 
 export default function TransactionRow({
@@ -72,6 +75,7 @@ export default function TransactionRow({
   onItemSelected,
   onResolveBarcode,
   onBarcodeNotFound,
+  onRowComplete,
   onDelete,
 }: Props) {
   const barcodeRef =
@@ -141,9 +145,7 @@ export default function TransactionRow({
 
   function handlePurchaseEnter(
     event: React.KeyboardEvent<HTMLInputElement>,
-    next:
-      | React.RefObject<HTMLInputElement | null>
-      | "SEARCH",
+    next: React.RefObject<HTMLInputElement | null>,
   ) {
     if (event.key !== "Enter") {
       return;
@@ -152,12 +154,20 @@ export default function TransactionRow({
     event.preventDefault();
     event.stopPropagation();
 
-    if (next === "SEARCH") {
-      focusPurchaseSearchField();
+    focusAndSelect(next);
+  }
+
+  function handleRowCompleteKeyDown(
+    event: React.KeyboardEvent<HTMLInputElement>,
+  ) {
+    if (event.key !== "Enter") {
       return;
     }
 
-    focusAndSelect(next);
+    event.preventDefault();
+    event.stopPropagation();
+
+    onRowComplete?.(index);
   }
 
   return (
@@ -167,6 +177,8 @@ export default function TransactionRow({
       <td className="p-1">
         <Input
           ref={barcodeRef}
+          data-row-index={index}
+          data-field="barcode"
           value={row.barcode}
           onChange={(event) =>
             onChange(
@@ -370,12 +382,7 @@ export default function TransactionRow({
                   Number(event.target.value),
                 )
               }
-              onKeyDown={(event) =>
-                handlePurchaseEnter(
-                  event,
-                  "SEARCH",
-                )
-              }
+              onKeyDown={handleRowCompleteKeyDown}
             />
           </td>
 

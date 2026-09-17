@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { flushSync } from "react-dom";
 
 import ERPTransactionGrid from "@/components/erp/transaction/ERPTransactionGrid";
 import TransactionRow from "@/components/erp/transaction/TransactionRow";
@@ -131,26 +132,57 @@ export default function PurchaseItemsGrid({
   }
 
   /*
-   * Focuses the Batch field of the row at `index` so the cursor
-   * flow (Barcode -> Batch -> Qty -> ...) continues into the row
-   * that was just filled by the search bar, instead of leaving
-   * focus stuck on the search bar itself. Waits a frame because
-   * the row's own state update (and, for a brand-new row, its DOM
-   * node) hasn't committed yet.
+   * Focuses a named field of the row at `index` (the cursor flow
+   * only ever targets "barcode" or "batch") so the grid can hand
+   * focus off between rows on its own - after the search bar fills
+   * a row, or after an operator finishes the last field of a row -
+   * instead of leaving focus stuck wherever it was, or forcing a
+   * click back up to the search bar.
+   *
+   * Called synchronously, right after any state update that the
+   * target row's DOM node depends on has already been flushed (see
+   * flushSync below) - never wrapped in its own setTimeout/rAF. A
+   * deferred focus() races against fast/scanner-speed typing: if
+   * the operator's next keystroke arrives before the callback runs,
+   * it lands wherever focus still is instead of the field it was
+   * meant for.
    */
-  function focusRowBatch(index: number) {
-    requestAnimationFrame(() => {
-      const el = document.querySelector(
-        `input[data-row-index="${index}"][data-field="batch"]`,
-      ) as HTMLInputElement | null;
+  function focusRowField(
+    index: number,
+    field: "barcode" | "batch",
+  ) {
+    const el = document.querySelector(
+      `input[data-row-index="${index}"][data-field="${field}"]`,
+    ) as HTMLInputElement | null;
 
-      if (el) {
-        el.focus();
-        el.select();
-      } else {
-        searchRef.current?.focus();
-      }
+    if (el) {
+      el.focus();
+      el.select();
+    } else {
+      searchRef.current?.focus();
+    }
+  }
+
+  /*
+   * Enter on a row's last field (MRP) continues the flow onto the
+   * next row's own Barcode cell - creating that row first if this
+   * was the last one - so an operator can keep scanning/entering
+   * items back-to-back without leaving the grid. flushSync forces
+   * the new row to actually commit to the DOM before focusRowField
+   * looks for it, instead of hoping a requestAnimationFrame wins
+   * the race against React's own render.
+   */
+  function handleRowComplete(index: number) {
+    if (index + 1 < rows.length) {
+      focusRowField(index + 1, "barcode");
+      return;
+    }
+
+    flushSync(() => {
+      addRow();
     });
+
+    focusRowField(index + 1, "barcode");
   }
 
   function addSelectedItem(item: ItemLookup) {
@@ -165,13 +197,15 @@ export default function PurchaseItemsGrid({
     );
 
     if (existingIndex >= 0) {
-      updateField(
-        existingIndex,
-        "qty",
-        Number(rows[existingIndex].qty || 0) + 1,
-      );
+      flushSync(() => {
+        updateField(
+          existingIndex,
+          "qty",
+          Number(rows[existingIndex].qty || 0) + 1,
+        );
+      });
 
-      focusRowBatch(existingIndex);
+      focusRowField(existingIndex, "batch");
 
       return;
     }
@@ -181,33 +215,37 @@ export default function PurchaseItemsGrid({
     );
 
     if (emptyRowIndex >= 0) {
-      updateRow(
-        emptyRowIndex,
-        {
-          ...rows[emptyRowIndex],
-          ...createPurchaseRow(item),
-        },
-      );
+      flushSync(() => {
+        updateRow(
+          emptyRowIndex,
+          {
+            ...rows[emptyRowIndex],
+            ...createPurchaseRow(item),
+          },
+        );
+      });
 
-      focusRowBatch(emptyRowIndex);
+      focusRowField(emptyRowIndex, "batch");
 
       return;
     }
 
     /*
-     * No empty row exists - append one and populate it. Both
-     * addRow() and updateRow() use React's functional setState
-     * form internally, so queuing them back-to-back here applies
-     * against the up-to-date state (not this stale `rows` closure)
-     * and is safe to do synchronously, without an intermediate
-     * requestAnimationFrame.
+     * No empty row exists - append one and populate it in a single
+     * flush. Both addRow() and updateRow() use React's functional
+     * setState form internally, so queuing them back-to-back inside
+     * flushSync applies against up-to-date state (not this stale
+     * `rows` closure) and commits to the DOM before we try to focus
+     * the new row's Batch field.
      */
     const nextIndex = rows.length;
 
-    addRow();
-    updateRow(nextIndex, createPurchaseRow(item));
+    flushSync(() => {
+      addRow();
+      updateRow(nextIndex, createPurchaseRow(item));
+    });
 
-    focusRowBatch(nextIndex);
+    focusRowField(nextIndex, "batch");
   }
 
   function handleSearchKeyDown(
@@ -472,6 +510,7 @@ export default function PurchaseItemsGrid({
                   "No item matches that barcode.",
                 )
               }
+              onRowComplete={handleRowComplete}
               onDelete={removeRow}
             />
           ))}
