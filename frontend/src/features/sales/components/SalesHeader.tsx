@@ -7,11 +7,21 @@ import {
   useState,
 } from "react";
 
+import ERPComboBox from "@/components/erp/lookup/ERPComboBox";
+
 import {
   CustomerBillingSummary,
   CustomerLookup,
   WarehouseLookup,
 } from "../types/sales.types";
+
+const inputClass =
+  "h-10 w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2";
+
+const SALE_TYPE_OPTIONS = [
+  { value: "CASH", label: "Cash Sale" },
+  { value: "CREDIT", label: "Credit Sale" },
+];
 
 interface SalesHeaderProps {
   billNo: string;
@@ -43,6 +53,14 @@ interface SalesHeaderProps {
   onTaxModeChange: (
     value: "EXCLUSIVE" | "INCLUSIVE",
   ) => void;
+
+  /*
+   * Fires once the sale-type field (Cash/Credit) is done - lets the
+   * page hand focus off into the Items search bar, so the screen
+   * reads as one continuous flow: Customer -> Cash/Credit -> first
+   * item scan.
+   */
+  onSaleTypeComplete?(): void;
 
   onCreateCustomer: (data: {
     name: string;
@@ -81,10 +99,23 @@ export default function SalesHeader({
   onWarehouseChange,
   onCreditChange,
   onTaxModeChange,
+  onSaleTypeComplete,
   onCreateCustomer,
 }: SalesHeaderProps) {
   const searchRef =
     useRef<HTMLInputElement>(null);
+
+  const saleTypeRef =
+    useRef<HTMLInputElement>(null);
+
+  /*
+   * Opening the entry screen should put the cursor where data
+   * entry naturally starts - Bill No/Date are usually left as-is,
+   * so the operator should land straight on Customer.
+   */
+  useEffect(() => {
+    searchRef.current?.focus();
+  }, []);
 
   const [customerSearch, setCustomerSearch] =
     useState("");
@@ -186,7 +217,7 @@ export default function SalesHeader({
     setSelectedCustomerIndex(0);
 
     requestAnimationFrame(() => {
-      searchRef.current?.focus();
+      saleTypeRef.current?.focus();
     });
   }
 
@@ -332,7 +363,15 @@ export default function SalesHeader({
         customerSearch.trim()
       ) {
         openCreateCustomer();
+
+        return;
       }
+
+      /*
+       * Nothing typed - a walk-in sale with no customer is valid,
+       * so Enter just continues the flow onto Sale Type.
+       */
+      saleTypeRef.current?.focus();
     }
   }
 
@@ -389,7 +428,7 @@ export default function SalesHeader({
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-6">
           {/* BILL NO */}
 
           <div>
@@ -405,7 +444,7 @@ export default function SalesHeader({
                   event.target.value,
                 )
               }
-              className="w-full rounded-md border px-3 py-2 text-sm"
+              className={inputClass}
               placeholder={
                 isEditMode
                   ? "Bill number"
@@ -429,7 +468,7 @@ export default function SalesHeader({
                   event.target.value,
                 )
               }
-              className="w-full rounded-md border px-3 py-2 text-sm"
+              className={inputClass}
             />
           </div>
 
@@ -460,7 +499,7 @@ export default function SalesHeader({
               onKeyDown={
                 handleCustomerKeyDown
               }
-              className="w-full rounded-md border-2 px-3 py-2 text-sm outline-none focus:ring-2"
+              className={inputClass}
               placeholder="Name / code / mobile..."
             />
 
@@ -719,6 +758,36 @@ export default function SalesHeader({
             )}
           </div>
 
+          {/* SALE TYPE */}
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              Sale Type
+            </label>
+
+            <ERPComboBox
+              ref={saleTypeRef}
+              className={inputClass}
+              placeholder="Cash Sale"
+              value={
+                isCredit
+                  ? "CREDIT"
+                  : "CASH"
+              }
+              options={
+                SALE_TYPE_OPTIONS
+              }
+              onSelect={(value) =>
+                onCreditChange(
+                  value === "CREDIT",
+                )
+              }
+              onAdvance={
+                onSaleTypeComplete
+              }
+            />
+          </div>
+
           {/* WAREHOUSE */}
 
           <div>
@@ -733,7 +802,7 @@ export default function SalesHeader({
                   event.target.value,
                 )
               }
-              className="w-full rounded-md border px-3 py-2 text-sm"
+              className={inputClass}
             >
               <option value="">
                 Select Warehouse
@@ -768,7 +837,7 @@ export default function SalesHeader({
                     | "INCLUSIVE",
                 )
               }
-              className="w-full rounded-md border px-3 py-2 text-sm"
+              className={inputClass}
             >
               <option value="EXCLUSIVE">
                 Exclusive (rate + GST)
@@ -778,29 +847,6 @@ export default function SalesHeader({
               </option>
             </select>
           </div>
-        </div>
-
-        {/* CREDIT */}
-
-        <div className="mt-4 flex items-center gap-2">
-          <input
-            id="isCredit"
-            type="checkbox"
-            checked={isCredit}
-            onChange={(event) =>
-              onCreditChange(
-                event.target.checked,
-              )
-            }
-            className="h-4 w-4"
-          />
-
-          <label
-            htmlFor="isCredit"
-            className="text-sm font-medium"
-          >
-            Credit Sale
-          </label>
         </div>
 
         {isCredit &&

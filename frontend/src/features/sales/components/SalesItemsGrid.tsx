@@ -77,11 +77,6 @@ interface SalesItemsGridProps {
     rate: number,
   ) => void;
 
-  onDiscountChange: (
-    index: number,
-    discount: number,
-  ) => void;
-
   onQuickAddItem: (
     itemId: string,
   ) => void;
@@ -123,7 +118,6 @@ export default function SalesItemsGrid({
   onBatchChange,
   onQtyChange,
   onRateChange,
-  onDiscountChange,
   onQuickAddItem,
   onQuickSetQty,
 }: SalesItemsGridProps) {
@@ -864,6 +858,7 @@ if (rowIndex !== null) {
           ref={searchRef}
           type="text"
           value={search}
+          aria-label="Scan barcode or search item"
           onChange={(event) =>
             setSearch(
               event.target.value,
@@ -975,10 +970,6 @@ if (rowIndex !== null) {
               </th>
 
               <th className="px-3 py-3 text-right">
-                Discount %
-              </th>
-
-              <th className="px-3 py-3 text-right">
                 GST %
               </th>
 
@@ -1001,7 +992,7 @@ if (rowIndex !== null) {
               <tr>
                 <td
                   colSpan={
-                    9
+                    8
                   }
                   className="px-4 py-10 text-center text-sm text-gray-500"
                 >
@@ -1394,35 +1385,6 @@ if (rowIndex !== null) {
                             )
                           }
                           className="w-28 rounded border px-2 py-2 text-right"
-                        />
-
-                      </td>
-
-                      {/* DISCOUNT */}
-
-                      <td className="p-2 align-top">
-
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          step="0.01"
-                          value={
-                            row.discountPercent
-                          }
-                          onChange={(
-                            event,
-                          ) =>
-                            onDiscountChange(
-                              index,
-                              Number(
-                                event
-                                  .target
-                                  .value,
-                              ),
-                            )
-                          }
-                          className="w-24 rounded border px-2 py-2 text-right"
                         />
 
                       </td>

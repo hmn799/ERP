@@ -1104,22 +1104,22 @@ setRows(
       : fallbackRate;
   }
 
-  function changeDiscount(
-    index: number,
-    discountPercent: number,
-  ) {
-    setRows((current) =>
-      current.map((row, i) =>
-        i === index
-          ? {
-              ...row,
-              discountPercent,
-            }
-          : row,
-      ),
-    );
+  /*
+   * Continues the natural flow from the header's last field (Sale
+   * Type) into the Items search bar, mirroring the same
+   * data-attribute-free aria-label targeting used elsewhere on this
+   * screen - so the whole screen reads as one sequence: Customer ->
+   * Sale Type -> first item scan.
+   */
+  function focusItemSearchBar() {
+    const el = document.querySelector(
+      'input[aria-label="Scan barcode or search item"]',
+    ) as HTMLInputElement | null;
 
-    setActiveRowIndex(index);
+    if (el) {
+      el.focus();
+      el.select();
+    }
   }
 
   /*
@@ -2823,6 +2823,9 @@ setRows(
         onTaxModeChange={
           setTaxMode
         }
+        onSaleTypeComplete={
+          focusItemSearchBar
+        }
         onCreateCustomer={
           handleCreateCustomer
         }
@@ -2850,9 +2853,6 @@ setRows(
         }
         onRateChange={
           changeRate
-        }
-        onDiscountChange={
-          changeDiscount
         }
         onQuickAddItem={
           quickAddItem
