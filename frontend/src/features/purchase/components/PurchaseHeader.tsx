@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
 
@@ -29,6 +29,14 @@ interface Props {
   onTaxModeChange(
     value: "EXCLUSIVE" | "INCLUSIVE",
   ): void;
+
+  /*
+   * Fires once the header's last field (GST Mode) is done - lets
+   * the page hand focus off into the Items grid so the whole
+   * screen reads as one continuous flow: Invoice No -> Bill Date
+   * -> Supplier -> Warehouse -> GST Mode -> first item row.
+   */
+  onHeaderComplete?(): void;
 }
 
 function Field({
@@ -65,12 +73,52 @@ export default function PurchaseHeader({
   onBillDateChange,
   onInvoiceNoChange,
   onTaxModeChange,
+  onHeaderComplete,
 }: Props) {
   const [suppliers, setSuppliers] =
     useState<SupplierLookup[]>([]);
 
   const [warehouses, setWarehouses] =
     useState<WarehouseLookup[]>([]);
+
+  const invoiceNoRef =
+    useRef<HTMLInputElement>(null);
+
+  const billDateRef =
+    useRef<HTMLInputElement>(null);
+
+  const supplierRef =
+    useRef<HTMLSelectElement>(null);
+
+  const warehouseRef =
+    useRef<HTMLSelectElement>(null);
+
+  const taxModeRef =
+    useRef<HTMLSelectElement>(null);
+
+  /*
+   * Opening the entry screen should put the cursor where data
+   * entry naturally starts, instead of making the operator click
+   * in - mirrors the same "ready to type" behavior the Items grid
+   * already has for its own fields.
+   */
+  useEffect(() => {
+    invoiceNoRef.current?.focus();
+  }, []);
+
+  function handleEnterAdvance(
+    event: React.KeyboardEvent,
+    next: React.RefObject<
+      HTMLInputElement | HTMLSelectElement | null
+    >,
+  ) {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    next.current?.focus();
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -135,32 +183,45 @@ export default function PurchaseHeader({
       <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
         <Field label="Invoice No.">
           <Input
+            ref={invoiceNoRef}
             className={inputClass}
             placeholder="Enter invoice number"
             value={invoiceNo}
             onChange={(event) =>
               onInvoiceNoChange(event.target.value)
             }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, billDateRef)
+            }
           />
         </Field>
 
         <Field label="Bill Date">
           <Input
+            ref={billDateRef}
             className={inputClass}
             type="date"
             value={billDate}
             onChange={(event) =>
               onBillDateChange(event.target.value)
             }
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, supplierRef)
+            }
           />
         </Field>
 
         <Field label="Supplier">
           <select
+            ref={supplierRef}
             className={inputClass}
             value={supplierId}
-            onChange={(event) =>
-              onSupplierChange(event.target.value)
+            onChange={(event) => {
+              onSupplierChange(event.target.value);
+              warehouseRef.current?.focus();
+            }}
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, warehouseRef)
             }
           >
             <option value="">Select Supplier</option>
@@ -178,10 +239,15 @@ export default function PurchaseHeader({
 
         <Field label="Warehouse">
           <select
+            ref={warehouseRef}
             className={inputClass}
             value={warehouseId}
-            onChange={(event) =>
-              onWarehouseChange(event.target.value)
+            onChange={(event) => {
+              onWarehouseChange(event.target.value);
+              taxModeRef.current?.focus();
+            }}
+            onKeyDown={(event) =>
+              handleEnterAdvance(event, taxModeRef)
             }
           >
             <option value="">Select Warehouse</option>
@@ -199,15 +265,26 @@ export default function PurchaseHeader({
 
         <Field label="GST Mode">
           <select
+            ref={taxModeRef}
             className={inputClass}
             value={taxMode}
-            onChange={(event) =>
+            onChange={(event) => {
               onTaxModeChange(
                 event.target.value as
                   | "EXCLUSIVE"
                   | "INCLUSIVE",
-              )
-            }
+              );
+
+              onHeaderComplete?.();
+            }}
+            onKeyDown={(event) => {
+              if (event.key !== "Enter") {
+                return;
+              }
+
+              event.preventDefault();
+              onHeaderComplete?.();
+            }}
           >
             <option value="EXCLUSIVE">
               Exclusive (rate + GST)

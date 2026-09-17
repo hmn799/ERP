@@ -530,6 +530,25 @@ export default function PurchasePage({
     }
   }
 
+  /*
+   * Continues the natural flow from the header's last field (GST
+   * Mode) into the Items grid's first row - same data-row-index /
+   * data-field targeting PurchaseItemsGrid uses internally to hand
+   * focus between rows, so the whole screen reads as one sequence:
+   * Invoice No -> Bill Date -> Supplier -> Warehouse -> GST Mode ->
+   * Barcode (row 1) -> ...
+   */
+  function focusFirstItemBarcode() {
+    const el = document.querySelector(
+      'input[data-row-index="0"][data-field="barcode"]',
+    ) as HTMLInputElement | null;
+
+    if (el) {
+      el.focus();
+      el.select();
+    }
+  }
+
   function handleClear() {
     if (
       isEditMode &&
@@ -595,6 +614,9 @@ export default function PurchasePage({
         }
         onTaxModeChange={
           setTaxMode
+        }
+        onHeaderComplete={
+          focusFirstItemBarcode
         }
       />
 
