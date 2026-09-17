@@ -646,10 +646,15 @@ if (rowIndex !== null) {
    *
    * Example:
    *
-   * type 10
+   * type +10
    * Enter
    *
-   * quantity becomes 10.
+   * quantity of the most recently added item becomes 10.
+   *
+   * The leading "+" is required, not optional - most barcodes
+   * are themselves plain digit strings (e.g. "1003"), so without
+   * it every numeric barcode scan would be swallowed as a
+   * quantity command instead of adding the item.
    */
 
   function handleSearchInputKeyDown(
@@ -665,7 +670,7 @@ if (rowIndex !== null) {
         search.trim();
 
       if (
-        /^\d+(\.\d+)?$/.test(
+        /^\+\d+(\.\d+)?$/.test(
           value,
         )
       ) {
