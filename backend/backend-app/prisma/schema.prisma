@@ -811,6 +811,16 @@ model SalesBill {
   customerId         String?
   warehouseId        String
   salesmanId         String?
+
+  // EXCLUSIVE (default) | INCLUSIVE - how the entered sale rate on
+  // this bill was interpreted. Every stored saleRate (on
+  // SalesBillItem) is always tax-exclusive regardless of this flag -
+  // it is converted once at save time - so nothing downstream needs
+  // to know or care which mode a bill was entered in. This field
+  // exists purely so the bill can be re-displayed/edited in the mode
+  // it was originally entered.
+  taxMode            String          @default("EXCLUSIVE")
+
   grossAmount        Decimal         @db.Decimal(14, 2)
   itemDiscountAmount Decimal         @db.Decimal(14, 2)
   billDiscountAmount Decimal         @db.Decimal(14, 2)

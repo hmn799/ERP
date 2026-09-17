@@ -99,6 +99,42 @@ export class SalesCalculationService {
     let totalItemDiscount = 0;
 
     // =====================================================
+    // TAX MODE
+    //
+    // EXCLUSIVE (default) | INCLUSIVE - how the entered
+    // saleRate on this bill was interpreted. Every stored
+    // saleRate is always tax-exclusive regardless of this
+    // flag - converted once, here, at save time - applied
+    // uniformly to whatever rate ends up billed (batch
+    // default, party price, or a manual override) so the
+    // whole bill reads consistently in whichever mode the
+    // cashier chose.
+    // =====================================================
+
+    const taxMode =
+      dto.taxMode ?? 'EXCLUSIVE';
+
+    const toExclusiveRate = (
+      rate: number,
+      gstPercent: number,
+    ) => {
+      if (taxMode !== 'INCLUSIVE') {
+        return rate;
+      }
+
+      const gst =
+        Number(gstPercent) || 0;
+
+      if (gst <= 0) {
+        return rate;
+      }
+
+      return Number(
+        (rate / (1 + gst / 100)).toFixed(4),
+      );
+    };
+
+    // =====================================================
     // SCHEME EXPANSION
     //
     // Adds free quantity to QUANTITY-scheme lines, injects
@@ -154,6 +190,29 @@ export class SalesCalculationService {
           `Batch does not belong to item ${item.itemId}`,
         );
       }
+
+      // ===================================================
+      // GST
+      //
+      // Resolved before the sale rate below, since an
+      // Inclusive-mode conversion needs the item's GST
+      // percent to divide the entered rate down.
+      // ===================================================
+
+      const gstPercent =
+        item.gstPercent !==
+          undefined &&
+        item.gstPercent !==
+          null
+          ? Number(
+              item.gstPercent,
+            )
+          : Number(
+              batch.item
+                .gstSlab
+                ?.percentage ??
+                0,
+            );
 
       // ===================================================
       // PARTY-DEFAULT BATCH RATE
@@ -274,12 +333,18 @@ export class SalesCalculationService {
           ? batchRate
           : Number(batch.mrp);
 
-      const saleRate =
+      const resolvedRate =
         partyPrice
           ? Number(partyPrice.salePrice)
           : hasManualOverride
             ? suppliedRate
             : fallbackRate;
+
+      const saleRate =
+        toExclusiveRate(
+          resolvedRate,
+          gstPercent,
+        );
 
       if (
         !Number.isFinite(
@@ -331,25 +396,6 @@ export class SalesCalculationService {
           `Negative stock warning: Available=${currentStock}, Requested=${item.qty}`,
         );
       }
-
-      // ===================================================
-      // GST
-      // ===================================================
-
-      const gstPercent =
-        item.gstPercent !==
-          undefined &&
-        item.gstPercent !==
-          null
-          ? Number(
-              item.gstPercent,
-            )
-          : Number(
-              batch.item
-                .gstSlab
-                ?.percentage ??
-                0,
-            );
 
       // ===================================================
       // ITEM CALCULATION

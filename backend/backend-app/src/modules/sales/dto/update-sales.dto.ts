@@ -2,6 +2,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
@@ -36,6 +37,16 @@ export class UpdateSalesDto {
   @IsOptional()
   @IsBoolean()
   isCredit?: boolean;
+
+  /*
+   * Whether every item's saleRate on this bill is entered tax-
+   * inclusive or tax-exclusive (default). The backend always
+   * converts to, and stores, a tax-exclusive rate - this is purely
+   * an input convention for this one bill.
+   */
+  @IsOptional()
+  @IsIn(['EXCLUSIVE', 'INCLUSIVE'])
+  taxMode?: 'EXCLUSIVE' | 'INCLUSIVE';
 
   @IsOptional()
   @IsNumber()

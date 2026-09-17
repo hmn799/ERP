@@ -25,6 +25,8 @@ interface SalesHeaderProps {
 
   isCredit: boolean;
 
+  taxMode: "EXCLUSIVE" | "INCLUSIVE";
+
   isEditMode?: boolean;
 
   customerOutstanding?: number;
@@ -38,6 +40,9 @@ interface SalesHeaderProps {
   onCustomerChange: (value: string) => void;
   onWarehouseChange: (value: string) => void;
   onCreditChange: (value: boolean) => void;
+  onTaxModeChange: (
+    value: "EXCLUSIVE" | "INCLUSIVE",
+  ) => void;
 
   onCreateCustomer: (data: {
     name: string;
@@ -64,6 +69,7 @@ export default function SalesHeader({
   customers,
   warehouses,
   isCredit,
+  taxMode,
   isEditMode = false,
   customerOutstanding = 0,
   customerLedgerLoading = false,
@@ -74,6 +80,7 @@ export default function SalesHeader({
   onCustomerChange,
   onWarehouseChange,
   onCreditChange,
+  onTaxModeChange,
   onCreateCustomer,
 }: SalesHeaderProps) {
   const searchRef =
@@ -382,7 +389,7 @@ export default function SalesHeader({
           )}
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
           {/* BILL NO */}
 
           <div>
@@ -742,6 +749,33 @@ export default function SalesHeader({
                   </option>
                 ),
               )}
+            </select>
+          </div>
+
+          {/* GST MODE */}
+
+          <div>
+            <label className="mb-1 block text-sm font-medium">
+              GST Mode
+            </label>
+
+            <select
+              value={taxMode}
+              onChange={(event) =>
+                onTaxModeChange(
+                  event.target.value as
+                    | "EXCLUSIVE"
+                    | "INCLUSIVE",
+                )
+              }
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            >
+              <option value="EXCLUSIVE">
+                Exclusive (rate + GST)
+              </option>
+              <option value="INCLUSIVE">
+                Inclusive (rate includes GST)
+              </option>
             </select>
           </div>
         </div>

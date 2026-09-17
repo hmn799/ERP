@@ -347,6 +347,10 @@ export class SalesUpdateService {
               dto.salesmanId ||
               null,
 
+            taxMode:
+              dto.taxMode ??
+              'EXCLUSIVE',
+
             grossAmount,
 
             itemDiscountAmount:

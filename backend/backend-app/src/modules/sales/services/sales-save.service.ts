@@ -299,6 +299,9 @@ export class SalesSaveService {
               salesmanId:
                 dto.salesmanId || null,
 
+              taxMode:
+                dto.taxMode ?? 'EXCLUSIVE',
+
               grossAmount,
 
               itemDiscountAmount:

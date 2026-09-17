@@ -52,6 +52,8 @@ import {
   SalesPaymentMode,
 } from "../types/sales.types";
 
+import { calculateSalesTotals } from "@/core/pricing/sales.totals";
+
 function getTodayDateTime() {
   const now = new Date();
 
@@ -125,6 +127,10 @@ export default function SalesPage({
 
   const [isCredit, setIsCredit] =
     useState(false);
+
+  const [taxMode, setTaxMode] = useState<
+    "EXCLUSIVE" | "INCLUSIVE"
+  >("EXCLUSIVE");
 
   const [
     billDiscountPercent,
@@ -419,6 +425,13 @@ const [originalRows, setOriginalRows] =
             ),
           );
 
+          const loadedTaxMode =
+            sale.taxMode === "INCLUSIVE"
+              ? "INCLUSIVE"
+              : "EXCLUSIVE";
+
+          setTaxMode(loadedTaxMode);
+
           setRoundOff(
             getNumber(
               sale.roundOff,
@@ -433,11 +446,33 @@ const [originalRows, setOriginalRows] =
 
           /*
            * Existing sale items.
+           *
+           * The stored rate is always tax-exclusive (see
+           * sales-calculation.service.ts). If this bill was
+           * originally entered inclusive, convert it back to the
+           * inclusive figure the operator would recognize, so
+           * editing round-trips.
            */
 
           const loadedRows: SalesGridRow[] =
   sale.items.map(
-    (item) => ({
+    (item) => {
+      const storedRate = getNumber(
+        item.saleRate,
+      );
+
+      const gstPercent = getNumber(
+        item.gstPercent,
+      );
+
+      const displayRate =
+        loadedTaxMode === "INCLUSIVE" &&
+        gstPercent > 0
+          ? storedRate *
+            (1 + gstPercent / 100)
+          : storedRate;
+
+      return {
       itemId:
         item.itemId,
 
@@ -449,21 +484,16 @@ const [originalRows, setOriginalRows] =
           item.qty,
         ),
 
-      saleRate:
-        getNumber(
-          item.saleRate,
-        ),
+      saleRate: displayRate,
 
       discountPercent:
         getNumber(
           item.discountPercent,
         ),
 
-      gstPercent:
-        getNumber(
-          item.gstPercent,
-        ),
-    }),
+      gstPercent,
+      };
+    },
   );
 
 /*
@@ -1259,106 +1289,19 @@ setRows(
    * =====================================================
    */
 
-  const totals = useMemo(() => {
-    let gross = 0;
-
-    let itemDiscount = 0;
-
-    let taxable = 0;
-
-    let cgst = 0;
-
-    let sgst = 0;
-
-    for (const row of rows) {
-      const amount =
-        getNumber(row.qty) *
-        getNumber(
-          row.saleRate,
-        );
-
-      const discount =
-        amount *
-        (getNumber(
-          row.discountPercent,
-        ) /
-          100);
-
-      const rowTaxable =
-        amount - discount;
-
-      const gst =
-        rowTaxable *
-        (getNumber(
-          row.gstPercent,
-        ) /
-          100);
-
-      gross += amount;
-
-      itemDiscount += discount;
-
-      taxable += rowTaxable;
-
-      cgst += gst / 2;
-
-      sgst += gst / 2;
-    }
-
-    const billDiscount =
-      taxable *
-      (billDiscountPercent /
-        100);
-
-    const finalTaxable =
-      taxable -
-      billDiscount;
-
-    let finalCgst = cgst;
-
-    let finalSgst = sgst;
-
-    if (billDiscount > 0) {
-      const ratio =
-        taxable > 0
-          ? finalTaxable /
-            taxable
-          : 0;
-
-      finalCgst =
-        cgst * ratio;
-
-      finalSgst =
-        sgst * ratio;
-    }
-
-    const net =
-      finalTaxable +
-      finalCgst +
-      finalSgst;
-
-    return {
-      gross,
-
-      itemDiscount,
-
-      taxable:
-        finalTaxable,
-
-      billDiscount,
-
-      cgst:
-        finalCgst,
-
-      sgst:
-        finalSgst,
-
-      net,
-    };
-  }, [
-    rows,
-    billDiscountPercent,
-  ]);
+  const totals = useMemo(
+    () =>
+      calculateSalesTotals(
+        rows,
+        billDiscountPercent,
+        taxMode,
+      ),
+    [
+      rows,
+      billDiscountPercent,
+      taxMode,
+    ],
+  );
 
   /*
    * =====================================================
@@ -2150,6 +2093,8 @@ setRows(
 
         isCredit,
 
+        taxMode,
+
         billDiscountPercent,
 
         roundOff,
@@ -2289,6 +2234,8 @@ setRows(
 
           isCredit,
 
+          taxMode,
+
           billDiscountPercent,
 
           roundOff,
@@ -2331,6 +2278,7 @@ setRows(
     customerId,
     billDate,
     isCredit,
+    taxMode,
     billDiscountPercent,
     roundOff,
     shortAmount,
@@ -2357,6 +2305,8 @@ setRows(
     setCustomerId("");
 
     setIsCredit(false);
+
+    setTaxMode("EXCLUSIVE");
 
     setBillDiscountPercent(0);
 
@@ -2439,6 +2389,8 @@ setRows(
 
         isCredit,
 
+        taxMode,
+
         billDiscountPercent,
 
         roundOff,
@@ -2492,6 +2444,12 @@ setRows(
 
     setIsCredit(
       Boolean(payload.isCredit),
+    );
+
+    setTaxMode(
+      payload.taxMode === "INCLUSIVE"
+        ? "INCLUSIVE"
+        : "EXCLUSIVE",
     );
 
     setBillDiscountPercent(
@@ -2833,6 +2791,7 @@ setRows(
         customers={customers}
         warehouses={warehouses}
         isCredit={isCredit}
+        taxMode={taxMode}
         isEditMode={isEditMode}
         customerOutstanding={
           customerOutstanding
@@ -2861,6 +2820,9 @@ setRows(
         onCreditChange={
           setIsCredit
         }
+        onTaxModeChange={
+          setTaxMode
+        }
         onCreateCustomer={
           handleCreateCustomer
         }
@@ -2872,6 +2834,7 @@ setRows(
       items={items}
       batches={batches}
       warehouseId={warehouseId}
+      taxMode={taxMode}
         onAddRow={addRow}
         onRemoveRow={
           removeRow

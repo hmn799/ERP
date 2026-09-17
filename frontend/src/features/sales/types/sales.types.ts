@@ -35,6 +35,14 @@ export interface CreateSalesDto {
 
   isCredit?: boolean;
 
+  /*
+   * Whether every item's saleRate on this bill is entered tax-
+   * inclusive or tax-exclusive (default). The backend always
+   * converts to, and stores, a tax-exclusive rate - this is purely
+   * an input convention for this one bill.
+   */
+  taxMode?: "EXCLUSIVE" | "INCLUSIVE";
+
   billDiscountPercent?: number;
   roundOff?: number;
   shortAmount?: number;
@@ -106,6 +114,8 @@ export interface SalesResponse {
   finalPayable: number | string;
 
   isCredit: boolean;
+
+  taxMode?: "EXCLUSIVE" | "INCLUSIVE";
 
   customer?: {
     id: string;

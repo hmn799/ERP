@@ -19,6 +19,11 @@ import {
 
 import { itemMatchesExactCode } from "@/lib/item-search";
 
+import {
+  calculateSalesRowAmounts,
+  SalesTaxMode,
+} from "@/core/pricing/sales.calculator";
+
 export interface SalesGridRow {
   itemId: string;
   batchId: string;
@@ -46,6 +51,8 @@ interface SalesItemsGridProps {
   batches: SalesBatchLookup[];
 
   warehouseId: string;
+
+  taxMode: SalesTaxMode;
 
   onAddRow: () => void;
   onRemoveRow: (index: number) => void;
@@ -109,6 +116,7 @@ export default function SalesItemsGrid({
   items,
   batches,
   warehouseId,
+  taxMode,
   onAddRow,
   onRemoveRow,
   onItemChange,
@@ -1113,35 +1121,14 @@ if (rowIndex !== null) {
                     ) >
                       effectiveAvailableStock;
 
-                  const amount =
-                    getNumber(
-                      row.qty,
-                    ) *
-                    getNumber(
-                      row.saleRate,
+                  const rowAmounts =
+                    calculateSalesRowAmounts(
+                      row,
+                      taxMode,
                     );
 
-                  const discount =
-                    amount *
-                    (getNumber(
-                      row.discountPercent,
-                    ) /
-                      100);
-
-                  const taxable =
-                    amount -
-                    discount;
-
-                  const gst =
-                    taxable *
-                    (getNumber(
-                      row.gstPercent,
-                    ) /
-                      100);
-
                   const net =
-                    taxable +
-                    gst;
+                    rowAmounts.netAmount;
 
                   return (
                     <tr

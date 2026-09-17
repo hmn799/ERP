@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "SalesBill" ADD COLUMN     "taxMode" TEXT NOT NULL DEFAULT 'EXCLUSIVE';
