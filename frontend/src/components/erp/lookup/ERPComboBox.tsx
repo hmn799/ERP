@@ -31,6 +31,16 @@ interface Props {
    * into the next field, same as every other field on this screen.
    */
   onAdvance?(): void;
+
+  /*
+   * When provided, typing something that matches nothing offers a
+   * "+ Create ..." action (via Enter or a click) instead of just
+   * "No matches." - the typed text is passed through as-is so the
+   * caller can prefill a create form with it.
+   */
+  onCreateNew?(searchText: string): void;
+
+  createNewLabel?: string;
 }
 
 /*
@@ -56,6 +66,8 @@ const ERPComboBox = forwardRef<
     className,
     onSelect,
     onAdvance,
+    onCreateNew,
+    createNewLabel,
   },
   forwardedRef,
 ) {
@@ -207,6 +219,17 @@ const ERPComboBox = forwardRef<
     onAdvance?.();
   }
 
+  function handleCreateNew() {
+    const searchText = search.trim();
+
+    if (!searchText) {
+      return;
+    }
+
+    setOpen(false);
+    onCreateNew?.(searchText);
+  }
+
   function handleKeyDown(
     event: React.KeyboardEvent<HTMLInputElement>,
   ) {
@@ -222,6 +245,11 @@ const ERPComboBox = forwardRef<
 
       if (choice) {
         selectOption(choice);
+        return;
+      }
+
+      if (onCreateNew) {
+        handleCreateNew();
       }
 
       return;
@@ -291,8 +319,24 @@ const ERPComboBox = forwardRef<
             }}
           >
             {filtered.length === 0 && (
-              <div className="px-4 py-3 text-sm text-gray-500">
-                No matches.
+              <div className="p-3">
+                <div className="px-1 pb-2 text-sm text-gray-500">
+                  No matches.
+                </div>
+
+                {onCreateNew &&
+                  search.trim() && (
+                    <button
+                      type="button"
+                      onClick={
+                        handleCreateNew
+                      }
+                      className="w-full rounded-md bg-black px-3 py-2 text-left text-sm font-medium text-white hover:bg-gray-800"
+                    >
+                      {createNewLabel ??
+                        `+ Create "${search.trim()}"`}
+                    </button>
+                  )}
               </div>
             )}
 

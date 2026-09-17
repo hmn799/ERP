@@ -1,5 +1,7 @@
 import { Injectable } from "@nestjs/common";
 
+import { Prisma } from "@prisma/client";
+
 import { PrismaService } from "../prisma/prisma.service";
 
 import { CreateSupplierDto } from "./dto/create-supplier.dto";
@@ -11,28 +13,76 @@ export class SupplierService {
     private prisma: PrismaService,
   ) {}
 
-  create(dto: CreateSupplierDto) {
-    return this.prisma.supplier.create({
-      data: {
-        supplierCode: dto.supplierCode,
-        name: dto.name,
+  async create(dto: CreateSupplierDto) {
+    return this.prisma.$transaction(async (tx) => {
+      const supplierCode =
+        dto.supplierCode ??
+        (await this.nextSupplierCode(tx));
 
-        gstType: dto.gstType,
-        gstin: dto.gstin,
+      return tx.supplier.create({
+        data: {
+          supplierCode,
+          name: dto.name,
 
-        mobile: dto.mobile,
-        email: dto.email,
+          gstType: dto.gstType,
+          gstin: dto.gstin,
 
-        address: dto.address,
-        city: dto.city,
-        state: dto.state,
-        pincode: dto.pincode,
+          mobile: dto.mobile,
+          email: dto.email,
 
-        openingBalance: dto.openingBalance ?? 0,
+          address: dto.address,
+          city: dto.city,
+          state: dto.state,
+          pincode: dto.pincode,
 
-        isActive: dto.isActive ?? true,
+          openingBalance: dto.openingBalance ?? 0,
+
+          isActive: dto.isActive ?? true,
+        },
+      });
+    });
+  }
+
+  /*
+   * SUP00001, SUP00002, ... - based on the highest existing code
+   * that already matches this pattern, so legacy/manually-entered
+   * codes in other formats (e.g. "001", "TESTSUP001") never disrupt
+   * numbering. Runs inside the caller's transaction so a concurrent
+   * create can't compute the same next number.
+   */
+  private async nextSupplierCode(
+    tx: Prisma.TransactionClient,
+  ) {
+    const suppliers = await tx.supplier.findMany({
+      where: {
+        supplierCode: {
+          startsWith: "SUP",
+        },
+      },
+      select: {
+        supplierCode: true,
       },
     });
+
+    const maxNumber = suppliers.reduce(
+      (max, supplier) => {
+        const match =
+          supplier.supplierCode.match(
+            /^SUP(\d+)$/,
+          );
+
+        const value = match
+          ? parseInt(match[1], 10)
+          : 0;
+
+        return Math.max(max, value);
+      },
+      0,
+    );
+
+    return `SUP${(maxNumber + 1)
+      .toString()
+      .padStart(5, "0")}`;
   }
 
   findAll() {

@@ -8,9 +8,15 @@ import {
 } from "class-validator";
 
 export class CreateSupplierDto {
+  /*
+   * Optional - when omitted, SupplierService.create() generates one
+   * (SUP00001, SUP00002, ...). Still accepted when supplied, so
+   * existing callers (e.g. bulk import) keep working unchanged.
+   */
+  @IsOptional()
   @IsString()
   @MaxLength(30)
-  supplierCode: string;
+  supplierCode?: string;
 
   @IsString()
   @MaxLength(150)
