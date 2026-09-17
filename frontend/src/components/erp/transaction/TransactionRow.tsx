@@ -5,7 +5,11 @@ import { useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import ERPItemLookup from "../lookup/ERPItemLookup";
-import { ItemLookup } from "@/features/purchase/services/purchase.service";
+import ERPBatchLookup from "../lookup/ERPBatchLookup";
+import {
+  BatchLookup,
+  ItemLookup,
+} from "@/features/purchase/services/purchase.service";
 
 import {
   TransactionMode,
@@ -38,6 +42,17 @@ interface Props {
   ): ItemLookup | undefined;
 
   onBarcodeNotFound?(): void;
+
+  /*
+   * Fires when an existing batch is picked from the Batch cell's
+   * lookup (purchase mode only) - lets the grid reuse that batch's
+   * own rates/MRP instead of whatever the item master currently
+   * has, matching what "reusing a batch" should mean.
+   */
+  onBatchSelected?(
+    index: number,
+    batch: BatchLookup,
+  ): void;
 
   /*
    * Fires when Enter is pressed on the last field of the row
@@ -75,6 +90,7 @@ export default function TransactionRow({
   onItemSelected,
   onResolveBarcode,
   onBarcodeNotFound,
+  onBatchSelected,
   onRowComplete,
   onDelete,
 }: Props) {
@@ -157,6 +173,13 @@ export default function TransactionRow({
     focusAndSelect(next);
   }
 
+  function handleBatchSelected(
+    batch: BatchLookup,
+  ) {
+    onBatchSelected?.(index, batch);
+    focusAndSelect(qtyRef);
+  }
+
   function handleRowCompleteKeyDown(
     event: React.KeyboardEvent<HTMLInputElement>,
   ) {
@@ -201,27 +224,39 @@ export default function TransactionRow({
 
       {/* BATCH */}
       <td className="p-1">
-        <Input
-          ref={batchRef}
-          data-row-index={index}
-          data-field="batch"
-          value={row.batchNo ?? ""}
-          onChange={(event) =>
-            onChange(
-              index,
-              "batchNo",
-              event.target.value,
-            )
-          }
-          onKeyDown={(event) =>
-            mode === "purchase"
-              ? handlePurchaseEnter(
-                  event,
-                  qtyRef,
-                )
-              : undefined
-          }
-        />
+        {mode === "purchase" ? (
+          <ERPBatchLookup
+            ref={batchRef}
+            index={index}
+            itemId={row.itemId}
+            value={row.batchNo ?? ""}
+            onChange={(value) =>
+              onChange(
+                index,
+                "batchNo",
+                value,
+              )
+            }
+            onSelect={handleBatchSelected}
+            onEnterAdvance={() =>
+              focusAndSelect(qtyRef)
+            }
+          />
+        ) : (
+          <Input
+            ref={batchRef}
+            data-row-index={index}
+            data-field="batch"
+            value={row.batchNo ?? ""}
+            onChange={(event) =>
+              onChange(
+                index,
+                "batchNo",
+                event.target.value,
+              )
+            }
+          />
+        )}
       </td>
 
       {/* QTY */}

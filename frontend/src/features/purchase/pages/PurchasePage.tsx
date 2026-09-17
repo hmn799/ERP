@@ -623,6 +623,7 @@ export default function PurchasePage({
       {/* ITEMS */}
       <PurchaseItemsGrid
         rows={transaction.rows}
+        taxMode={taxMode}
         addRow={transaction.addRow}
         removeRow={
           transaction.removeRow

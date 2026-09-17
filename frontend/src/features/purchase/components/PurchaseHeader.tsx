@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import ERPComboBox from "@/components/erp/lookup/ERPComboBox";
 
 import {
   getSuppliers,
@@ -10,6 +11,17 @@ import {
   SupplierLookup,
   WarehouseLookup,
 } from "../services/purchase.service";
+
+const GST_MODE_OPTIONS = [
+  {
+    value: "EXCLUSIVE",
+    label: "Exclusive (rate + GST)",
+  },
+  {
+    value: "INCLUSIVE",
+    label: "Inclusive (rate includes GST)",
+  },
+];
 
 interface Props {
   isEditMode?: boolean;
@@ -88,13 +100,13 @@ export default function PurchaseHeader({
     useRef<HTMLInputElement>(null);
 
   const supplierRef =
-    useRef<HTMLSelectElement>(null);
+    useRef<HTMLInputElement>(null);
 
   const warehouseRef =
-    useRef<HTMLSelectElement>(null);
+    useRef<HTMLInputElement>(null);
 
   const taxModeRef =
-    useRef<HTMLSelectElement>(null);
+    useRef<HTMLInputElement>(null);
 
   /*
    * Opening the entry screen should put the cursor where data
@@ -108,9 +120,7 @@ export default function PurchaseHeader({
 
   function handleEnterAdvance(
     event: React.KeyboardEvent,
-    next: React.RefObject<
-      HTMLInputElement | HTMLSelectElement | null
-    >,
+    next: React.RefObject<HTMLInputElement | null>,
   ) {
     if (event.key !== "Enter") {
       return;
@@ -212,87 +222,59 @@ export default function PurchaseHeader({
         </Field>
 
         <Field label="Supplier">
-          <select
+          <ERPComboBox
             ref={supplierRef}
             className={inputClass}
+            placeholder="Select Supplier"
             value={supplierId}
-            onChange={(event) => {
-              onSupplierChange(event.target.value);
-              warehouseRef.current?.focus();
-            }}
-            onKeyDown={(event) =>
-              handleEnterAdvance(event, warehouseRef)
+            options={suppliers.map(
+              (supplier) => ({
+                value: supplier.id,
+                label: `${supplier.supplierCode} - ${supplier.name}`,
+              }),
+            )}
+            onSelect={onSupplierChange}
+            onAdvance={() =>
+              warehouseRef.current?.focus()
             }
-          >
-            <option value="">Select Supplier</option>
-
-            {suppliers.map((supplier) => (
-              <option
-                key={supplier.id}
-                value={supplier.id}
-              >
-                {supplier.supplierCode} - {supplier.name}
-              </option>
-            ))}
-          </select>
+          />
         </Field>
 
         <Field label="Warehouse">
-          <select
+          <ERPComboBox
             ref={warehouseRef}
             className={inputClass}
+            placeholder="Select Warehouse"
             value={warehouseId}
-            onChange={(event) => {
-              onWarehouseChange(event.target.value);
-              taxModeRef.current?.focus();
-            }}
-            onKeyDown={(event) =>
-              handleEnterAdvance(event, taxModeRef)
+            options={warehouses.map(
+              (warehouse) => ({
+                value: warehouse.id,
+                label: warehouse.name,
+              }),
+            )}
+            onSelect={onWarehouseChange}
+            onAdvance={() =>
+              taxModeRef.current?.focus()
             }
-          >
-            <option value="">Select Warehouse</option>
-
-            {warehouses.map((warehouse) => (
-              <option
-                key={warehouse.id}
-                value={warehouse.id}
-              >
-                {warehouse.name}
-              </option>
-            ))}
-          </select>
+          />
         </Field>
 
         <Field label="GST Mode">
-          <select
+          <ERPComboBox
             ref={taxModeRef}
             className={inputClass}
+            placeholder="Select GST Mode"
             value={taxMode}
-            onChange={(event) => {
+            options={GST_MODE_OPTIONS}
+            onSelect={(value) =>
               onTaxModeChange(
-                event.target.value as
+                value as
                   | "EXCLUSIVE"
                   | "INCLUSIVE",
-              );
-
-              onHeaderComplete?.();
-            }}
-            onKeyDown={(event) => {
-              if (event.key !== "Enter") {
-                return;
-              }
-
-              event.preventDefault();
-              onHeaderComplete?.();
-            }}
-          >
-            <option value="EXCLUSIVE">
-              Exclusive (rate + GST)
-            </option>
-            <option value="INCLUSIVE">
-              Inclusive (rate includes GST)
-            </option>
-          </select>
+              )
+            }
+            onAdvance={onHeaderComplete}
+          />
         </Field>
       </div>
     </section>

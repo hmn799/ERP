@@ -11,6 +11,7 @@ import {
 } from "@/components/erp/transaction/transaction.types";
 
 import {
+  BatchLookup,
   getItemLookup,
   ItemLookup,
 } from "@/features/purchase/services/purchase.service";
@@ -22,6 +23,8 @@ import {
 
 interface Props {
   rows: TransactionRowModel[];
+
+  taxMode: "EXCLUSIVE" | "INCLUSIVE";
 
   addRow(): void;
 
@@ -41,6 +44,7 @@ interface Props {
 
 export default function PurchaseItemsGrid({
   rows,
+  taxMode,
   addRow,
   removeRow,
   updateField,
@@ -328,6 +332,58 @@ export default function PurchaseItemsGrid({
   }
 
   /*
+   * Picking an existing batch from the Batch cell's own lookup
+   * should mean actually reusing it - so its rates/MRP replace
+   * whatever the item master currently holds, matching what the
+   * InventoryDecisionEngine treats as the same batch (rate + MRP +
+   * expiry) on save. If the bill is in Inclusive mode, the batch's
+   * stored rate (always tax-exclusive) is converted back to the
+   * inclusive figure the operator expects to see, the same reverse
+   * conversion used when reopening an existing bill for edit.
+   */
+  function handleBatchSelected(
+    index: number,
+    batch: BatchLookup,
+  ) {
+    const row = rows[index];
+
+    const gstPercent = Number(
+      row.gstPercent || 0,
+    );
+
+    const storedRate = Number(
+      batch.purchaseRate ?? 0,
+    );
+
+    const displayRate =
+      taxMode === "INCLUSIVE" &&
+      gstPercent > 0
+        ? storedRate *
+          (1 + gstPercent / 100)
+        : storedRate;
+
+    updateRow(index, {
+      ...row,
+
+      batchId: batch.id,
+      batchNo: batch.batchNo,
+
+      purchaseRate: displayRate,
+      retailRate: Number(
+        batch.retailRate ?? 0,
+      ),
+      wholesaleRate: Number(
+        batch.wholesaleRate ?? 0,
+      ),
+      distributorRate: Number(
+        batch.distributorRate ?? 0,
+      ),
+
+      mrp: Number(batch.mrp ?? 0),
+    });
+  }
+
+  /*
    * Lets a row's own Barcode cell resolve an item directly (matches
    * primary or alternate barcodes, or an item code) - completing
    * Barcode -> Batch -> Qty -> ... entirely within the row, instead
@@ -510,6 +566,7 @@ export default function PurchaseItemsGrid({
                   "No item matches that barcode.",
                 )
               }
+              onBatchSelected={handleBatchSelected}
               onRowComplete={handleRowComplete}
               onDelete={removeRow}
             />

@@ -59,6 +59,26 @@ export interface WarehouseLookup {
   name: string;
 }
 
+export interface BatchLookup {
+  id: string;
+
+  batchNo: string;
+
+  purchaseRate: number;
+
+  retailRate: number;
+
+  wholesaleRate: number;
+
+  distributorRate: number;
+
+  mrp: number;
+
+  expiryDate: string | null;
+
+  manufacturingDate: string | null;
+}
+
 export interface ItemLookup {
   id: string;
 
@@ -357,6 +377,14 @@ export function getWarehouses() {
 export function getItemLookup() {
   return get<ItemLookup[]>(
     `${API_URL}/items/lookup`,
+  );
+}
+
+export function getBatchesByItem(
+  itemId: string,
+) {
+  return get<BatchLookup[]>(
+    `${API_URL}/batches/by-item/${itemId}`,
   );
 }
 
