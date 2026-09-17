@@ -54,15 +54,26 @@ interface Props {
 
 function Field({
   label,
+  required,
   children,
 }: {
   label: string;
+  required?: boolean;
   children: React.ReactNode;
 }) {
   return (
     <div className="min-w-0">
       <label className="mb-1.5 block text-xs font-semibold text-gray-700">
         {label}
+        {required && (
+          <span
+            className="text-red-600"
+            aria-hidden="true"
+          >
+            {" "}
+            *
+          </span>
+        )}
       </label>
       {children}
     </div>
@@ -311,7 +322,7 @@ export default function PurchaseHeader({
           />
         </Field>
 
-        <Field label="Supplier">
+        <Field label="Supplier" required>
           <ERPComboBox
             ref={supplierRef}
             className={inputClass}
@@ -332,7 +343,7 @@ export default function PurchaseHeader({
           />
         </Field>
 
-        <Field label="Warehouse">
+        <Field label="Warehouse" required>
           <ERPComboBox
             ref={warehouseRef}
             className={inputClass}
@@ -398,7 +409,13 @@ export default function PurchaseHeader({
 
             <div>
               <label className="mb-1 block text-sm font-medium">
-                Name *
+                Name{" "}
+                <span
+                  className="text-red-600"
+                  aria-hidden="true"
+                >
+                  *
+                </span>
               </label>
 
               <input

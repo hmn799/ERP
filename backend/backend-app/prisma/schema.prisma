@@ -230,9 +230,15 @@ model Item {
   baseUnitId         String
   purchaseUnitId     String
   saleUnitId         String
-  conversionFactor   Decimal              @db.Decimal(10, 2)
   mrp                Decimal              @db.Decimal(12, 2)
   purchaseRate       Decimal              @db.Decimal(12, 2)
+
+  // Reorder tracking - minQty is the stock floor an item should
+  // never fall below; reorderQty is how much to order when it does.
+  // Both optional (default 0) so this is opt-in per item.
+  minQty     Decimal @default(0) @db.Decimal(12, 2)
+  reorderQty Decimal @default(0) @db.Decimal(12, 2)
+
   isActive           Boolean              @default(true)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt

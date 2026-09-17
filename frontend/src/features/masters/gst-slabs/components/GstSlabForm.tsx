@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export interface GstSlabFormValues {
   name: string;
@@ -49,20 +50,28 @@ export default function GstSlabForm({
         });
       }}
     >
-      <Input
-        value={name}
-        disabled={loading}
-        placeholder="GST Name (e.g. GST 18%)"
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label required>GST Name</Label>
 
-      <Input
-        type="number"
-        value={percentage}
-        disabled={loading}
-        placeholder="GST Percentage"
-        onChange={(e) => setPercentage(e.target.value)}
-      />
+        <Input
+          value={name}
+          disabled={loading}
+          placeholder="GST Name (e.g. GST 18%)"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label required>GST Percentage</Label>
+
+        <Input
+          type="number"
+          value={percentage}
+          disabled={loading}
+          placeholder="GST Percentage"
+          onChange={(e) => setPercentage(e.target.value)}
+        />
+      </div>
     </form>
   );
 }

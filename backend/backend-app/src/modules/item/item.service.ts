@@ -59,11 +59,13 @@ export class ItemService {
 
         saleUnitId: dto.saleUnitId,
 
-        conversionFactor: dto.conversionFactor,
-
         mrp: dto.mrp,
 
         purchaseRate: dto.purchaseRate,
+
+        minQty: dto.minQty ?? 0,
+
+        reorderQty: dto.reorderQty ?? 0,
 
         isActive: dto.isActive ?? true,
       },
@@ -140,11 +142,13 @@ export class ItemService {
 
         saleUnitId: dto.saleUnitId,
 
-        conversionFactor: dto.conversionFactor,
-
         mrp: dto.mrp,
 
         purchaseRate: dto.purchaseRate,
+
+        minQty: dto.minQty,
+
+        reorderQty: dto.reorderQty,
 
         isActive: dto.isActive,
       },

@@ -92,11 +92,12 @@ export default function ItemDialog({
                 purchaseUnitId:
                   item.purchaseUnitId,
                 saleUnitId: item.saleUnitId,
-                conversionFactor:
-                  item.conversionFactor,
                 mrp: item.mrp,
                 purchaseRate:
                   item.purchaseRate,
+                minQty: item.minQty ?? 0,
+                reorderQty:
+                  item.reorderQty ?? 0,
                 isActive: item.isActive,
               }
             : undefined

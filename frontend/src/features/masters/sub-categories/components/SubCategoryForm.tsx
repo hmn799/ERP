@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -69,32 +70,40 @@ export default function SubCategoryForm({
         });
       }}
     >
-      <Select
-        value={categoryId}
-        onValueChange={setCategoryId}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select Category" />
-        </SelectTrigger>
+      <div className="space-y-2">
+        <Label required>Category</Label>
 
-        <SelectContent>
-          {categories.map((category) => (
-            <SelectItem
-              key={category.id}
-              value={category.id}
-            >
-              {category.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        <Select
+          value={categoryId}
+          onValueChange={setCategoryId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Select Category" />
+          </SelectTrigger>
 
-      <Input
-        value={name}
-        disabled={loading}
-        placeholder="Enter Sub Category"
-        onChange={(e) => setName(e.target.value)}
-      />
+          <SelectContent>
+            {categories.map((category) => (
+              <SelectItem
+                key={category.id}
+                value={category.id}
+              >
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="space-y-2">
+        <Label required>Sub Category Name</Label>
+
+        <Input
+          value={name}
+          disabled={loading}
+          placeholder="Enter Sub Category"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
     </form>
   );
 }

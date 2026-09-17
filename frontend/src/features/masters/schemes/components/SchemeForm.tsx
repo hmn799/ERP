@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 import { useSchemeItems } from "../hooks/useSchemes";
 
@@ -128,14 +129,19 @@ export default function SchemeForm({
         });
       }}
     >
-      <Input
-        value={name}
-        disabled={loading}
-        placeholder="Scheme name (e.g. Diwali 10+1)"
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label required>Scheme Name</Label>
+        <Input
+          value={name}
+          disabled={loading}
+          placeholder="Scheme name (e.g. Diwali 10+1)"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
 
       <div className="space-y-1">
+        <Label required>Scheme Type</Label>
+
         <select
           value={schemeType}
           disabled={loading}
@@ -162,59 +168,17 @@ export default function SchemeForm({
         </p>
       </div>
 
-      <select
-        value={itemId}
-        disabled={loading}
-        onChange={(e) => setItemId(e.target.value)}
-        className="w-full rounded-md border px-3 py-2 text-sm"
-      >
-        <option value="">
-          Select trigger item...
-        </option>
+      <div className="space-y-2">
+        <Label required>Trigger Item</Label>
 
-        {items.map((item) => (
-          <option key={item.id} value={item.id}>
-            {item.itemCode} - {item.name}
-          </option>
-        ))}
-      </select>
-
-      {(schemeType === "QUANTITY" ||
-        schemeType === "FREE_ITEM") && (
-        <div className="grid grid-cols-2 gap-3">
-          <Input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={buyQty}
-            disabled={loading}
-            placeholder="Buy qty (e.g. 10)"
-            onChange={(e) => setBuyQty(e.target.value)}
-          />
-
-          <Input
-            type="number"
-            min="0.01"
-            step="0.01"
-            value={freeQty}
-            disabled={loading}
-            placeholder="Free qty (e.g. 1)"
-            onChange={(e) => setFreeQty(e.target.value)}
-          />
-        </div>
-      )}
-
-      {schemeType === "FREE_ITEM" && (
         <select
-          value={freeItemId}
+          value={itemId}
           disabled={loading}
-          onChange={(e) =>
-            setFreeItemId(e.target.value)
-          }
+          onChange={(e) => setItemId(e.target.value)}
           className="w-full rounded-md border px-3 py-2 text-sm"
         >
           <option value="">
-            Select free item...
+            Select trigger item...
           </option>
 
           {items.map((item) => (
@@ -223,21 +187,80 @@ export default function SchemeForm({
             </option>
           ))}
         </select>
+      </div>
+
+      {(schemeType === "QUANTITY" ||
+        schemeType === "FREE_ITEM") && (
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-2">
+            <Label required>Buy Qty</Label>
+            <Input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={buyQty}
+              disabled={loading}
+              placeholder="Buy qty (e.g. 10)"
+              onChange={(e) => setBuyQty(e.target.value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label required>Free Qty</Label>
+            <Input
+              type="number"
+              min="0.01"
+              step="0.01"
+              value={freeQty}
+              disabled={loading}
+              placeholder="Free qty (e.g. 1)"
+              onChange={(e) => setFreeQty(e.target.value)}
+            />
+          </div>
+        </div>
+      )}
+
+      {schemeType === "FREE_ITEM" && (
+        <div className="space-y-2">
+          <Label required>Free Item</Label>
+
+          <select
+            value={freeItemId}
+            disabled={loading}
+            onChange={(e) =>
+              setFreeItemId(e.target.value)
+            }
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          >
+            <option value="">
+              Select free item...
+            </option>
+
+            {items.map((item) => (
+              <option key={item.id} value={item.id}>
+                {item.itemCode} - {item.name}
+              </option>
+            ))}
+          </select>
+        </div>
       )}
 
       {schemeType === "DISCOUNT" && (
-        <Input
-          type="number"
-          min="0"
-          max="100"
-          step="0.01"
-          value={discountPercent}
-          disabled={loading}
-          placeholder="Discount % (e.g. 10)"
-          onChange={(e) =>
-            setDiscountPercent(e.target.value)
-          }
-        />
+        <div className="space-y-2">
+          <Label required>Discount %</Label>
+          <Input
+            type="number"
+            min="0"
+            max="100"
+            step="0.01"
+            value={discountPercent}
+            disabled={loading}
+            placeholder="Discount % (e.g. 10)"
+            onChange={(e) =>
+              setDiscountPercent(e.target.value)
+            }
+          />
+        </div>
       )}
 
       <label className="flex items-center gap-2 text-sm">

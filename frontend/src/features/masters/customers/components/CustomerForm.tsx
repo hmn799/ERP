@@ -30,6 +30,13 @@ export interface CustomerFormValues {
 
   name: string;
 
+  /*
+   * RETAIL (Rate A) | WHOLESALE (Rate B, shown as "Semi Wholesale") |
+   * DISTRIBUTOR (Rate C, shown as "Wholesale") - the one field that
+   * picks the customer's pricing tier. priceLevel is set to match
+   * this automatically on submit (the backend also defaults it the
+   * same way) - there is no longer a separate Price Level control.
+   */
   customerGroup: string;
 
   priceLevel: string;
@@ -77,10 +84,7 @@ export default function CustomerForm({
   const [name, setName] = useState("");
 
   const [customerGroup, setCustomerGroup] =
-    useState("Retail");
-
-  const [priceLevel, setPriceLevel] =
-    useState("Retail");
+    useState("RETAIL");
 
   const [priceListId, setPriceListId] =
     useState("");
@@ -127,9 +131,13 @@ export default function CustomerForm({
 
       setName(defaultValues.name);
 
-      setCustomerGroup(defaultValues.customerGroup);
-
-      setPriceLevel(defaultValues.priceLevel);
+      // Normalizes legacy title-case values ("Retail", "Wholesale")
+      // from before customerGroup became a fixed 3-option field.
+      setCustomerGroup(
+        (
+          defaultValues.customerGroup || "RETAIL"
+        ).toUpperCase(),
+      );
 
       setPriceListId(defaultValues.priceListId ?? "");
 
@@ -173,7 +181,7 @@ export default function CustomerForm({
             : undefined,
           name,
           customerGroup,
-          priceLevel,
+          priceLevel: customerGroup,
           priceListId: priceListId || undefined,
           gstCategory,
           gstin,
@@ -213,7 +221,7 @@ export default function CustomerForm({
         )}
 
         <div className="space-y-2">
-          <Label>Customer Name</Label>
+          <Label required>Customer Name</Label>
           <Input
             value={name}
             disabled={loading}
@@ -224,7 +232,7 @@ export default function CustomerForm({
         </div>
 
         <div className="space-y-2">
-          <Label>Customer Group</Label>
+          <Label required>Customer Group</Label>
 
           <Select
             value={customerGroup}
@@ -235,19 +243,23 @@ export default function CustomerForm({
             </SelectTrigger>
 
             <SelectContent>
-              <SelectItem value="Retail">
-                Retail
+              <SelectItem value="RETAIL">
+                Retail - Rate A
               </SelectItem>
 
-              <SelectItem value="Wholesale">
-                Wholesale
+              <SelectItem value="WHOLESALE">
+                Semi Wholesale - Rate B
+              </SelectItem>
+
+              <SelectItem value="DISTRIBUTOR">
+                Wholesale - Rate C
               </SelectItem>
             </SelectContent>
           </Select>
         </div>
 
         <div className="space-y-2">
-          <Label>GST Category</Label>
+          <Label required>GST Category</Label>
 
           <Select
             value={gstCategory}
@@ -370,18 +382,6 @@ export default function CustomerForm({
             disabled={loading}
             onChange={(e) =>
               setPincode(e.target.value)
-            }
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Price Level</Label>
-
-          <Input
-            value={priceLevel}
-            disabled={loading}
-            onChange={(e) =>
-              setPriceLevel(e.target.value)
             }
           />
         </div>

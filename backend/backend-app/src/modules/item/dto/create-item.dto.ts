@@ -48,14 +48,20 @@ export class CreateItemDto {
   saleUnitId: string;
 
   @IsNumber()
-  @Min(1)
-  conversionFactor: number;
-
-  @IsNumber()
   mrp: number;
 
   @IsNumber()
   purchaseRate: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  minQty?: number;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  reorderQty?: number;
 
   @IsOptional()
   @IsBoolean()

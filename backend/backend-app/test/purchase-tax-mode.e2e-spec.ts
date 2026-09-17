@@ -90,7 +90,6 @@ describe('Purchase tax mode (inclusive/exclusive) (e2e)', () => {
         baseUnitId: unit.id,
         purchaseUnitId: unit.id,
         saleUnitId: unit.id,
-        conversionFactor: 1,
         mrp: 200,
         purchaseRate: 100,
       },

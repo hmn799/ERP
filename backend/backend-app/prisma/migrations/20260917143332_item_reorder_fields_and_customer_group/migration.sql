@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "Item" DROP COLUMN "conversionFactor",
+ADD COLUMN     "minQty" DECIMAL(12,2) NOT NULL DEFAULT 0,
+ADD COLUMN     "reorderQty" DECIMAL(12,2) NOT NULL DEFAULT 0;
+

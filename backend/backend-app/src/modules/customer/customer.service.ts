@@ -25,7 +25,14 @@ export class CustomerService {
           name: dto.name,
 
           customerGroup: dto.customerGroup,
-          priceLevel: dto.priceLevel,
+
+          // Defaults to customerGroup when not sent separately -
+          // the one dropdown the operator sees drives both, but
+          // this keeps pricing correct even for a caller that only
+          // sends customerGroup.
+          priceLevel:
+            dto.priceLevel ?? dto.customerGroup,
+
           priceListId: dto.priceListId,
 
           gstCategory: dto.gstCategory,
@@ -133,7 +140,10 @@ export class CustomerService {
         name: dto.name,
 
         customerGroup: dto.customerGroup,
-        priceLevel: dto.priceLevel,
+
+        priceLevel:
+          dto.priceLevel ?? dto.customerGroup,
+
         priceListId: dto.priceListId,
 
         gstCategory: dto.gstCategory,

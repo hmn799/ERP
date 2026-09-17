@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export interface WarehouseFormValues {
   name: string;
@@ -43,12 +44,16 @@ export default function WarehouseForm({
         });
       }}
     >
-      <Input
-        value={name}
-        disabled={loading}
-        placeholder="Warehouse Name"
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label required>Warehouse Name</Label>
+
+        <Input
+          value={name}
+          disabled={loading}
+          placeholder="Warehouse Name"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
     </form>
   );
 }

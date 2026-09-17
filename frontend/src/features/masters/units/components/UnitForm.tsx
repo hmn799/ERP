@@ -59,7 +59,7 @@ export default function UnitForm({
       onSubmit={form.handleSubmit(onSubmit)}
     >
       <div>
-        <Label>Unit Name</Label>
+        <Label required>Unit Name</Label>
 
         <Input
           {...form.register("name")}
@@ -71,7 +71,7 @@ export default function UnitForm({
       </div>
 
       <div>
-        <Label>Short Name</Label>
+        <Label required>Short Name</Label>
 
         <Input
           {...form.register("shortName")}

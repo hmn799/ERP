@@ -139,10 +139,7 @@ export default function SalesHeader({
     useState("");
 
   const [newCustomerGroup, setNewCustomerGroup] =
-    useState("Retail");
-
-  const [newCustomerPriceLevel, setNewCustomerPriceLevel] =
-    useState("Retail");
+    useState("RETAIL");
 
   const [newCustomerGstCategory, setNewCustomerGstCategory] =
     useState("Unregistered");
@@ -261,7 +258,7 @@ export default function SalesHeader({
         customerGroup:
           newCustomerGroup,
         priceLevel:
-          newCustomerPriceLevel,
+          newCustomerGroup,
         gstCategory:
           newCustomerGstCategory,
         creditLimit:
@@ -792,7 +789,13 @@ export default function SalesHeader({
 
           <div>
             <label className="mb-1 block text-sm font-medium">
-              Warehouse
+              Warehouse{" "}
+              <span
+                className="text-red-600"
+                aria-hidden="true"
+              >
+                *
+              </span>
             </label>
 
             <select
@@ -879,7 +882,13 @@ export default function SalesHeader({
             <div className="space-y-4 p-5">
               <div>
                 <label className="mb-1 block text-sm font-medium">
-                  Name *
+                  Name{" "}
+                  <span
+                    className="text-red-600"
+                    aria-hidden="true"
+                  >
+                    *
+                  </span>
                 </label>
 
                 <input
@@ -913,7 +922,7 @@ export default function SalesHeader({
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium">
-                    Customer Group
+                    Customer Group *
                   </label>
 
                   <select
@@ -927,51 +936,27 @@ export default function SalesHeader({
                     }
                     className="w-full rounded-md border px-3 py-2"
                   >
-                    <option>
-                      Retail
+                    <option value="RETAIL">
+                      Retail - Rate A
                     </option>
-                    <option>
-                      Wholesale
+                    <option value="WHOLESALE">
+                      Semi Wholesale - Rate B
                     </option>
-                    <option>
-                      Distributor
+                    <option value="DISTRIBUTOR">
+                      Wholesale - Rate C
                     </option>
                   </select>
                 </div>
 
                 <div>
                   <label className="mb-1 block text-sm font-medium">
-                    Price Level
-                  </label>
-
-                  <select
-                    value={
-                      newCustomerPriceLevel
-                    }
-                    onChange={(event) =>
-                      setNewCustomerPriceLevel(
-                        event.target.value,
-                      )
-                    }
-                    className="w-full rounded-md border px-3 py-2"
-                  >
-                    <option>
-                      Retail
-                    </option>
-                    <option>
-                      Wholesale
-                    </option>
-                    <option>
-                      Distributor
-                    </option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="mb-1 block text-sm font-medium">
-                    GST Category
+                    GST Category{" "}
+                    <span
+                      className="text-red-600"
+                      aria-hidden="true"
+                    >
+                      *
+                    </span>
                   </label>
 
                   <select
@@ -996,7 +981,9 @@ export default function SalesHeader({
                     </option>
                   </select>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="mb-1 block text-sm font-medium">
                     Credit Limit

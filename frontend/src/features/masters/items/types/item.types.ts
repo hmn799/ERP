@@ -19,11 +19,13 @@ export interface Item {
   purchaseUnitId: string;
   saleUnitId: string;
 
-  conversionFactor: number;
-
   mrp: number;
 
   purchaseRate: number;
+
+  minQty?: number;
+
+  reorderQty?: number;
 
   isActive: boolean;
 
@@ -85,11 +87,13 @@ export interface CreateItemDto {
 
   saleUnitId: string;
 
-  conversionFactor: number;
-
   mrp: number;
 
   purchaseRate: number;
+
+  minQty?: number;
+
+  reorderQty?: number;
 
   isActive?: boolean;
 }

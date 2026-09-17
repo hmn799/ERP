@@ -7,8 +7,17 @@ import { cn } from "@/lib/utils"
 
 function Label({
   className,
+  required,
+  children,
   ...props
-}: React.ComponentProps<typeof LabelPrimitive.Root>) {
+}: React.ComponentProps<typeof LabelPrimitive.Root> & {
+  /*
+   * Appends a red "*" after the label text - the app-wide marker
+   * for a mandatory field, so callers don't hand-type "Field *"
+   * (inconsistent styling, easy to forget) in every form.
+   */
+  required?: boolean
+}) {
   return (
     <LabelPrimitive.Root
       data-slot="label"
@@ -17,7 +26,17 @@ function Label({
         className
       )}
       {...props}
-    />
+    >
+      {children}
+      {required && (
+        <span
+          className="text-red-600"
+          aria-hidden="true"
+        >
+          *
+        </span>
+      )}
+    </LabelPrimitive.Root>
   )
 }
 

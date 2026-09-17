@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export interface PriceListFormValues {
   code: string;
@@ -62,34 +63,46 @@ export default function PriceListForm({
         });
       }}
     >
-      <Input
-        placeholder="Code"
-        value={code}
-        disabled={loading}
-        onChange={(e) => setCode(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label required>Code</Label>
+        <Input
+          placeholder="Code"
+          value={code}
+          disabled={loading}
+          onChange={(e) => setCode(e.target.value)}
+        />
+      </div>
 
-      <Input
-        placeholder="Name"
-        value={name}
-        disabled={loading}
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label required>Name</Label>
+        <Input
+          placeholder="Name"
+          value={name}
+          disabled={loading}
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
 
-      <Input
-        placeholder="Description"
-        value={description}
-        disabled={loading}
-        onChange={(e) => setDescription(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label>Description</Label>
+        <Input
+          placeholder="Description"
+          value={description}
+          disabled={loading}
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
 
-      <Input
-        type="number"
-        placeholder="Priority"
-        value={priority}
-        disabled={loading}
-        onChange={(e) => setPriority(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label>Priority</Label>
+        <Input
+          type="number"
+          placeholder="Priority"
+          value={priority}
+          disabled={loading}
+          onChange={(e) => setPriority(e.target.value)}
+        />
+      </div>
     </form>
   );
 }

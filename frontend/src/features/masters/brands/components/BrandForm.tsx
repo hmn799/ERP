@@ -43,7 +43,7 @@ export default function BrandForm({
       }}
     >
       <div className="space-y-2">
-        <Label>Brand Name</Label>
+        <Label required>Brand Name</Label>
 
         <Input
           value={name}

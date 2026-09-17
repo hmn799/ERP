@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 
 import {
@@ -45,11 +46,13 @@ export interface ItemFormValues {
 
   saleUnitId: string;
 
-  conversionFactor: number;
-
   mrp: number;
 
   purchaseRate: number;
+
+  minQty?: number;
+
+  reorderQty?: number;
 
   isActive: boolean;
 }
@@ -87,11 +90,13 @@ export default function ItemForm({
   const [purchaseUnitId, setPurchaseUnitId] = useState("");
   const [saleUnitId, setSaleUnitId] = useState("");
 
-  const [conversionFactor, setConversionFactor] = useState("1");
-
   const [mrp, setMrp] = useState("");
 
   const [purchaseRate, setPurchaseRate] = useState("");
+
+  const [minQty, setMinQty] = useState("0");
+
+  const [reorderQty, setReorderQty] = useState("0");
 
   const [isActive, setIsActive] = useState(true);
 
@@ -120,14 +125,18 @@ export default function ItemForm({
     setPurchaseUnitId(defaultValues.purchaseUnitId);
     setSaleUnitId(defaultValues.saleUnitId);
 
-    setConversionFactor(
-      String(defaultValues.conversionFactor),
-    );
-
     setMrp(String(defaultValues.mrp));
 
     setPurchaseRate(
       String(defaultValues.purchaseRate),
+    );
+
+    setMinQty(
+      String(defaultValues.minQty ?? 0),
+    );
+
+    setReorderQty(
+      String(defaultValues.reorderQty ?? 0),
     );
 
     setIsActive(defaultValues.isActive);
@@ -155,176 +164,228 @@ export default function ItemForm({
           purchaseUnitId,
           saleUnitId,
 
-          conversionFactor:
-            Number(conversionFactor),
-
           mrp: Number(mrp),
 
           purchaseRate:
             Number(purchaseRate),
 
+          minQty: Number(minQty),
+
+          reorderQty: Number(reorderQty),
+
           isActive,
         });
       }}
     >
-      <Input
-        value={name}
-        disabled={loading}
-        placeholder="Item Name"
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label required>Item Name</Label>
+        <Input
+          value={name}
+          disabled={loading}
+          placeholder="Item Name"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
 
-      <Input
-        value={hsnCode}
-        disabled={loading}
-        placeholder="HSN Code"
-        onChange={(e) => setHsnCode(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label>HSN Code</Label>
+        <Input
+          value={hsnCode}
+          disabled={loading}
+          placeholder="HSN Code"
+          onChange={(e) => setHsnCode(e.target.value)}
+        />
+      </div>
 
-      <Input
-        value={barcode}
-        disabled={loading}
-        placeholder="Barcode"
-        onChange={(e) => setBarcode(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label>Barcode</Label>
+        <Input
+          value={barcode}
+          disabled={loading}
+          placeholder="Barcode"
+          onChange={(e) => setBarcode(e.target.value)}
+        />
+      </div>
 
-      <Select value={categoryId} onValueChange={setCategoryId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Category" />
-        </SelectTrigger>
+      <div className="space-y-2">
+        <Label required>Category</Label>
+        <Select value={categoryId} onValueChange={setCategoryId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Category" />
+          </SelectTrigger>
 
-        <SelectContent>
-          {categories.map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectContent>
+            {categories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select
-        value={subCategoryId}
-        onValueChange={setSubCategoryId}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Sub Category" />
-        </SelectTrigger>
+      <div className="space-y-2">
+        <Label>Sub Category</Label>
+        <Select
+          value={subCategoryId}
+          onValueChange={setSubCategoryId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sub Category" />
+          </SelectTrigger>
 
-        <SelectContent>
-          {subCategories.map((c) => (
-            <SelectItem key={c.id} value={c.id}>
-              {c.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectContent>
+            {subCategories.map((c) => (
+              <SelectItem key={c.id} value={c.id}>
+                {c.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select value={brandId} onValueChange={setBrandId}>
-        <SelectTrigger>
-          <SelectValue placeholder="Brand" />
-        </SelectTrigger>
+      <div className="space-y-2">
+        <Label>Brand</Label>
+        <Select value={brandId} onValueChange={setBrandId}>
+          <SelectTrigger>
+            <SelectValue placeholder="Brand" />
+          </SelectTrigger>
 
-        <SelectContent>
-          {brands.map((b) => (
-            <SelectItem key={b.id} value={b.id}>
-              {b.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectContent>
+            {brands.map((b) => (
+              <SelectItem key={b.id} value={b.id}>
+                {b.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select
-        value={gstSlabId}
-        onValueChange={setGstSlabId}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="GST Slab" />
-        </SelectTrigger>
+      <div className="space-y-2">
+        <Label required>GST Slab</Label>
+        <Select
+          value={gstSlabId}
+          onValueChange={setGstSlabId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="GST Slab" />
+          </SelectTrigger>
 
-        <SelectContent>
-          {gstSlabs.map((g) => (
-            <SelectItem key={g.id} value={g.id}>
-              {g.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectContent>
+            {gstSlabs.map((g) => (
+              <SelectItem key={g.id} value={g.id}>
+                {g.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select
-        value={baseUnitId}
-        onValueChange={setBaseUnitId}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Base Unit" />
-        </SelectTrigger>
+      <div className="space-y-2">
+        <Label required>Base Unit</Label>
+        <Select
+          value={baseUnitId}
+          onValueChange={setBaseUnitId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Base Unit" />
+          </SelectTrigger>
 
-        <SelectContent>
-          {units.map((u) => (
-            <SelectItem key={u.id} value={u.id}>
-              {u.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectContent>
+            {units.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select
-        value={purchaseUnitId}
-        onValueChange={setPurchaseUnitId}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Purchase Unit" />
-        </SelectTrigger>
+      <div className="space-y-2">
+        <Label required>Purchase Unit</Label>
+        <Select
+          value={purchaseUnitId}
+          onValueChange={setPurchaseUnitId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Purchase Unit" />
+          </SelectTrigger>
 
-        <SelectContent>
-          {units.map((u) => (
-            <SelectItem key={u.id} value={u.id}>
-              {u.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectContent>
+            {units.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Select
-        value={saleUnitId}
-        onValueChange={setSaleUnitId}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Sale Unit" />
-        </SelectTrigger>
+      <div className="space-y-2">
+        <Label required>Sale Unit</Label>
+        <Select
+          value={saleUnitId}
+          onValueChange={setSaleUnitId}
+        >
+          <SelectTrigger>
+            <SelectValue placeholder="Sale Unit" />
+          </SelectTrigger>
 
-        <SelectContent>
-          {units.map((u) => (
-            <SelectItem key={u.id} value={u.id}>
-              {u.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+          <SelectContent>
+            {units.map((u) => (
+              <SelectItem key={u.id} value={u.id}>
+                {u.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
-      <Input
-        type="number"
-        value={conversionFactor}
-        placeholder="Conversion Factor"
-        onChange={(e) =>
-          setConversionFactor(e.target.value)
-        }
-      />
+      <div className="space-y-2">
+        <Label required>MRP</Label>
+        <Input
+          type="number"
+          value={mrp}
+          placeholder="MRP"
+          onChange={(e) => setMrp(e.target.value)}
+        />
+      </div>
 
-      <Input
-        type="number"
-        value={mrp}
-        placeholder="MRP"
-        onChange={(e) => setMrp(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label required>Purchase Rate</Label>
+        <Input
+          type="number"
+          value={purchaseRate}
+          placeholder="Purchase Rate"
+          onChange={(e) =>
+            setPurchaseRate(e.target.value)
+          }
+        />
+      </div>
 
-      <Input
-        type="number"
-        value={purchaseRate}
-        placeholder="Purchase Rate"
-        onChange={(e) =>
-          setPurchaseRate(e.target.value)
-        }
-      />
+      <div className="space-y-2">
+        <Label>Min Qty</Label>
+        <Input
+          type="number"
+          value={minQty}
+          placeholder="Min Qty"
+          onChange={(e) =>
+            setMinQty(e.target.value)
+          }
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Reorder Qty</Label>
+        <Input
+          type="number"
+          value={reorderQty}
+          placeholder="Reorder Qty"
+          onChange={(e) =>
+            setReorderQty(e.target.value)
+          }
+        />
+      </div>
 
       <div className="flex items-center gap-2">
         <Checkbox

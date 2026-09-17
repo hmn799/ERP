@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 export interface CategoryFormValues {
   name: string;
@@ -43,12 +44,16 @@ export default function CategoryForm({
         });
       }}
     >
-      <Input
-        value={name}
-        disabled={loading}
-        placeholder="Enter Category Name"
-        onChange={(e) => setName(e.target.value)}
-      />
+      <div className="space-y-2">
+        <Label required>Category Name</Label>
+
+        <Input
+          value={name}
+          disabled={loading}
+          placeholder="Enter Category Name"
+          onChange={(e) => setName(e.target.value)}
+        />
+      </div>
     </form>
   );
 }

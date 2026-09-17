@@ -116,7 +116,6 @@ describe('Monitoring (e2e)', () => {
         baseUnitId: unit.id,
         purchaseUnitId: unit.id,
         saleUnitId: unit.id,
-        conversionFactor: 1,
         mrp: 100,
         purchaseRate: 50,
       },

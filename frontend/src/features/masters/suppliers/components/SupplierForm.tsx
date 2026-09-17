@@ -178,7 +178,7 @@ export default function SupplierForm({
         )}
 
         <div className="space-y-2">
-          <Label>Supplier Name</Label>
+          <Label required>Supplier Name</Label>
           <Input
             value={name}
             disabled={loading}
@@ -189,7 +189,7 @@ export default function SupplierForm({
         </div>
 
         <div className="space-y-2">
-          <Label>GST Type</Label>
+          <Label required>GST Type</Label>
 
           <Select
             value={gstType}

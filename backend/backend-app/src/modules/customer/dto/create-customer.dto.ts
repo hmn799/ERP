@@ -1,11 +1,18 @@
 import {
   IsBoolean,
   IsEmail,
+  IsIn,
   IsNumber,
   IsOptional,
   IsString,
   MaxLength,
 } from "class-validator";
+
+const CUSTOMER_GROUPS = [
+  "RETAIL",
+  "WHOLESALE",
+  "DISTRIBUTOR",
+] as const;
 
 export class CreateCustomerDto {
   /*
@@ -22,11 +29,18 @@ export class CreateCustomerDto {
   @MaxLength(150)
   name: string;
 
-  @IsString()
+  /*
+   * RETAIL (Rate A) | WHOLESALE (Rate B, shown to the operator as
+   * "Semi Wholesale") | DISTRIBUTOR (Rate C, shown as "Wholesale") -
+   * this is also what sales-calculation.service.ts reads (as
+   * priceLevel, kept in sync below) to pick which batch rate column
+   * applies to this customer's sales.
+   */
+  @IsIn(CUSTOMER_GROUPS)
   customerGroup: string;
 
   @IsOptional()
-  @IsString()
+  @IsIn(CUSTOMER_GROUPS)
   priceLevel?: string;
 
   @IsOptional()
