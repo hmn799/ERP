@@ -137,3 +137,101 @@ body{
 main{
     background:var(--erp-bg);
 }
+
+/*
+ * 3-inch (80mm) sale receipt. SalesReceiptPrint portals its markup
+ * onto <body> so it sits alongside the whole app shell (sidebar,
+ * nav, page chrome) rather than nested inside it - that lets one
+ * rule below hide every other direct child of <body> on print,
+ * regardless of how deep ERPLayout's own DOM is.
+ */
+.receipt-print-portal{
+    display:none;
+}
+
+@media print{
+    body > *:not(.receipt-print-portal){
+        display:none !important;
+    }
+
+    .receipt-print-portal{
+        display:block !important;
+    }
+
+    @page{
+        size: 80mm auto;
+        margin: 0;
+    }
+}
+
+.receipt-3in{
+    width: 76mm;
+    margin: 0 auto;
+    padding: 2mm;
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    line-height: 1.35;
+    color: #000;
+}
+
+.receipt-center{
+    text-align: center;
+}
+
+.receipt-bold{
+    font-weight: 700;
+}
+
+.receipt-lg{
+    font-size: 13px;
+}
+
+.receipt-row{
+    display: flex;
+    justify-content: space-between;
+    gap: 4px;
+}
+
+.receipt-row > span{
+    white-space: nowrap;
+}
+
+.receipt-item{
+    margin-bottom: 1mm;
+}
+
+.receipt-rule{
+    border-top: 1px solid #000;
+    margin: 1mm 0;
+}
+
+.receipt-rule-dashed{
+    border-top: 1px dashed #000;
+    margin: 1mm 0;
+}
+
+.receipt-col-item{
+    flex: 1 1 auto;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.receipt-col-qty{
+    flex: 0 0 20px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.receipt-col-rate{
+    flex: 0 0 50px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.receipt-col-amt{
+    flex: 0 0 54px;
+    text-align: right;
+    white-space: nowrap;
+}

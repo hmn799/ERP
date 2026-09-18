@@ -5,6 +5,10 @@ import { useRouter } from "next/navigation";
 
 import { getSaleById } from "../services/sales.service";
 import { SalesResponse } from "../types/sales.types";
+import SalesReceiptPrint from "../components/SalesReceiptPrint";
+
+import CompanyService from "@/services/company/company.service";
+import { CompanyProfile } from "@/features/settings/types/company.types";
 
 import {
   formatCurrency,
@@ -23,6 +27,9 @@ export default function SalesViewPage({
 
   const [sale, setSale] =
     useState<SalesResponse | null>(null);
+
+  const [company, setCompany] =
+    useState<CompanyProfile | null>(null);
 
   const [loading, setLoading] =
     useState(true);
@@ -58,6 +65,17 @@ export default function SalesViewPage({
       loadSale();
     }
   }, [saleId]);
+
+  useEffect(() => {
+    CompanyService.getProfile()
+      .then(setCompany)
+      .catch((err) =>
+        console.error(
+          "Failed to load company profile:",
+          err,
+        ),
+      );
+  }, []);
 
   if (loading) {
     return (
@@ -126,6 +144,11 @@ export default function SalesViewPage({
 
   return (
     <div className="space-y-6 p-6">
+      <SalesReceiptPrint
+        sale={sale}
+        company={company}
+      />
+
       {/* HEADER */}
 
       <div className="flex items-center justify-between">
