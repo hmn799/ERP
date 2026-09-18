@@ -8,6 +8,7 @@ import { CompanyProfile } from "@/features/settings/types/company.types";
 import {
   formatCurrency,
   formatDate,
+  formatTime,
 } from "@/shared/utils/format";
 
 interface Props {
@@ -72,6 +73,21 @@ export default function SalesReceiptPrint({
       0,
     ) ?? 0;
 
+  const totalSavings =
+    sale.items?.reduce((sum, item) => {
+      const mrp = Number(item.batch?.mrp ?? 0);
+
+      if (mrp <= 0) {
+        return sum;
+      }
+
+      const qty = Number(item.qty ?? 0);
+      const net = Number(item.netAmount ?? 0);
+      const savings = mrp * qty - net;
+
+      return sum + (savings > 0 ? savings : 0);
+    }, 0) ?? 0;
+
   return createPortal(
     <div className="receipt-print-portal">
       <div className="receipt-3in">
@@ -115,7 +131,8 @@ export default function SalesReceiptPrint({
 
         <div className="receipt-row">
           <span>
-            {formatDate(sale.billDate)}
+            {formatDate(sale.billDate)}{" "}
+            {formatTime(sale.billDate)}
           </span>
 
           <span>
@@ -131,6 +148,23 @@ export default function SalesReceiptPrint({
               "Cash Customer"}
           </span>
         </div>
+
+        {sale.customer?.address && (
+          <div className="receipt-row">
+            <span>
+              {sale.customer.address}
+              {sale.customer.city
+                ? `, ${sale.customer.city}`
+                : ""}
+              {sale.customer.state
+                ? `, ${sale.customer.state}`
+                : ""}
+              {sale.customer.pincode
+                ? ` - ${sale.customer.pincode}`
+                : ""}
+            </span>
+          </div>
+        )}
 
         {sale.customer?.gstin && (
           <div className="receipt-row">
@@ -176,6 +210,23 @@ export default function SalesReceiptPrint({
               {item.batch?.batchNo
                 ? ` (${item.batch.batchNo})`
                 : ""}
+            </div>
+
+            <div className="receipt-row receipt-meta">
+              <span>
+                HSN:{" "}
+                {item.item?.hsnCode || "-"}
+              </span>
+
+              {Number(item.batch?.mrp ?? 0) >
+                0 && (
+                <span>
+                  MRP:{" "}
+                  {formatCurrency(
+                    Number(item.batch?.mrp),
+                  )}
+                </span>
+              )}
             </div>
 
             <div className="receipt-row">
@@ -287,6 +338,12 @@ export default function SalesReceiptPrint({
           <span>NET PAYABLE</span>
           <span>{money(finalPayable)}</span>
         </div>
+
+        {totalSavings > 0.01 && (
+          <div className="receipt-center receipt-bold">
+            You Saved {money(totalSavings)}
+          </div>
+        )}
 
         <div className="receipt-rule" />
 

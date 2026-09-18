@@ -123,6 +123,11 @@ export interface SalesResponse {
     name: string;
     gstCategory?: string;
     gstin?: string | null;
+    mobile?: string | null;
+    address?: string | null;
+    city?: string | null;
+    state?: string | null;
+    pincode?: string | null;
   };
 
   warehouse?: {

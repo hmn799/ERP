@@ -11,6 +11,19 @@ export function formatDate(
   ).format(new Date(value));
 }
 
+export function formatTime(
+  value: string | Date,
+) {
+  return new Intl.DateTimeFormat(
+    "en-IN",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    },
+  ).format(new Date(value));
+}
+
 export function formatCurrency(
   value: number | string,
 ) {

@@ -200,6 +200,10 @@ main{
     margin-bottom: 1mm;
 }
 
+.receipt-meta{
+    font-size: 9px;
+}
+
 .receipt-rule{
     border-top: 1px solid #000;
     margin: 1mm 0;
