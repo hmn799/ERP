@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { ColumnDef } from "@tanstack/react-table";
@@ -8,14 +8,20 @@ import { ColumnDef } from "@tanstack/react-table";
 import ERPToolbar from "@/components/erp/crud/ERPToolbar";
 import ERPFormDialog from "@/components/erp/crud/ERPFormDialog";
 import ERPDataTable from "@/components/erp/crud/ERPDataTable";
+import { Button } from "@/components/ui/button";
 
 import LedgerService from "@/services/ledger/ledger.service";
+import BankAccountService from "@/services/bank/bank-account.service";
+import CompanyService from "@/services/company/company.service";
 
 import PaymentForm, {
   PaymentFormValues,
 } from "../components/PaymentForm";
 
+import VoucherReceiptPrint from "../../components/VoucherReceiptPrint";
+
 import type { Payment } from "../../types/ledger.types";
+import type { CompanyProfile } from "@/features/settings/types/company.types";
 
 function money(value: number) {
   return value.toLocaleString("en-IN", {
@@ -24,34 +30,53 @@ function money(value: number) {
   });
 }
 
-const columns: ColumnDef<Payment>[] = [
-  {
-    accessorKey: "date",
-    header: "Date",
-    cell: ({ row }) =>
-      new Date(
-        row.original.date,
-      ).toLocaleDateString("en-IN"),
-  },
-  {
-    id: "supplier",
-    header: "Supplier",
-    cell: ({ row }) =>
-      `${row.original.supplierCode} - ${row.original.supplierName}`,
-  },
-  {
-    accessorKey: "amount",
-    header: "Amount",
-    cell: ({ row }) =>
-      `₹${money(row.original.amount)}`,
-  },
-  {
-    accessorKey: "remarks",
-    header: "Remarks",
-    cell: ({ row }) =>
-      row.original.remarks || "-",
-  },
-];
+function getColumns(
+  onPrint: (payment: Payment) => void,
+): ColumnDef<Payment>[] {
+  return [
+    {
+      accessorKey: "date",
+      header: "Date",
+      cell: ({ row }) =>
+        new Date(
+          row.original.date,
+        ).toLocaleDateString("en-IN"),
+    },
+    {
+      id: "supplier",
+      header: "Supplier",
+      cell: ({ row }) =>
+        `${row.original.supplierCode} - ${row.original.supplierName}`,
+    },
+    {
+      accessorKey: "amount",
+      header: "Amount",
+      cell: ({ row }) =>
+        `₹${money(row.original.amount)}`,
+    },
+    {
+      accessorKey: "remarks",
+      header: "Remarks",
+      cell: ({ row }) =>
+        row.original.remarks || "-",
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            onPrint(row.original)
+          }
+        >
+          Print
+        </Button>
+      ),
+    },
+  ];
+}
 
 export default function PaymentsPage() {
   const {
@@ -63,9 +88,60 @@ export default function PaymentsPage() {
     queryFn: LedgerService.listPayments,
   });
 
+  const { data: bankAccounts = [] } = useQuery({
+    queryKey: ["bank-accounts"],
+    queryFn: BankAccountService.getAll,
+    retry: false,
+  });
+
+  const [company, setCompany] =
+    useState<CompanyProfile | null>(null);
+
+  const [printingPayment, setPrintingPayment] =
+    useState<Payment | null>(null);
+
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    CompanyService.getProfile()
+      .then(setCompany)
+      .catch((err) =>
+        console.error(
+          "Failed to load company profile:",
+          err,
+        ),
+      );
+  }, []);
+
+  useEffect(() => {
+    if (!printingPayment) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      window.print();
+    }, 100);
+
+    function handleAfterPrint() {
+      setPrintingPayment(null);
+    }
+
+    window.addEventListener(
+      "afterprint",
+      handleAfterPrint,
+    );
+
+    return () => {
+      window.clearTimeout(timer);
+
+      window.removeEventListener(
+        "afterprint",
+        handleAfterPrint,
+      );
+    };
+  }, [printingPayment]);
 
   async function handleSubmit(
     values: PaymentFormValues,
@@ -104,8 +180,28 @@ export default function PaymentsPage() {
         .includes(search.toLowerCase()),
   );
 
+  const printingBankAccountName = printingPayment
+    ?.bankAccountId
+    ? bankAccounts.find(
+        (account) =>
+          account.id ===
+          printingPayment.bankAccountId,
+      )?.name
+    : null;
+
   return (
     <div className="space-y-6">
+      {printingPayment && (
+        <VoucherReceiptPrint
+          type="PAYMENT"
+          record={printingPayment}
+          bankAccountName={
+            printingBankAccountName
+          }
+          company={company}
+        />
+      )}
+
       <ERPToolbar
         search={search}
         searchPlaceholder="Search payments by supplier..."
@@ -116,7 +212,9 @@ export default function PaymentsPage() {
       />
 
       <ERPDataTable
-        columns={columns}
+        columns={getColumns(
+          setPrintingPayment,
+        )}
         data={filtered}
         loading={isLoading}
       />
