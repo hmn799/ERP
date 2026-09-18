@@ -93,7 +93,7 @@ export default function SalesReceiptPrint({
       <div className="receipt-3in">
         {/* SHOP HEADER */}
 
-        <div className="receipt-center receipt-bold receipt-lg">
+        <div className="receipt-center receipt-bold receipt-lg receipt-shop-name">
           {company?.name || "Your Shop Name"}
         </div>
 
@@ -212,9 +212,6 @@ export default function SalesReceiptPrint({
                 {item.item?.name ||
                   item.item?.itemCode ||
                   "-"}
-                {item.batch?.batchNo
-                  ? ` (${item.batch.batchNo})`
-                  : ""}
               </span>
 
               <span className="receipt-col-qty">
@@ -333,9 +330,15 @@ export default function SalesReceiptPrint({
         </div>
 
         {totalSavings > 0.01 && (
-          <div className="receipt-center receipt-bold">
-            You Saved {money(totalSavings)}
-          </div>
+          <>
+            <div className="receipt-rule-dashed" />
+
+            <div className="receipt-center receipt-bold receipt-savings">
+              *** You Saved {money(totalSavings)} ***
+            </div>
+
+            <div className="receipt-rule-dashed" />
+          </>
         )}
 
         <div className="receipt-rule" />
@@ -386,6 +389,10 @@ export default function SalesReceiptPrint({
 
         <div className="receipt-center receipt-bold">
           Thank you! Visit again.
+        </div>
+
+        <div className="receipt-center receipt-flourish">
+          * * * * * * * * * *
         </div>
       </div>
     </div>,

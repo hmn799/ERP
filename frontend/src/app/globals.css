@@ -169,9 +169,12 @@ main{
     margin: 0 auto;
     padding: 2mm;
     font-family: "Courier New", monospace;
-    font-size: 11px;
-    line-height: 1.35;
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.4;
     color: #000;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
 }
 
 .receipt-center{
@@ -179,11 +182,28 @@ main{
 }
 
 .receipt-bold{
-    font-weight: 700;
+    font-weight: 800;
 }
 
 .receipt-lg{
+    font-size: 15px;
+}
+
+.receipt-shop-name{
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+
+.receipt-savings{
     font-size: 13px;
+    padding: 0.5mm 0;
+}
+
+.receipt-flourish{
+    margin-top: 1mm;
+    font-size: 10px;
+    font-weight: 400;
+    letter-spacing: 1px;
 }
 
 .receipt-row{
@@ -197,21 +217,22 @@ main{
 }
 
 .receipt-item{
-    margin-bottom: 1mm;
+    margin-bottom: 1.5mm;
 }
 
 .receipt-meta{
-    font-size: 9px;
+    font-size: 10px;
+    font-weight: 400;
 }
 
 .receipt-rule{
-    border-top: 1px solid #000;
-    margin: 1mm 0;
+    border-top: 2px solid #000;
+    margin: 1.2mm 0;
 }
 
 .receipt-rule-dashed{
-    border-top: 1px dashed #000;
-    margin: 1mm 0;
+    border-top: 1.5px dashed #000;
+    margin: 1.2mm 0;
 }
 
 /*
@@ -225,7 +246,7 @@ main{
 .receipt-item-row{
     display: flex;
     align-items: flex-start;
-    gap: 4px;
+    gap: 7px;
 }
 
 .receipt-col-item{
@@ -237,25 +258,25 @@ main{
 }
 
 .receipt-col-qty{
-    flex: 0 0 16px;
+    flex: 0 0 20px;
     text-align: right;
     white-space: nowrap;
 }
 
 .receipt-col-mrp{
-    flex: 0 0 32px;
+    flex: 0 0 36px;
     text-align: right;
     white-space: nowrap;
 }
 
 .receipt-col-rate{
-    flex: 0 0 32px;
+    flex: 0 0 36px;
     text-align: right;
     white-space: nowrap;
 }
 
 .receipt-col-amt{
-    flex: 0 0 38px;
+    flex: 0 0 42px;
     text-align: right;
     white-space: nowrap;
 }
