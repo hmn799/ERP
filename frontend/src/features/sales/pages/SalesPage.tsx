@@ -130,7 +130,7 @@ export default function SalesPage({
 
   const [taxMode, setTaxMode] = useState<
     "EXCLUSIVE" | "INCLUSIVE"
-  >("EXCLUSIVE");
+  >("INCLUSIVE");
 
   const [
     billDiscountPercent,
@@ -2285,7 +2285,7 @@ setRows(
 
     setIsCredit(false);
 
-    setTaxMode("EXCLUSIVE");
+    setTaxMode("INCLUSIVE");
 
     setBillDiscountPercent(0);
 
@@ -2770,7 +2770,6 @@ setRows(
         customers={customers}
         warehouses={warehouses}
         isCredit={isCredit}
-        taxMode={taxMode}
         isEditMode={isEditMode}
         customerOutstanding={
           customerOutstanding
@@ -2798,9 +2797,6 @@ setRows(
         }
         onCreditChange={
           setIsCredit
-        }
-        onTaxModeChange={
-          setTaxMode
         }
         onSaleTypeComplete={
           focusItemSearchBar

@@ -35,8 +35,6 @@ interface SalesHeaderProps {
 
   isCredit: boolean;
 
-  taxMode: "EXCLUSIVE" | "INCLUSIVE";
-
   isEditMode?: boolean;
 
   customerOutstanding?: number;
@@ -50,9 +48,6 @@ interface SalesHeaderProps {
   onCustomerChange: (value: string) => void;
   onWarehouseChange: (value: string) => void;
   onCreditChange: (value: boolean) => void;
-  onTaxModeChange: (
-    value: "EXCLUSIVE" | "INCLUSIVE",
-  ) => void;
 
   /*
    * Fires once the sale-type field (Cash/Credit) is done - lets the
@@ -87,7 +82,6 @@ export default function SalesHeader({
   customers,
   warehouses,
   isCredit,
-  taxMode,
   isEditMode = false,
   customerOutstanding = 0,
   customerLedgerLoading = false,
@@ -98,7 +92,6 @@ export default function SalesHeader({
   onCustomerChange,
   onWarehouseChange,
   onCreditChange,
-  onTaxModeChange,
   onSaleTypeComplete,
   onCreateCustomer,
 }: SalesHeaderProps) {
@@ -821,33 +814,6 @@ export default function SalesHeader({
                   </option>
                 ),
               )}
-            </select>
-          </div>
-
-          {/* GST MODE */}
-
-          <div>
-            <label className="mb-1 block text-sm font-medium">
-              GST Mode
-            </label>
-
-            <select
-              value={taxMode}
-              onChange={(event) =>
-                onTaxModeChange(
-                  event.target.value as
-                    | "EXCLUSIVE"
-                    | "INCLUSIVE",
-                )
-              }
-              className={inputClass}
-            >
-              <option value="EXCLUSIVE">
-                Exclusive (rate + GST)
-              </option>
-              <option value="INCLUSIVE">
-                Inclusive (rate includes GST)
-              </option>
             </select>
           </div>
         </div>
