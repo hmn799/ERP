@@ -22,6 +22,9 @@ export default function CompanySettingsPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
+  const [receiptFontSize, setReceiptFontSize] =
+    useState(13);
+
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -42,6 +45,9 @@ export default function CompanySettingsPage() {
         setAddress(profile.address ?? "");
         setPhone(profile.phone ?? "");
         setEmail(profile.email ?? "");
+        setReceiptFontSize(
+          profile.receiptFontSize ?? 13,
+        );
       } catch (error) {
         console.error(
           "Failed to load company profile:",
@@ -78,6 +84,7 @@ export default function CompanySettingsPage() {
         address: address.trim() || undefined,
         phone: phone.trim() || undefined,
         email: email.trim() || undefined,
+        receiptFontSize,
       });
 
       toast.success(
@@ -178,6 +185,48 @@ export default function CompanySettingsPage() {
               }
             />
           </div>
+        </div>
+
+      </div>
+
+      <div>
+        <h2 className="text-lg font-semibold">
+          Receipt Print Settings
+        </h2>
+
+        <p className="text-sm text-gray-500">
+          Controls the text size on the printed 3-inch sale
+          receipt.
+        </p>
+      </div>
+
+      <div className="space-y-4 rounded-lg border bg-white p-5 shadow-sm">
+        <div className="space-y-2">
+          <Label>Receipt Font Size</Label>
+
+          <select
+            value={receiptFontSize}
+            disabled={saving}
+            onChange={(event) =>
+              setReceiptFontSize(
+                Number(event.target.value),
+              )
+            }
+            className="h-10 w-full rounded-md border px-3 py-2 text-sm outline-none focus:ring-2"
+          >
+            <option value={11}>
+              Small
+            </option>
+            <option value={13}>
+              Medium (Default)
+            </option>
+            <option value={15}>
+              Large
+            </option>
+            <option value={17}>
+              Extra Large
+            </option>
+          </select>
         </div>
 
         <div className="flex justify-end pt-2">

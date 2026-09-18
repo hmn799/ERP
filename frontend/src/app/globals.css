@@ -169,7 +169,7 @@ main{
     margin: 0 auto;
     padding: 2mm;
     font-family: "Courier New", monospace;
-    font-size: 12px;
+    font-size: var(--receipt-font-size, 13px);
     font-weight: 600;
     line-height: 1.4;
     color: #000;
@@ -185,8 +185,13 @@ main{
     font-weight: 800;
 }
 
+/*
+ * Sized in em, not px, so every heading/label scales together with
+ * the user's chosen receipt font size (Settings > Receipt Print
+ * Settings) instead of staying fixed while the base text grows.
+ */
 .receipt-lg{
-    font-size: 15px;
+    font-size: 1.25em;
 }
 
 .receipt-shop-name{
@@ -195,13 +200,13 @@ main{
 }
 
 .receipt-savings{
-    font-size: 13px;
+    font-size: 1.08em;
     padding: 0.5mm 0;
 }
 
 .receipt-flourish{
     margin-top: 1mm;
-    font-size: 10px;
+    font-size: 0.83em;
     font-weight: 400;
     letter-spacing: 1px;
 }
@@ -221,7 +226,7 @@ main{
 }
 
 .receipt-meta{
-    font-size: 10px;
+    font-size: 0.83em;
     font-weight: 700;
 }
 
@@ -246,38 +251,44 @@ main{
 .receipt-item-row{
     display: flex;
     align-items: flex-start;
-    gap: 7px;
+    gap: 4px;
 }
 
+/*
+ * Column widths are in `ch` (one monospace character), not px, so
+ * they scale together with the user's chosen receipt font size
+ * instead of getting proportionally tighter (or wasting space) as
+ * that size changes.
+ */
 .receipt-col-item{
     flex: 1 1 auto;
     min-width: 0;
     text-align: left;
-    font-size: 13px;
+    font-size: 1.08em;
     white-space: normal;
     word-break: break-word;
 }
 
 .receipt-col-qty{
-    flex: 0 0 20px;
+    flex: 0 0 3ch;
     text-align: right;
     white-space: nowrap;
 }
 
 .receipt-col-mrp{
-    flex: 0 0 36px;
+    flex: 0 0 6ch;
     text-align: right;
     white-space: nowrap;
 }
 
 .receipt-col-rate{
-    flex: 0 0 36px;
+    flex: 0 0 6ch;
     text-align: right;
     white-space: nowrap;
 }
 
 .receipt-col-amt{
-    flex: 0 0 42px;
+    flex: 0 0 7ch;
     text-align: right;
     white-space: nowrap;
 }

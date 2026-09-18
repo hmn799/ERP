@@ -11,6 +11,8 @@ export interface CompanyProfile {
 
   email?: string | null;
 
+  receiptFontSize?: number;
+
   isActive: boolean;
 
   createdAt?: string;
@@ -28,4 +30,6 @@ export interface UpdateCompanyDto {
   phone?: string;
 
   email?: string;
+
+  receiptFontSize?: number;
 }

@@ -1,8 +1,11 @@
 import {
   IsEmail,
+  IsInt,
   IsOptional,
   IsString,
+  Max,
   MaxLength,
+  Min,
 } from "class-validator";
 
 export class UpdateCompanyDto {
@@ -25,4 +28,10 @@ export class UpdateCompanyDto {
   @IsOptional()
   @IsEmail()
   email?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(8)
+  @Max(20)
+  receiptFontSize?: number;
 }

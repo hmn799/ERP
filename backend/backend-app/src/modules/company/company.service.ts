@@ -40,6 +40,7 @@ export class CompanyService {
       address: dto.address,
       phone: dto.phone,
       email: dto.email,
+      receiptFontSize: dto.receiptFontSize,
     };
 
     if (existing) {

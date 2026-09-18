@@ -1,5 +1,6 @@
 "use client";
 
+import type { CSSProperties } from "react";
 import { createPortal } from "react-dom";
 
 import { SalesResponse } from "../types/sales.types";
@@ -52,15 +53,6 @@ export default function SalesReceiptPrint({
 
   const totalItems = sale.items?.length ?? 0;
 
-  const totalPaid =
-    sale.payments?.reduce(
-      (total, payment) =>
-        total +
-        Number(payment.amount ?? 0) +
-        Number(payment.cardSurcharge ?? 0),
-      0,
-    ) ?? 0;
-
   const totalSavings =
     sale.items?.reduce((sum, item) => {
       const mrp = Number(item.batch?.mrp ?? 0);
@@ -76,9 +68,16 @@ export default function SalesReceiptPrint({
       return sum + (savings > 0 ? savings : 0);
     }, 0) ?? 0;
 
+  const receiptStyle = {
+    "--receipt-font-size": `${company?.receiptFontSize ?? 13}px`,
+  } as CSSProperties;
+
   return createPortal(
     <div className="receipt-print-portal">
-      <div className="receipt-3in">
+      <div
+        className="receipt-3in"
+        style={receiptStyle}
+      >
         {/* SHOP HEADER */}
 
         <div className="receipt-center receipt-bold receipt-lg receipt-shop-name">
@@ -197,6 +196,7 @@ export default function SalesReceiptPrint({
           >
             <div className="receipt-item-row">
               <span className="receipt-col-item">
+                {index + 1}.{" "}
                 {item.item?.name ||
                   item.item?.itemCode ||
                   "-"}
@@ -266,38 +266,6 @@ export default function SalesReceiptPrint({
         )}
 
         <div className="receipt-rule" />
-
-        {/* PAYMENTS */}
-
-        {!sale.isCredit &&
-          sale.payments &&
-          sale.payments.length > 0 && (
-            <>
-              {sale.payments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="receipt-row"
-                >
-                  <span>
-                    {payment.paymentMode}
-                  </span>
-
-                  <span>
-                    {money(payment.amount)}
-                  </span>
-                </div>
-              ))}
-
-              <div className="receipt-row receipt-bold">
-                <span>Total Paid</span>
-                <span>
-                  {money(totalPaid)}
-                </span>
-              </div>
-
-              <div className="receipt-rule" />
-            </>
-          )}
 
         {sale.isCredit && (
           <>

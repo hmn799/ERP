@@ -45,15 +45,16 @@ enum SchemeType {
 }
 
 model Company {
-  id        String   @id @default(cuid())
-  name      String
-  gstin     String?
-  address   String?
-  phone     String?
-  email     String?
-  isActive  Boolean  @default(true)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id               String   @id @default(cuid())
+  name             String
+  gstin            String?
+  address          String?
+  phone            String?
+  email            String?
+  receiptFontSize  Int      @default(13)
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
 }
 
 model FinancialYear {
