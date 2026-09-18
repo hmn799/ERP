@@ -10,6 +10,7 @@ import SalesChart from "../components/SalesChart";
 import RecentBills from "../components/RecentBills";
 import TopSellingItems from "../components/TopSellingItems";
 import LowStock from "../components/LowStock";
+import QuickAccess from "../components/QuickAccess";
 
 export default function DashboardPage() {
   const {
@@ -55,6 +56,8 @@ export default function DashboardPage() {
           outstanding balances.
         </p>
       </div>
+
+      <QuickAccess />
 
       <DashboardStats summary={summary} />
 
