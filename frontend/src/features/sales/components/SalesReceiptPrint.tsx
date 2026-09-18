@@ -178,13 +178,17 @@ export default function SalesReceiptPrint({
 
         {/* ITEMS */}
 
-        <div className="receipt-row receipt-bold">
+        <div className="receipt-item-row receipt-bold">
           <span className="receipt-col-item">
             Item
           </span>
 
           <span className="receipt-col-qty">
             Qty
+          </span>
+
+          <span className="receipt-col-mrp">
+            MRP
           </span>
 
           <span className="receipt-col-rate">
@@ -203,42 +207,27 @@ export default function SalesReceiptPrint({
             key={item.id ?? index}
             className="receipt-item"
           >
-            <div>
-              {item.item?.name ||
-                item.item?.itemCode ||
-                "-"}
-              {item.batch?.batchNo
-                ? ` (${item.batch.batchNo})`
-                : ""}
-            </div>
-
-            <div className="receipt-row receipt-meta">
-              <span>
-                HSN:{" "}
-                {item.item?.hsnCode || "-"}
-              </span>
-
-              {Number(item.batch?.mrp ?? 0) >
-                0 && (
-                <span>
-                  MRP:{" "}
-                  {formatCurrency(
-                    Number(item.batch?.mrp),
-                  )}
-                </span>
-              )}
-            </div>
-
-            <div className="receipt-row">
+            <div className="receipt-item-row">
               <span className="receipt-col-item">
-                {Number(
-                  item.gstPercent ?? 0,
-                )}
-                % GST
+                {item.item?.name ||
+                  item.item?.itemCode ||
+                  "-"}
+                {item.batch?.batchNo
+                  ? ` (${item.batch.batchNo})`
+                  : ""}
               </span>
 
               <span className="receipt-col-qty">
                 {Number(item.qty ?? 0)}
+              </span>
+
+              <span className="receipt-col-mrp">
+                {Number(item.batch?.mrp ?? 0) >
+                0
+                  ? formatCurrency(
+                      Number(item.batch?.mrp),
+                    )
+                  : "-"}
               </span>
 
               <span className="receipt-col-rate">
@@ -252,6 +241,10 @@ export default function SalesReceiptPrint({
                   Number(item.netAmount ?? 0),
                 )}
               </span>
+            </div>
+
+            <div className="receipt-meta">
+              HSN: {item.item?.hsnCode || "-"}
             </div>
           </div>
         ))}

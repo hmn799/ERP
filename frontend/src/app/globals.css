@@ -214,28 +214,48 @@ main{
     margin: 1mm 0;
 }
 
+/*
+ * The item table's column row. A plain flex row (like .receipt-row)
+ * would force every cell onto one line via `white-space: nowrap` -
+ * fine for the numeric columns, but a long item name needs to wrap
+ * onto its own line(s) instead of overlapping or squeezing them.
+ * align-items: flex-start keeps the numeric columns pinned to the
+ * item name's first line when it wraps to two or more.
+ */
+.receipt-item-row{
+    display: flex;
+    align-items: flex-start;
+    gap: 4px;
+}
+
 .receipt-col-item{
     flex: 1 1 auto;
+    min-width: 0;
     text-align: left;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    word-break: break-word;
 }
 
 .receipt-col-qty{
-    flex: 0 0 20px;
+    flex: 0 0 16px;
+    text-align: right;
+    white-space: nowrap;
+}
+
+.receipt-col-mrp{
+    flex: 0 0 32px;
     text-align: right;
     white-space: nowrap;
 }
 
 .receipt-col-rate{
-    flex: 0 0 50px;
+    flex: 0 0 32px;
     text-align: right;
     white-space: nowrap;
 }
 
 .receipt-col-amt{
-    flex: 0 0 54px;
+    flex: 0 0 38px;
     text-align: right;
     white-space: nowrap;
 }
