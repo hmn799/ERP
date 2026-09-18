@@ -26,4 +26,8 @@ export class CreatePaymentDto {
   @IsOptional()
   @IsString()
   bankAccountId?: string;
+
+  @IsOptional()
+  @IsString()
+  purchaseBillId?: string;
 }

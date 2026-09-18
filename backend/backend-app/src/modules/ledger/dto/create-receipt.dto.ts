@@ -26,4 +26,8 @@ export class CreateReceiptDto {
   @IsOptional()
   @IsString()
   bankAccountId?: string;
+
+  @IsOptional()
+  @IsString()
+  salesBillId?: string;
 }

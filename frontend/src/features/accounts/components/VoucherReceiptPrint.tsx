@@ -20,6 +20,7 @@ interface Props {
   type: "PAYMENT" | "RECEIPT";
   record: Payment | Receipt;
   bankAccountName?: string | null;
+  outstandingBalance?: number | null;
   company: CompanyProfile | null;
 }
 
@@ -37,6 +38,7 @@ export default function VoucherReceiptPrint({
   type,
   record,
   bankAccountName,
+  outstandingBalance,
   company,
 }: Props) {
   if (typeof document === "undefined") {
@@ -138,6 +140,13 @@ export default function VoucherReceiptPrint({
           <span>Code: {partyCode}</span>
         </div>
 
+        <div className="receipt-row">
+          <span>
+            Against Bill:{" "}
+            {record.billNo || "General"}
+          </span>
+        </div>
+
         <div className="receipt-rule-dashed" />
 
         <div className="receipt-row">
@@ -163,6 +172,25 @@ export default function VoucherReceiptPrint({
           <span>AMOUNT</span>
           <span>{money(record.amount)}</span>
         </div>
+
+        {outstandingBalance !== null &&
+          outstandingBalance !== undefined && (
+            <div className="receipt-row receipt-bold">
+              <span>
+                {isPayment
+                  ? "Balance Payable"
+                  : "Balance Receivable"}
+              </span>
+
+              <span>
+                {money(
+                  outstandingBalance > 0
+                    ? outstandingBalance
+                    : 0,
+                )}
+              </span>
+            </div>
+          )}
 
         <div className="receipt-rule" />
 

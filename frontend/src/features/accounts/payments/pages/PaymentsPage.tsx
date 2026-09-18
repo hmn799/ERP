@@ -61,6 +61,12 @@ function getColumns(
         row.original.remarks || "-",
     },
     {
+      id: "billNo",
+      header: "Against Bill",
+      cell: ({ row }) =>
+        row.original.billNo || "General",
+    },
+    {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
@@ -100,6 +106,11 @@ export default function PaymentsPage() {
   const [printingPayment, setPrintingPayment] =
     useState<Payment | null>(null);
 
+  const [
+    printingOutstanding,
+    setPrintingOutstanding,
+  ] = useState<number | null>(null);
+
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -117,12 +128,36 @@ export default function PaymentsPage() {
 
   useEffect(() => {
     if (!printingPayment) {
+      setPrintingOutstanding(null);
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      window.print();
-    }, 100);
+    let cancelled = false;
+
+    function triggerPrint() {
+      window.setTimeout(() => {
+        window.print();
+      }, 100);
+    }
+
+    LedgerService.getSupplierOutstanding(
+      printingPayment.supplierId,
+    )
+      .then((value) => {
+        if (!cancelled) {
+          setPrintingOutstanding(value);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setPrintingOutstanding(null);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          triggerPrint();
+        }
+      });
 
     function handleAfterPrint() {
       setPrintingPayment(null);
@@ -134,7 +169,7 @@ export default function PaymentsPage() {
     );
 
     return () => {
-      window.clearTimeout(timer);
+      cancelled = true;
 
       window.removeEventListener(
         "afterprint",
@@ -197,6 +232,9 @@ export default function PaymentsPage() {
           record={printingPayment}
           bankAccountName={
             printingBankAccountName
+          }
+          outstandingBalance={
+            printingOutstanding
           }
           company={company}
         />

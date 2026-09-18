@@ -9,6 +9,8 @@ import CustomerService from "@/services/customer/customer.service";
 import LedgerService from "@/services/ledger/ledger.service";
 import BankAccountService from "@/services/bank/bank-account.service";
 
+import { getSales } from "@/features/sales/services/sales.service";
+
 import type { CreateReceiptDto } from "../../types/ledger.types";
 
 export type ReceiptFormValues = CreateReceiptDto;
@@ -40,6 +42,11 @@ export default function ReceiptForm({
     retry: false,
   });
 
+  const { data: sales = [] } = useQuery({
+    queryKey: ["sales", "for-receipt"],
+    queryFn: getSales,
+  });
+
   const [customerId, setCustomerId] = useState("");
   const [amount, setAmount] = useState("");
   const [receiptDate, setReceiptDate] = useState(
@@ -47,6 +54,13 @@ export default function ReceiptForm({
   );
   const [remarks, setRemarks] = useState("");
   const [bankAccountId, setBankAccountId] = useState("");
+  const [salesBillId, setSalesBillId] = useState("");
+
+  const creditBills = sales.filter(
+    (sale) =>
+      sale.customerId === customerId &&
+      sale.isCredit,
+  );
 
   const [outstanding, setOutstanding] = useState<
     number | null
@@ -88,15 +102,17 @@ export default function ReceiptForm({
           ).toISOString(),
           remarks: remarks || undefined,
           bankAccountId: bankAccountId || undefined,
+          salesBillId: salesBillId || undefined,
         });
       }}
     >
       <select
         value={customerId}
         disabled={loading}
-        onChange={(e) =>
-          setCustomerId(e.target.value)
-        }
+        onChange={(e) => {
+          setCustomerId(e.target.value);
+          setSalesBillId("");
+        }}
         className="w-full rounded-md border px-3 py-2 text-sm"
       >
         <option value="">
@@ -113,6 +129,35 @@ export default function ReceiptForm({
           </option>
         ))}
       </select>
+
+      {customerId && creditBills.length > 0 && (
+        <select
+          value={salesBillId}
+          disabled={loading}
+          onChange={(e) =>
+            setSalesBillId(e.target.value)
+          }
+          className="w-full rounded-md border px-3 py-2 text-sm"
+        >
+          <option value="">
+            General receipt (not against a specific bill)
+          </option>
+
+          {creditBills.map((sale) => (
+            <option key={sale.id} value={sale.id}>
+              {sale.billNo} - ₹
+              {money(
+                Number(sale.finalPayable),
+              )}{" "}
+              (
+              {new Date(
+                sale.billDate,
+              ).toLocaleDateString("en-IN")}
+              )
+            </option>
+          ))}
+        </select>
+      )}
 
       {outstanding !== null && (
         <div className="rounded-md border bg-gray-50 p-2 text-sm">

@@ -163,6 +163,11 @@ export class LedgerService {
 
         transactionType: "RECEIPT",
 
+        referenceType: dto.salesBillId
+          ? "SALES_BILL"
+          : undefined,
+        referenceId: dto.salesBillId,
+
         debitAmount: 0,
         creditAmount: dto.amount,
 
@@ -200,6 +205,11 @@ export class LedgerService {
 
         transactionType: "PAYMENT",
 
+        referenceType: dto.purchaseBillId
+          ? "PURCHASE_BILL"
+          : undefined,
+        referenceId: dto.purchaseBillId,
+
         debitAmount: dto.amount,
         creditAmount: 0,
 
@@ -231,6 +241,24 @@ export class LedgerService {
       customers.map((customer) => [customer.id, customer]),
     );
 
+    const billIds = rows
+      .filter(
+        (row) => row.referenceType === "SALES_BILL",
+      )
+      .map((row) => row.referenceId as string);
+
+    const bills =
+      billIds.length > 0
+        ? await this.prisma.salesBill.findMany({
+            where: { id: { in: billIds } },
+            select: { id: true, billNo: true },
+          })
+        : [];
+
+    const billMap = new Map(
+      bills.map((bill) => [bill.id, bill.billNo]),
+    );
+
     return rows.map((row) => ({
       id: row.id,
       date: row.transactionDate,
@@ -243,6 +271,11 @@ export class LedgerService {
       amount: Number(row.creditAmount),
       remarks: row.remarks,
       bankAccountId: row.bankAccountId,
+      billNo:
+        row.referenceType === "SALES_BILL"
+          ? (billMap.get(row.referenceId as string) ??
+            null)
+          : null,
     }));
   }
 
@@ -267,6 +300,24 @@ export class LedgerService {
       suppliers.map((supplier) => [supplier.id, supplier]),
     );
 
+    const billIds = rows
+      .filter(
+        (row) => row.referenceType === "PURCHASE_BILL",
+      )
+      .map((row) => row.referenceId as string);
+
+    const bills =
+      billIds.length > 0
+        ? await this.prisma.purchaseBill.findMany({
+            where: { id: { in: billIds } },
+            select: { id: true, billNo: true },
+          })
+        : [];
+
+    const billMap = new Map(
+      bills.map((bill) => [bill.id, bill.billNo]),
+    );
+
     return rows.map((row) => ({
       id: row.id,
       date: row.transactionDate,
@@ -279,6 +330,11 @@ export class LedgerService {
       amount: Number(row.debitAmount),
       remarks: row.remarks,
       bankAccountId: row.bankAccountId,
+      billNo:
+        row.referenceType === "PURCHASE_BILL"
+          ? (billMap.get(row.referenceId as string) ??
+            null)
+          : null,
     }));
   }
 

@@ -9,6 +9,8 @@ import SupplierService from "@/services/supplier/supplier.service";
 import LedgerService from "@/services/ledger/ledger.service";
 import BankAccountService from "@/services/bank/bank-account.service";
 
+import { getPurchaseList } from "@/features/purchase/services/purchase.service";
+
 import type { CreatePaymentDto } from "../../types/ledger.types";
 
 export type PaymentFormValues = CreatePaymentDto;
@@ -47,10 +49,16 @@ export default function PaymentForm({
   );
   const [remarks, setRemarks] = useState("");
   const [bankAccountId, setBankAccountId] = useState("");
+  const [purchaseBillId, setPurchaseBillId] =
+    useState("");
 
   const [outstanding, setOutstanding] = useState<
     number | null
   >(null);
+
+  const [supplierBills, setSupplierBills] = useState<
+    { id: string; billNo: string; billDate: string; totalAmount: number }[]
+  >([]);
 
   useEffect(() => {
     if (!supplierId) {
@@ -73,6 +81,29 @@ export default function PaymentForm({
     };
   }, [supplierId]);
 
+  useEffect(() => {
+    if (!supplierId) {
+      setSupplierBills([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    getPurchaseList({ supplierId, pageSize: 100 })
+      .then((response) => {
+        if (!cancelled) {
+          setSupplierBills(response.data);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setSupplierBills([]);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [supplierId]);
+
   return (
     <form
       id="payment-form"
@@ -88,15 +119,17 @@ export default function PaymentForm({
           ).toISOString(),
           remarks: remarks || undefined,
           bankAccountId: bankAccountId || undefined,
+          purchaseBillId: purchaseBillId || undefined,
         });
       }}
     >
       <select
         value={supplierId}
         disabled={loading}
-        onChange={(e) =>
-          setSupplierId(e.target.value)
-        }
+        onChange={(e) => {
+          setSupplierId(e.target.value);
+          setPurchaseBillId("");
+        }}
         className="w-full rounded-md border px-3 py-2 text-sm"
       >
         <option value="">
@@ -113,6 +146,32 @@ export default function PaymentForm({
           </option>
         ))}
       </select>
+
+      {supplierId && supplierBills.length > 0 && (
+        <select
+          value={purchaseBillId}
+          disabled={loading}
+          onChange={(e) =>
+            setPurchaseBillId(e.target.value)
+          }
+          className="w-full rounded-md border px-3 py-2 text-sm"
+        >
+          <option value="">
+            General payment (not against a specific bill)
+          </option>
+
+          {supplierBills.map((bill) => (
+            <option key={bill.id} value={bill.id}>
+              {bill.billNo} - ₹
+              {money(bill.totalAmount)} (
+              {new Date(
+                bill.billDate,
+              ).toLocaleDateString("en-IN")}
+              )
+            </option>
+          ))}
+        </select>
+      )}
 
       {outstanding !== null && (
         <div className="rounded-md border bg-gray-50 p-2 text-sm">
