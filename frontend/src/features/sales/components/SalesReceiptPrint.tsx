@@ -52,18 +52,6 @@ export default function SalesReceiptPrint({
 
   const totalItems = sale.items?.length ?? 0;
 
-  const cgst = Number(sale.cgstAmount ?? 0);
-  const sgst = Number(sale.sgstAmount ?? 0);
-  const igst = Number(sale.igstAmount ?? 0);
-
-  const itemDiscount = Number(
-    sale.itemDiscountAmount ?? 0,
-  );
-
-  const billDiscount = Number(
-    sale.billDiscountAmount ?? 0,
-  );
-
   const totalPaid =
     sale.payments?.reduce(
       (total, payment) =>
@@ -258,74 +246,10 @@ export default function SalesReceiptPrint({
 
         <div className="receipt-rule" />
 
-        {/* TOTALS */}
-
-        <div className="receipt-row">
-          <span>Gross Amount</span>
-          <span>
-            {money(sale.grossAmount)}
-          </span>
-        </div>
-
-        {itemDiscount > 0 && (
-          <div className="receipt-row">
-            <span>Item Discount</span>
-            <span>
-              -{money(itemDiscount)}
-            </span>
-          </div>
-        )}
-
-        {billDiscount > 0 && (
-          <div className="receipt-row">
-            <span>Bill Discount</span>
-            <span>
-              -{money(billDiscount)}
-            </span>
-          </div>
-        )}
-
-        <div className="receipt-row">
-          <span>Taxable Amount</span>
-          <span>
-            {money(sale.taxableAmount)}
-          </span>
-        </div>
-
-        {cgst > 0 && (
-          <div className="receipt-row">
-            <span>CGST</span>
-            <span>{money(cgst)}</span>
-          </div>
-        )}
-
-        {sgst > 0 && (
-          <div className="receipt-row">
-            <span>SGST</span>
-            <span>{money(sgst)}</span>
-          </div>
-        )}
-
-        {igst > 0 && (
-          <div className="receipt-row">
-            <span>IGST</span>
-            <span>{money(igst)}</span>
-          </div>
-        )}
-
-        {Number(sale.roundOff ?? 0) !== 0 && (
-          <div className="receipt-row">
-            <span>Round Off</span>
-            <span>
-              {money(sale.roundOff)}
-            </span>
-          </div>
-        )}
-
-        <div className="receipt-rule" />
+        {/* BILL AMOUNT */}
 
         <div className="receipt-row receipt-bold receipt-lg">
-          <span>NET PAYABLE</span>
+          <span>BILL AMOUNT</span>
           <span>{money(finalPayable)}</span>
         </div>
 

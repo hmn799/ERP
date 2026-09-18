@@ -222,7 +222,7 @@ main{
 
 .receipt-meta{
     font-size: 10px;
-    font-weight: 400;
+    font-weight: 700;
 }
 
 .receipt-rule{
@@ -253,6 +253,7 @@ main{
     flex: 1 1 auto;
     min-width: 0;
     text-align: left;
+    font-size: 13px;
     white-space: normal;
     word-break: break-word;
 }
