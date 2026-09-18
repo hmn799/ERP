@@ -102,6 +102,19 @@ cashBook(
   );
 }
 
+@Get('bank-book')
+bankBook(
+  @Query('bankAccountId') bankAccountId: string,
+  @Query('from') from: string,
+  @Query('to') to: string,
+) {
+  return this.reportsService.bankBook(
+    bankAccountId,
+    from,
+    to,
+  );
+}
+
 @Get('stock-report')
 stockReport() {
   return this.reportsService.stockReport();

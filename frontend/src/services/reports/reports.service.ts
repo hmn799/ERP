@@ -136,6 +136,30 @@ export interface ProfitRow {
   profit: number;
 }
 
+export interface CashBookRow {
+  date: string;
+  partyType: string;
+  partyId: string;
+  partyName: string;
+  type: string;
+  receipt: number;
+  payment: number;
+  balance: number;
+  remarks?: string | null;
+}
+
+export interface BankBookRow {
+  date: string;
+  partyType: string;
+  partyId: string;
+  partyName: string;
+  type: string;
+  deposit: number;
+  withdrawal: number;
+  balance: number;
+  remarks?: string | null;
+}
+
 export interface GstSummary {
   taxableAmount: number;
   cgstAmount: number;
@@ -325,6 +349,29 @@ export const ReportsService = {
   async getProfitReport(): Promise<ProfitRow[]> {
     const { data } = await apiClient.get(
       "/reports/profit-report",
+    );
+    return data;
+  },
+
+  async getCashBook(
+    from: string,
+    to: string,
+  ): Promise<CashBookRow[]> {
+    const { data } = await apiClient.get(
+      "/reports/cash-book",
+      { params: { from, to } },
+    );
+    return data;
+  },
+
+  async getBankBook(
+    bankAccountId: string,
+    from: string,
+    to: string,
+  ): Promise<BankBookRow[]> {
+    const { data } = await apiClient.get(
+      "/reports/bank-book",
+      { params: { bankAccountId, from, to } },
     );
     return data;
   },

@@ -410,6 +410,15 @@ async supplierStatement(
   });
 }
 
+    /*
+     * CASH BOOK - cash-in-hand movements only. RECEIPT/PAYMENT
+     * ledger entries collected into or paid out of a bank account
+     * carry a bankAccountId (see the LedgerEntry.bankAccountId
+     * comment in schema.prisma) - excluding those here is what
+     * makes this a cash book rather than a combined cash+bank book
+     * (that's bankBook() below, and dayBook() above for everything
+     * unfiltered).
+     */
     async cashBook(
   from: string,
   to: string,
@@ -424,6 +433,8 @@ async supplierStatement(
           gte: fromDate,
           lte: toDate,
         },
+
+        bankAccountId: null,
 
         OR: [
           {
@@ -440,6 +451,9 @@ async supplierStatement(
       },
     });
 
+  const partyNames =
+    await this.resolvePartyNames(rows);
+
   let balance = 0;
 
   return rows.map((row) => {
@@ -455,6 +469,9 @@ async supplierStatement(
       date: row.transactionDate,
       partyType: row.partyType,
       partyId: row.partyId,
+      partyName:
+        partyNames.get(row.partyId) ??
+        'Unknown',
       type: row.transactionType,
       receipt,
       payment,
@@ -462,6 +479,120 @@ async supplierStatement(
       remarks: row.remarks,
     };
   });
+}
+
+    /*
+     * BANK BOOK - the flip side of cashBook(): every RECEIPT/
+     * PAYMENT that moved through one specific bank account, with a
+     * running balance for that account.
+     */
+    async bankBook(
+  bankAccountId: string,
+  from: string,
+  to: string,
+) {
+  const fromDate = new Date(from);
+  const toDate = new Date(to);
+
+  const rows =
+    await this.prisma.ledgerEntry.findMany({
+      where: {
+        transactionDate: {
+          gte: fromDate,
+          lte: toDate,
+        },
+
+        bankAccountId,
+
+        OR: [
+          {
+            transactionType: 'RECEIPT',
+          },
+          {
+            transactionType: 'PAYMENT',
+          },
+        ],
+      },
+
+      orderBy: {
+        transactionDate: 'asc',
+      },
+    });
+
+  const partyNames =
+    await this.resolvePartyNames(rows);
+
+  let balance = 0;
+
+  return rows.map((row) => {
+    const deposit =
+      Number(row.creditAmount);
+
+    const withdrawal =
+      Number(row.debitAmount);
+
+    balance += deposit - withdrawal;
+
+    return {
+      date: row.transactionDate,
+      partyType: row.partyType,
+      partyId: row.partyId,
+      partyName:
+        partyNames.get(row.partyId) ??
+        'Unknown',
+      type: row.transactionType,
+      deposit,
+      withdrawal,
+      balance,
+      remarks: row.remarks,
+    };
+  });
+}
+
+    /*
+     * Shared by cashBook/bankBook - a ledger row's partyId is a
+     * Customer id (partyType "CUSTOMER") or Supplier id
+     * ("SUPPLIER"); look both up in one pass per book rather than
+     * per row.
+     */
+    private async resolvePartyNames(
+  rows: { partyType: string; partyId: string }[],
+) {
+  const customerIds = rows
+    .filter((row) => row.partyType === 'CUSTOMER')
+    .map((row) => row.partyId);
+
+  const supplierIds = rows
+    .filter((row) => row.partyType === 'SUPPLIER')
+    .map((row) => row.partyId);
+
+  const [customers, suppliers] = await Promise.all([
+    customerIds.length > 0
+      ? this.prisma.customer.findMany({
+          where: { id: { in: customerIds } },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+
+    supplierIds.length > 0
+      ? this.prisma.supplier.findMany({
+          where: { id: { in: supplierIds } },
+          select: { id: true, name: true },
+        })
+      : Promise.resolve([]),
+  ]);
+
+  const map = new Map<string, string>();
+
+  for (const customer of customers) {
+    map.set(customer.id, customer.name);
+  }
+
+  for (const supplier of suppliers) {
+    map.set(supplier.id, supplier.name);
+  }
+
+  return map;
 }
 
 async stockReport() {

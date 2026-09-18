@@ -42,6 +42,7 @@ import { GlobalExceptionFilter } from './core/monitoring/global-exception.filter
 import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { BankModule } from './modules/bank/bank.module';
 import { CompanyModule } from './modules/company/company.module';
+import { AccountGroupModule } from './modules/account-group/account-group.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -61,6 +62,7 @@ import { CompanyModule } from './modules/company/company.module';
      GstSlabModule,
     UnitModule,
     CategoryModule,
+    AccountGroupModule,
     BrandModule,
     WarehouseModule,
     ItemModule,

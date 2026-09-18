@@ -105,6 +105,11 @@ export const NAVIGATION: NavigationGroup[] = [
         title: "Warehouses",
         href: ROUTES.WAREHOUSES,
       },
+      {
+        id: "account-groups",
+        title: "Account Groups",
+        href: ROUTES.ACCOUNT_GROUPS,
+      },
     ],
   },
 
@@ -188,6 +193,16 @@ export const NAVIGATION: NavigationGroup[] = [
         id: "ledger",
         title: "Ledger",
         href: ROUTES.LEDGER,
+      },
+      {
+        id: "cash-book",
+        title: "Cash Book",
+        href: ROUTES.CASH_BOOK,
+      },
+      {
+        id: "bank-book",
+        title: "Bank Book",
+        href: ROUTES.BANK_BOOK,
       },
       {
         id: "bank-reconciliation",

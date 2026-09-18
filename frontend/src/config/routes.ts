@@ -13,6 +13,7 @@ export const ROUTES = {
   PRICE_LISTS: "/masters/price-lists",
   SCHEMES: "/masters/schemes",
   WAREHOUSES: "/masters/warehouses",
+  ACCOUNT_GROUPS: "/masters/account-groups",
 
   // Transactions
   SALES: "/sales",
@@ -31,6 +32,8 @@ export const ROUTES = {
   RECEIPTS: "/accounts/receipts",
   PAYMENTS: "/accounts/payments",
   LEDGER: "/accounts/ledger",
+  CASH_BOOK: "/accounts/cash-book",
+  BANK_BOOK: "/accounts/bank-book",
   BANK_RECONCILIATION: "/accounts/bank-reconciliation",
 
   // Reports
