@@ -3,6 +3,7 @@ import { Global, Module } from '@nestjs/common';
 import { PrismaModule } from '../prisma/prisma.module';
 
 import { MonitoringController } from './monitoring.controller';
+import { AlertsController } from './alerts.controller';
 import { MonitoringService } from './monitoring.service';
 
 import { SlowQueryInterceptor } from '../../core/monitoring/slow-query.interceptor';
@@ -10,7 +11,7 @@ import { SlowQueryInterceptor } from '../../core/monitoring/slow-query.intercept
 @Global()
 @Module({
   imports: [PrismaModule],
-  controllers: [MonitoringController],
+  controllers: [MonitoringController, AlertsController],
   providers: [MonitoringService, SlowQueryInterceptor],
   exports: [MonitoringService, SlowQueryInterceptor],
 })

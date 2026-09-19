@@ -9,8 +9,9 @@ import { Button } from "@/components/ui/button";
 
 import { useAuth } from "@/providers/AuthProvider";
 
+import NotificationBell from "@/components/erp/notifications/NotificationBell";
+
 import {
-  Bell,
   Search,
   Settings,
   UserCircle2,
@@ -46,12 +47,7 @@ export default function AppHeader() {
 
         <div className="flex items-center gap-2">
 
-          <Button
-            variant="ghost"
-            size="icon"
-          >
-            <Bell className="h-5 w-5" />
-          </Button>
+          <NotificationBell />
 
           <Button
             variant="ghost"
