@@ -32,6 +32,7 @@ export const ROUTES = {
   STOCK_LEDGER: "/reports/stock?tab=movement",
   OPENING_STOCK: "/inventory/opening-stock",
   OPENING_STOCK_BULK: "/inventory/opening-stock/bulk",
+  LABEL_PRINT: "/inventory/label-print",
 
   // Accounts
   RECEIPTS: "/accounts/receipts",
@@ -60,4 +61,5 @@ export const ROUTES = {
   MONITORING: "/admin/monitoring",
   BANK_ACCOUNTS: "/admin/bank-accounts",
   DOCUMENT_SERIES: "/admin/document-series",
+  FINANCIAL_YEARS: "/admin/financial-years",
 } as const;

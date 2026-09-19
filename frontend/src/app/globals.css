@@ -139,27 +139,47 @@ main{
 }
 
 /*
- * 3-inch (80mm) sale receipt. SalesReceiptPrint portals its markup
- * onto <body> so it sits alongside the whole app shell (sidebar,
- * nav, page chrome) rather than nested inside it - that lets one
- * rule below hide every other direct child of <body> on print,
- * regardless of how deep ERPLayout's own DOM is.
+ * 3-inch (80mm) sale receipt, and the 40mm x 25mm barcode/price
+ * label sheet below, both portal their markup onto <body> so each
+ * sits alongside the whole app shell (sidebar, nav, page chrome)
+ * rather than nested inside it - that lets one rule hide every
+ * other direct child of <body> on print, regardless of how deep
+ * ERPLayout's own DOM is. Only one of these portals is ever mounted
+ * at a time (they belong to different pages), but both rules live
+ * in this same global stylesheet, so the "hide everything else"
+ * selector below excludes both portal classes, and each portal is
+ * pinned to its own named @page - otherwise two unscoped @page
+ * rules with different sizes in one stylesheet would just fight
+ * over which size wins on every print, regardless of which portal
+ * is actually on the page.
  */
-.receipt-print-portal{
+.receipt-print-portal,
+.label-print-portal{
     display:none;
 }
 
 @media print{
-    body > *:not(.receipt-print-portal){
+    body > *:not(.receipt-print-portal):not(.label-print-portal){
         display:none !important;
     }
 
     .receipt-print-portal{
         display:block !important;
+        page: receipt;
     }
 
-    @page{
+    .label-print-portal{
+        display:block !important;
+        page: label;
+    }
+
+    @page receipt{
         size: 80mm auto;
+        margin: 0;
+    }
+
+    @page label{
+        size: 40mm 25mm;
         margin: 0;
     }
 }
@@ -291,4 +311,54 @@ main{
     flex: 0 0 7ch;
     text-align: right;
     white-space: nowrap;
+}
+
+.label-40x25{
+    width: 40mm;
+    height: 25mm;
+    padding: 1.5mm;
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-between;
+    font-family: Arial, Helvetica, sans-serif;
+    color: #000;
+    page-break-after: always;
+    break-after: page;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    overflow: hidden;
+}
+
+.label-name{
+    width: 100%;
+    text-align: center;
+    font-size: 8px;
+    font-weight: 700;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.label-price{
+    font-size: 10px;
+    font-weight: 800;
+}
+
+.label-barcode{
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
+.label-barcode svg{
+    width: 100%;
+    height: 10mm;
+}
+
+.label-code-text{
+    font-size: 7px;
+    letter-spacing: 0.5px;
 }

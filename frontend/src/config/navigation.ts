@@ -172,6 +172,11 @@ export const NAVIGATION: NavigationGroup[] = [
         href: ROUTES.OPENING_STOCK,
       },
       {
+        id: "label-print",
+        title: "Print Labels",
+        href: ROUTES.LABEL_PRINT,
+      },
+      {
         id: "stock-transfer",
         title: "Stock Transfer",
         href: ROUTES.STOCK_TRANSFER,
@@ -315,6 +320,11 @@ export const NAVIGATION: NavigationGroup[] = [
         id: "document-series",
         title: "Document Series",
         href: ROUTES.DOCUMENT_SERIES,
+      },
+      {
+        id: "financial-years",
+        title: "Financial Years",
+        href: ROUTES.FINANCIAL_YEARS,
       },
     ],
   },
