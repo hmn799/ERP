@@ -17,7 +17,7 @@ import {
   getWarehouseStocks,
 } from "../services/sales-stock.service";
 
-import { itemMatchesExactCode } from "@/lib/item-search";
+import { itemsMatchingExactCode } from "@/lib/item-search";
 
 import {
   calculateSalesRowAmounts,
@@ -171,6 +171,44 @@ export default function SalesItemsGrid({
 
   const dismissedPopupKeyRef =
     useRef<string | null>(null);
+
+  /*
+   * =====================================================
+   * ITEM PICKER (AMBIGUOUS BARCODE)
+   * =====================================================
+   *
+   * More than one item can share the same scanned code (a
+   * mislabeled product, a reused generic barcode). Rather than
+   * silently adding whichever item happens to come first, this
+   * pops up a chooser so the operator picks the right one.
+   */
+
+  const [
+    itemPickerOptions,
+    setItemPickerOptions,
+  ] = useState<SalesItemLookup[]>([]);
+
+  const [
+    selectedItemPickerIndex,
+    setSelectedItemPickerIndex,
+  ] = useState(0);
+
+  function closeItemPicker() {
+    setItemPickerOptions([]);
+    setSelectedItemPickerIndex(0);
+  }
+
+  function selectItemFromPicker(
+    item: SalesItemLookup,
+  ) {
+    onQuickAddItem(item.id);
+
+    setSearch("");
+
+    closeItemPicker();
+
+    focusSearch();
+  }
 
   /*
    * =====================================================
@@ -583,6 +621,20 @@ if (rowIndex !== null) {
 
   /*
    * =====================================================
+   * ITEM PICKER KEYBOARD
+   * =====================================================
+   *
+   * Handled inline from the search input's own onKeyDown (see
+   * handleSearchInputKeyDown) rather than a reactive window
+   * listener. A listener attached via an effect that itself runs as
+   * a *result* of this same Enter keypress would still be in the
+   * bubble path of that very keydown once React commits mid-dispatch
+   * - re-triggering itself immediately and auto-picking the first
+   * option before the operator ever sees the picker.
+   */
+
+  /*
+   * =====================================================
    * SEARCH KEYBOARD
    * =====================================================
    */
@@ -595,12 +647,15 @@ if (rowIndex !== null) {
     ) {
       event.preventDefault();
 
-      if (
-        searchResults.length ===
-        1
-      ) {
+      const exactMatches =
+        itemsMatchingExactCode(
+          items,
+          search,
+        );
+
+      if (exactMatches.length === 1) {
         onQuickAddItem(
-          searchResults[0].id,
+          exactMatches[0].id,
         );
 
         setSearch("");
@@ -608,17 +663,22 @@ if (rowIndex !== null) {
         return;
       }
 
-      const exactMatch =
-        items.find((item) =>
-          itemMatchesExactCode(
-            item,
-            search,
-          ),
+      if (exactMatches.length > 1) {
+        setItemPickerOptions(
+          exactMatches,
         );
 
-      if (exactMatch) {
+        setSelectedItemPickerIndex(0);
+
+        return;
+      }
+
+      if (
+        searchResults.length ===
+        1
+      ) {
         onQuickAddItem(
-          exactMatch.id,
+          searchResults[0].id,
         );
 
         setSearch("");
@@ -662,6 +722,60 @@ if (rowIndex !== null) {
   function handleSearchInputKeyDown(
     event: React.KeyboardEvent<HTMLInputElement>,
   ) {
+    if (itemPickerOptions.length > 0) {
+      if (event.key === "ArrowDown") {
+        event.preventDefault();
+
+        setSelectedItemPickerIndex((current) =>
+          Math.min(
+            current + 1,
+            itemPickerOptions.length - 1,
+          ),
+        );
+
+        return;
+      }
+
+      if (event.key === "ArrowUp") {
+        event.preventDefault();
+
+        setSelectedItemPickerIndex((current) =>
+          Math.max(current - 1, 0),
+        );
+
+        return;
+      }
+
+      if (event.key === "Enter") {
+        event.preventDefault();
+
+        const item =
+          itemPickerOptions[
+            selectedItemPickerIndex
+          ];
+
+        if (item) {
+          selectItemFromPicker(item);
+        }
+
+        return;
+      }
+
+      if (event.key === "Escape") {
+        event.preventDefault();
+
+        closeItemPicker();
+
+        focusSearch();
+
+        return;
+      }
+
+      event.preventDefault();
+
+      return;
+    }
+
     if (
       event.key ===
       "Enter"
@@ -819,6 +933,79 @@ if (rowIndex !== null) {
 
           </div>
         )}
+
+      {/* =================================================
+          ITEM PICKER (AMBIGUOUS BARCODE)
+          ================================================= */}
+
+      {itemPickerOptions.length > 1 && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4">
+
+          <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl">
+
+            <div className="border-b px-5 py-4">
+              <h3 className="text-lg font-bold">
+                Select Item
+              </h3>
+
+              <p className="mt-1 text-sm text-gray-500">
+                More than one item is registered with this barcode.
+              </p>
+            </div>
+
+            <div className="p-3">
+
+              {itemPickerOptions.map(
+                (item, index) => {
+                  const isSelected =
+                    index === selectedItemPickerIndex;
+
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() =>
+                        selectItemFromPicker(item)
+                      }
+                      className={`mb-2 flex w-full items-center justify-between rounded-lg border p-4 text-left ${
+                        isSelected
+                          ? "border-black bg-gray-100"
+                          : "hover:bg-gray-50"
+                      }`}
+                    >
+
+                      <div>
+                        <div className="font-semibold">
+                          {item.name}
+                        </div>
+
+                        <div className="text-xs text-gray-500">
+                          {item.itemCode}
+                        </div>
+                      </div>
+
+                      <div className="text-right text-xs text-gray-500">
+                        Retail ₹
+                        {getNumber(
+                          item.retailRate,
+                        ).toFixed(2)}
+                      </div>
+
+                    </button>
+                  );
+                },
+              )}
+
+            </div>
+
+            <div className="border-t bg-gray-50 px-5 py-3 text-xs text-gray-500">
+              ↑ ↓ Select · Enter Confirm · ESC Close
+            </div>
+
+          </div>
+
+        </div>
+      )}
 
       {/* =================================================
           HEADER

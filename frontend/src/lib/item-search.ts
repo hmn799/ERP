@@ -48,3 +48,17 @@ export function itemMatchesExactCode(
     (barcode) => barcode.trim().toLowerCase() === value,
   );
 }
+
+/*
+ * Every item matching a scanned code exactly, not just the first one.
+ * The same barcode can legitimately end up on more than one item (a
+ * mislabeled product, a shared generic code), so callers must be able
+ * to tell "one match" from "several" and let the operator pick rather
+ * than silently acting on whichever item happens to come first.
+ */
+export function itemsMatchingExactCode<T extends SearchableItem>(
+  items: T[],
+  code: string,
+): T[] {
+  return items.filter((item) => itemMatchesExactCode(item, code));
+}

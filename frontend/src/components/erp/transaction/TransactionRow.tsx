@@ -35,13 +35,23 @@ interface Props {
   /*
    * Resolves a scanned/typed code against known items (primary or
    * alternate barcodes, or item code) - lets the row's own Barcode
-   * cell drive item selection directly, purchase-mode only.
+   * cell drive item selection directly, purchase-mode only. Returns
+   * every item that matches, since the same code can legitimately
+   * belong to more than one item.
    */
   onResolveBarcode?(
     code: string,
-  ): ItemLookup | undefined;
+  ): ItemLookup[];
 
   onBarcodeNotFound?(): void;
+
+  /*
+   * Fires instead of onItemSelected when a code resolves to more
+   * than one item - the row itself has no picker UI, so this hands
+   * the ambiguous code up to the grid's own search bar/dropdown for
+   * the operator to disambiguate.
+   */
+  onBarcodeAmbiguous?(code: string): void;
 
   /*
    * Fires when an existing batch is picked from the Batch cell's
@@ -90,6 +100,7 @@ export default function TransactionRow({
   onItemSelected,
   onResolveBarcode,
   onBarcodeNotFound,
+  onBarcodeAmbiguous,
   onBatchSelected,
   onRowComplete,
   onDelete,
@@ -150,10 +161,12 @@ export default function TransactionRow({
       return;
     }
 
-    const item = onResolveBarcode(code);
+    const matches = onResolveBarcode(code);
 
-    if (item) {
-      handleItemSelected(item);
+    if (matches.length === 1) {
+      handleItemSelected(matches[0]);
+    } else if (matches.length > 1) {
+      onBarcodeAmbiguous?.(code);
     } else {
       onBarcodeNotFound?.();
     }

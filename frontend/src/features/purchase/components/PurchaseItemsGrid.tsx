@@ -17,8 +17,8 @@ import {
 } from "@/features/purchase/services/purchase.service";
 
 import {
-  itemMatchesExactCode,
   itemMatchesQuery,
+  itemsMatchingExactCode,
 } from "@/lib/item-search";
 
 interface Props {
@@ -282,13 +282,24 @@ export default function PurchaseItemsGrid({
      * as exact matches. This is important for barcode scanners
      * because the scanner normally sends the complete barcode
      * followed by Enter.
+     *
+     * More than one item can share the same barcode (a mislabeled
+     * product, a reused generic code) - in that case fall through to
+     * the results dropdown instead of silently picking whichever
+     * item happens to come first, so the operator chooses.
      */
-    const exactMatch = items.find((item) =>
-      itemMatchesExactCode(item, query),
-    );
+    const exactMatches = itemsMatchingExactCode(items, query);
 
-    if (exactMatch) {
-      addSelectedItem(exactMatch);
+    if (exactMatches.length === 1) {
+      addSelectedItem(exactMatches[0]);
+      return;
+    }
+
+    if (exactMatches.length > 1) {
+      setShowResults(true);
+      setSearchError(
+        "Multiple items share this barcode - select one below.",
+      );
       return;
     }
 
@@ -387,12 +398,12 @@ export default function PurchaseItemsGrid({
    * Lets a row's own Barcode cell resolve an item directly (matches
    * primary or alternate barcodes, or an item code) - completing
    * Barcode -> Batch -> Qty -> ... entirely within the row, instead
-   * of requiring the separate search bar above the grid.
+   * of requiring the separate search bar above the grid. Returns
+   * every match, not just one, so the caller can tell an ambiguous
+   * code (shared by more than one item) from a clean single hit.
    */
   function resolveItemByCode(code: string) {
-    return items.find((item) =>
-      itemMatchesExactCode(item, code),
-    );
+    return itemsMatchingExactCode(items, code);
   }
 
   return (
@@ -566,6 +577,16 @@ export default function PurchaseItemsGrid({
                   "No item matches that barcode.",
                 )
               }
+              onBarcodeAmbiguous={(code) => {
+                setSearch(code);
+                setShowResults(true);
+                setSearchError(
+                  "Multiple items share this barcode - select one below.",
+                );
+                requestAnimationFrame(() =>
+                  searchRef.current?.focus(),
+                );
+              }}
               onBatchSelected={handleBatchSelected}
               onRowComplete={handleRowComplete}
               onDelete={removeRow}
