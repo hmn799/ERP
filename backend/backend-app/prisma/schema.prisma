@@ -63,8 +63,44 @@ model FinancialYear {
   startDate DateTime
   endDate   DateTime
   isActive  Boolean  @default(true)
+
+  isClosed Boolean   @default(false)
+  closedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  closingBalances FinancialYearClosingBalance[]
+}
+
+/*
+ * A read-only snapshot of each party's closing balance as of a
+ * closed financial year's end date - NOT a ledger posting. Every
+ * outstanding-balance calculation in this app (customerOutstanding,
+ * supplierOutstanding, dashboards, etc.) sums the full LedgerEntry
+ * history with no date scoping, so inserting a synthetic "opening
+ * balance carried forward" LedgerEntry at close time would double
+ * count every party's balance from that point on. This table exists
+ * so a closed year's ending position is preserved and reportable
+ * (e.g. as the "opening balance" line on a new year's statement)
+ * without touching the ledger's running total at all.
+ */
+model FinancialYearClosingBalance {
+  id String @id @default(cuid())
+
+  financialYearId String
+  financialYear   FinancialYear @relation(fields: [financialYearId], references: [id])
+
+  partyType String
+  partyId   String
+  partyName String
+
+  closingBalance Decimal @db.Decimal(14, 2)
+
+  createdAt DateTime @default(now())
+
+  @@unique([financialYearId, partyType, partyId])
+  @@index([partyType, partyId])
 }
 
 model Role {

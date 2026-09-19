@@ -15,6 +15,7 @@ import { DocumentType } from "../../../core/document-number/document-type.enum";
 import { BatchService } from "../../batch/batch.service";
 
 import { WarehouseStockService } from "../../warehouse/services/warehouse-stock.service";
+import { FinancialYearGuardService } from "../../financial-year/financial-year-guard.service";
 
 @Injectable()
 export class PurchaseSaveService {
@@ -32,6 +33,8 @@ export class PurchaseSaveService {
     private readonly batchService: BatchService,
 
     private readonly warehouseStockService: WarehouseStockService,
+
+    private readonly financialYearGuardService: FinancialYearGuardService,
   ) {}
 
   async savePurchase(
@@ -39,6 +42,10 @@ export class PurchaseSaveService {
     purchaseBillId?: string,
     prisma: Prisma.TransactionClient = this.prisma,
   ) {
+    await this.financialYearGuardService.assertDateNotClosed(
+      dto.billDate,
+    );
+
     const taxMode = dto.taxMode ?? 'EXCLUSIVE';
 
     /*

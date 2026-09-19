@@ -12,6 +12,7 @@ import { LedgerService } from '../../ledger/ledger.service';
 import { DocumentNumberService } from '../../../core/document-number/document-number.service';
 import { DocumentType } from '../../../core/document-number/document-type.enum';
 import { AuditService, AuditActor } from '../../audit/audit.service';
+import { FinancialYearGuardService } from '../../financial-year/financial-year-guard.service';
 
 @Injectable()
 export class SalesSaveService {
@@ -23,6 +24,7 @@ export class SalesSaveService {
     private readonly calculationService: SalesCalculationService,
     private readonly documentNumberService: DocumentNumberService,
     private readonly auditService: AuditService,
+    private readonly financialYearGuardService: FinancialYearGuardService,
   ) {}
 
   async saveSales(
@@ -35,6 +37,10 @@ export class SalesSaveService {
         'Bill date is required',
       );
     }
+
+    await this.financialYearGuardService.assertDateNotClosed(
+      dto.billDate,
+    );
 
     if (!dto.warehouseId) {
       throw new Error(

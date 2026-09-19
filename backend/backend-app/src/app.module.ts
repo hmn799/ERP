@@ -49,6 +49,7 @@ import { BulkImportModule } from './modules/bulk-import/bulk-import.module';
 import { OpeningStockModule } from './modules/opening-stock/opening-stock.module';
 import { StockTransferModule } from './modules/stock-transfer/stock-transfer.module';
 import { SalesOrderModule } from './modules/sales-order/sales-order.module';
+import { FinancialYearModule } from './modules/financial-year/financial-year.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -95,6 +96,7 @@ import { SalesOrderModule } from './modules/sales-order/sales-order.module';
      OpeningStockModule,
      StockTransferModule,
      SalesOrderModule,
+     FinancialYearModule,
 
   ],
   controllers: [AppController],

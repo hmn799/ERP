@@ -9,11 +9,13 @@ import { PrismaService } from "../prisma/prisma.service";
 
 import { CreateReceiptDto } from "./dto/create-receipt.dto";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
+import { FinancialYearGuardService } from "../financial-year/financial-year-guard.service";
 
 @Injectable()
 export class LedgerService {
   constructor(
     private readonly prisma: PrismaService,
+    private readonly financialYearGuardService: FinancialYearGuardService,
   ) {}
 
   // =========================================================
@@ -144,6 +146,10 @@ export class LedgerService {
     dto: CreateReceiptDto,
     prisma: Prisma.TransactionClient = this.prisma,
   ) {
+    await this.financialYearGuardService.assertDateNotClosed(
+      dto.receiptDate,
+    );
+
     const customer = await prisma.customer.findUnique({
       where: { id: dto.customerId },
     });
@@ -186,6 +192,10 @@ export class LedgerService {
     dto: CreatePaymentDto,
     prisma: Prisma.TransactionClient = this.prisma,
   ) {
+    await this.financialYearGuardService.assertDateNotClosed(
+      dto.paymentDate,
+    );
+
     const supplier = await prisma.supplier.findUnique({
       where: { id: dto.supplierId },
     });
