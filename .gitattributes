@@ -1,0 +1,7 @@
+# Deployment scripts must keep LF endings so they run correctly
+# inside Linux containers, regardless of core.autocrlf on the
+# machine that checked them out.
+*.sh text eol=lf
+Dockerfile text eol=lf
+Caddyfile text eol=lf
+docker-compose*.yml text eol=lf
