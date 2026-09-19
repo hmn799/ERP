@@ -21,6 +21,7 @@ export const ROUTES = {
   PURCHASE: "/purchase",
   PURCHASE_RETURN: "/purchase-return",
   PURCHASE_ORDER: "/purchase-order",
+  SALES_ORDER: "/sales-order",
 
   // Inventory - Stock/Batch/Stock Ledger are tabs of the same
   // report page (frontend/src/features/reports/stock), not separate

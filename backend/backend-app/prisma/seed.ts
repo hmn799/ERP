@@ -109,6 +109,7 @@ async function main() {
   ["PB", "Purchase Bill"],
   ["SB", "Sales Bill"],
   ["PO", "Purchase Order"],
+  ["SO", "Sales Order"],
   ["PR", "Purchase Return"],
   ["SR", "Sales Return"],
   ["ST", "Stock Transfer"],

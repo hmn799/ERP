@@ -143,6 +143,11 @@ export const NAVIGATION: NavigationGroup[] = [
         title: "Purchase Order",
         href: ROUTES.PURCHASE_ORDER,
       },
+      {
+        id: "sales-order",
+        title: "Sales Order",
+        href: ROUTES.SALES_ORDER,
+      },
     ],
   },
 

@@ -39,5 +39,10 @@ import { HeldSaleService } from './services/held-sale.service';
     SalesUpdateService,
     HeldSaleService,
   ],
+
+  exports: [
+    SalesService,
+    SalesStockService,
+  ],
 })
 export class SalesModule {}
