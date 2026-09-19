@@ -43,6 +43,7 @@ import { AnalyticsModule } from './modules/analytics/analytics.module';
 import { BankModule } from './modules/bank/bank.module';
 import { CompanyModule } from './modules/company/company.module';
 import { AccountGroupModule } from './modules/account-group/account-group.module';
+import { UserModule } from './modules/user/user.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -83,6 +84,7 @@ import { AccountGroupModule } from './modules/account-group/account-group.module
      AuthModule,
      ShortcutModule,
      RoleModule,
+     UserModule,
 
   ],
   controllers: [AppController],
