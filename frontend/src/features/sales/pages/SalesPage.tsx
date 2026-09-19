@@ -17,6 +17,11 @@ import SalesItemsGrid, {
   SalesGridRow,
 } from "../components/SalesItemsGrid";
 
+import SalesReceiptPrint from "../components/SalesReceiptPrint";
+
+import CompanyService from "@/services/company/company.service";
+import { CompanyProfile } from "@/features/settings/types/company.types";
+
 import {
   createCustomer,
   createSale,
@@ -47,6 +52,7 @@ import {
   HeldSale,
   SalesBatchLookup,
   SalesItemLookup,
+  SalesResponse,
   WarehouseLookup,
   SalesPaymentDto,
   SalesPaymentMode,
@@ -139,6 +145,26 @@ export default function SalesPage({
 
   const [rows, setRows] =
     useState<SalesGridRow[]>([]);
+
+  const [company, setCompany] =
+    useState<CompanyProfile | null>(null);
+
+  const [savedSale, setSavedSale] =
+    useState<SalesResponse | null>(null);
+
+  const [printPromptOpen, setPrintPromptOpen] =
+    useState(false);
+
+  useEffect(() => {
+    CompanyService.getProfile()
+      .then(setCompany)
+      .catch((err) =>
+        console.error(
+          "Failed to load company profile:",
+          err,
+        ),
+      );
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -2128,9 +2154,21 @@ setRows(
 
       setPaymentOpen(false);
 
-      router.push(
-        `/sales/view/${result.id}`,
-      );
+      /*
+       * Editing an existing bill still goes to the view page, as
+       * before - the "print now, then start a fresh bill" flow
+       * below is for the rapid-entry new-sale case only.
+       */
+      if (isEditMode) {
+        router.push(
+          `/sales/view/${result.id}`,
+        );
+
+        return;
+      }
+
+      setSavedSale(result);
+      setPrintPromptOpen(true);
     } catch (err) {
       console.error(err);
 
@@ -2695,6 +2733,13 @@ setRows(
 
   return (
     <div className="space-y-6">
+      {savedSale && (
+        <SalesReceiptPrint
+          sale={savedSale}
+          company={company}
+        />
+      )}
+
       {error && (
         <div className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
           {error}
@@ -3854,6 +3899,45 @@ setRows(
                   })}
                 </div>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {printPromptOpen && savedSale && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white p-6 text-center shadow-2xl">
+            <h2 className="text-lg font-bold">
+              Bill {savedSale.billNo} Saved
+            </h2>
+
+            <p className="mt-1 text-sm text-gray-500">
+              Print the receipt now?
+            </p>
+
+            <div className="mt-6 flex flex-col gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  setPrintPromptOpen(false);
+                  window.print();
+                  window.location.href = "/sales/new";
+                }}
+                className="rounded-md bg-black px-4 py-2.5 text-sm font-semibold text-white hover:bg-gray-800"
+              >
+                Print &amp; New Sale
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setPrintPromptOpen(false);
+                  window.location.href = "/sales/new";
+                }}
+                className="rounded-md border border-gray-300 px-4 py-2.5 text-sm font-medium hover:bg-gray-50"
+              >
+                Skip &amp; New Sale
+              </button>
             </div>
           </div>
         </div>
