@@ -162,6 +162,11 @@ export const NAVIGATION: NavigationGroup[] = [
         href: ROUTES.BATCH,
       },
       {
+        id: "opening-stock",
+        title: "Opening Stock",
+        href: ROUTES.OPENING_STOCK,
+      },
+      {
         id: "stock-transfer",
         title: "Stock Transfer",
         href: ROUTES.STOCK_TRANSFER,

@@ -29,6 +29,9 @@ import { CreateCustomerDto } from "../customer/dto/create-customer.dto";
 import { ItemService } from "../item/item.service";
 import { CreateItemDto } from "../item/dto/create-item.dto";
 
+import { OpeningStockService } from "../opening-stock/opening-stock.service";
+import { CreateOpeningStockDto } from "../opening-stock/dto/create-opening-stock.dto";
+
 export interface BulkImportError {
   row: number;
   message: string;
@@ -49,6 +52,7 @@ const IMPORT_ENTITIES = [
   "supplier",
   "customer",
   "item",
+  "opening-stock",
 ] as const;
 
 type ImportEntity = (typeof IMPORT_ENTITIES)[number];
@@ -92,6 +96,7 @@ export class BulkImportService {
     private readonly supplierService: SupplierService,
     private readonly customerService: CustomerService,
     private readonly itemService: ItemService,
+    private readonly openingStockService: OpeningStockService,
   ) {}
 
   import(
@@ -235,6 +240,9 @@ export class BulkImportService {
 
       case "item":
         return this.importItems(rows);
+
+      case "opening-stock":
+        return this.importOpeningStock(rows);
     }
   }
 
@@ -509,6 +517,124 @@ export class BulkImportService {
             error instanceof Error
               ? error.message
               : "Failed to save this item.",
+        });
+      }
+    }
+
+    return {
+      total: rows.length,
+      successCount,
+      errors,
+    };
+  }
+
+  private async importOpeningStock(
+    rows: Record<string, string>[],
+  ): Promise<BulkImportResult> {
+    const [items, warehouses] = await Promise.all([
+      this.prisma.item.findMany({
+        select: { id: true, itemCode: true, name: true },
+      }),
+      this.prisma.warehouse.findMany(),
+    ]);
+
+    const itemByCode = new Map(
+      items.map((item) => [
+        item.itemCode.toLowerCase(),
+        item,
+      ]),
+    );
+    const itemByName = new Map(
+      items.map((item) => [
+        item.name.toLowerCase(),
+        item,
+      ]),
+    );
+    const warehouseMap = byNameLower(warehouses);
+
+    const errors: BulkImportError[] = [];
+    let successCount = 0;
+
+    for (let i = 0; i < rows.length; i++) {
+      const row = rows[i];
+      const rowNumber = i + 2;
+      const rowErrors: string[] = [];
+
+      const itemRaw = text(row, "Item");
+
+      const item = itemRaw
+        ? (itemByCode.get(itemRaw.toLowerCase()) ??
+          itemByName.get(itemRaw.toLowerCase()))
+        : undefined;
+
+      if (!itemRaw) {
+        rowErrors.push("Item is required.");
+      } else if (!item) {
+        rowErrors.push(`Item "${itemRaw}" not found.`);
+      }
+
+      const warehouseName = text(row, "Warehouse");
+
+      const warehouse = warehouseName
+        ? warehouseMap.get(warehouseName.toLowerCase())
+        : undefined;
+
+      if (!warehouseName) {
+        rowErrors.push("Warehouse is required.");
+      } else if (!warehouse) {
+        rowErrors.push(
+          `Warehouse "${warehouseName}" not found.`,
+        );
+      }
+
+      if (rowErrors.length > 0) {
+        errors.push({
+          row: rowNumber,
+          message: rowErrors.join(" "),
+        });
+        continue;
+      }
+
+      const { dto, messages } = await this.validateRow(
+        CreateOpeningStockDto,
+        {
+          itemId: item!.id,
+          warehouseId: warehouse!.id,
+          qty: optionalNumber(row, "Qty"),
+          purchaseRate: optionalNumber(row, "Purchase Rate"),
+          retailRate: optionalNumber(row, "Retail Rate"),
+          wholesaleRate: optionalNumber(row, "Wholesale Rate"),
+          distributorRate: optionalNumber(
+            row,
+            "Distributor Rate",
+          ),
+          mrp: optionalNumber(row, "MRP"),
+          expiryDate: text(row, "Expiry Date") || undefined,
+          manufacturingDate:
+            text(row, "Manufacturing Date") || undefined,
+          transactionDate: text(row, "Date") || undefined,
+          remarks: text(row, "Remarks") || undefined,
+        },
+      );
+
+      if (messages.length > 0) {
+        errors.push({
+          row: rowNumber,
+          message: messages.join(" "),
+        });
+        continue;
+      }
+
+      try {
+        await this.openingStockService.create(dto);
+        successCount++;
+      } catch (error) {
+        errors.push({
+          row: rowNumber,
+          message:
+            error instanceof Error
+              ? error.message
+              : "Failed to save this row.",
         });
       }
     }

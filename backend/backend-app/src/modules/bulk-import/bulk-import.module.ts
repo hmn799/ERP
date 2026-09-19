@@ -10,6 +10,7 @@ import { GstSlabModule } from "../gst-slab/gst-slab.module";
 import { SupplierModule } from "../supplier/supplier.module";
 import { CustomerModule } from "../customer/customer.module";
 import { ItemModule } from "../item/item.module";
+import { OpeningStockModule } from "../opening-stock/opening-stock.module";
 
 import { BulkImportController } from "./bulk-import.controller";
 import { BulkImportService } from "./bulk-import.service";
@@ -25,6 +26,7 @@ import { BulkImportService } from "./bulk-import.service";
     SupplierModule,
     CustomerModule,
     ItemModule,
+    OpeningStockModule,
   ],
 
   controllers: [BulkImportController],

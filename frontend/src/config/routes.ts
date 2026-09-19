@@ -29,6 +29,8 @@ export const ROUTES = {
   BATCH: "/reports/stock?tab=batch",
   STOCK_TRANSFER: "/inventory/stock-transfer",
   STOCK_LEDGER: "/reports/stock?tab=movement",
+  OPENING_STOCK: "/inventory/opening-stock",
+  OPENING_STOCK_BULK: "/inventory/opening-stock/bulk",
 
   // Accounts
   RECEIPTS: "/accounts/receipts",

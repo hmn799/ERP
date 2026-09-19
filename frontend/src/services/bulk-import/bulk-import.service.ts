@@ -19,7 +19,8 @@ export type ImportEntity =
   | "gst-slab"
   | "supplier"
   | "customer"
-  | "item";
+  | "item"
+  | "opening-stock";
 
 export const BulkImportService = {
   async import(

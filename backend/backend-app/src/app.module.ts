@@ -46,6 +46,7 @@ import { AccountGroupModule } from './modules/account-group/account-group.module
 import { UserModule } from './modules/user/user.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { BulkImportModule } from './modules/bulk-import/bulk-import.module';
+import { OpeningStockModule } from './modules/opening-stock/opening-stock.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -89,6 +90,7 @@ import { BulkImportModule } from './modules/bulk-import/bulk-import.module';
      UserModule,
      PermissionModule,
      BulkImportModule,
+     OpeningStockModule,
 
   ],
   controllers: [AppController],
