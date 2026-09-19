@@ -17,5 +17,9 @@ import { BrandService } from './brand.service';
   providers: [
     BrandService,
   ],
+
+  exports: [
+    BrandService,
+  ],
 })
 export class BrandModule {}

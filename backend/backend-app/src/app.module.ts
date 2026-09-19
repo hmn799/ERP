@@ -45,6 +45,7 @@ import { CompanyModule } from './modules/company/company.module';
 import { AccountGroupModule } from './modules/account-group/account-group.module';
 import { UserModule } from './modules/user/user.module';
 import { PermissionModule } from './modules/permission/permission.module';
+import { BulkImportModule } from './modules/bulk-import/bulk-import.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -87,6 +88,7 @@ import { PermissionModule } from './modules/permission/permission.module';
      RoleModule,
      UserModule,
      PermissionModule,
+     BulkImportModule,
 
   ],
   controllers: [AppController],

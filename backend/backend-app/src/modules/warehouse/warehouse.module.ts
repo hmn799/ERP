@@ -23,6 +23,7 @@ import { WarehouseStockService } from './services/warehouse-stock.service';
 
   exports: [
     WarehouseStockService,
+    WarehouseService,
   ],
 })
 export class WarehouseModule {}

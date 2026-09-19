@@ -5,6 +5,9 @@ import { toast } from "sonner";
 
 import ERPToolbar from "@/components/erp/crud/ERPToolbar";
 import ERPDeleteDialog from "@/components/erp/crud/ERPDeleteDialog";
+import ImportMastersDialog from "@/components/erp/crud/ImportMastersDialog";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
 import { useCustomers } from "../hooks/useCustomers";
 import CustomerTable from "../components/CustomerTable";
@@ -30,6 +33,9 @@ export default function CustomersPage() {
     useState<Customer>();
 
   const [deleteOpen, setDeleteOpen] =
+    useState(false);
+
+  const [importOpen, setImportOpen] =
     useState(false);
 
   async function deleteCustomer() {
@@ -77,6 +83,15 @@ export default function CustomersPage() {
           setSelected(undefined);
           setDialogOpen(true);
         }}
+        extraActions={
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+        }
       />
 
       <CustomerTable
@@ -109,6 +124,43 @@ export default function CustomersPage() {
           setDeleteOpen(false)
         }
         onConfirm={deleteCustomer}
+      />
+
+      <ImportMastersDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="Import Customers"
+        entity="customer"
+        templateHeaders={[
+          "Name",
+          "Customer Group",
+          "GST Category",
+          "GSTIN",
+          "Mobile",
+          "Email",
+          "Address",
+          "City",
+          "State",
+          "Pincode",
+          "Opening Balance",
+          "Credit Limit",
+        ]}
+        templateSample={[
+          "Ramesh Kumar",
+          "RETAIL",
+          "Unregistered",
+          "",
+          "9876543210",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "0",
+          "0",
+        ]}
+        helpText='Customer Group: RETAIL, WHOLESALE, or DISTRIBUTOR. GST Category: "Registered" or "Unregistered". Customer code is generated automatically.'
+        onSuccess={refetch}
       />
 
     </div>

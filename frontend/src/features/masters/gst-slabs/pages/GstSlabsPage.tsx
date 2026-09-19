@@ -5,6 +5,9 @@ import { toast } from "sonner";
 
 import ERPToolbar from "@/components/erp/crud/ERPToolbar";
 import ERPDeleteDialog from "@/components/erp/crud/ERPDeleteDialog";
+import ImportMastersDialog from "@/components/erp/crud/ImportMastersDialog";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
 import { useGstSlabs } from "../hooks/useGstSlabs";
 import GstSlabTable from "../components/GstSlabTable";
@@ -28,6 +31,8 @@ export default function GstSlabsPage() {
   const [selected, setSelected] = useState<GstSlab>();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const [importOpen, setImportOpen] = useState(false);
 
   async function deleteGstSlab() {
     if (!selected) return;
@@ -64,6 +69,15 @@ export default function GstSlabsPage() {
           setSelected(undefined);
           setDialogOpen(true);
         }}
+        extraActions={
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+        }
       />
 
       <GstSlabTable
@@ -92,6 +106,16 @@ export default function GstSlabsPage() {
         description={`Delete "${selected?.name}" ?`}
         onClose={() => setDeleteOpen(false)}
         onConfirm={deleteGstSlab}
+      />
+
+      <ImportMastersDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="Import GST Slabs"
+        entity="gst-slab"
+        templateHeaders={["Name", "Percentage"]}
+        templateSample={["12%", "12"]}
+        onSuccess={refetch}
       />
 
     </div>

@@ -11,5 +11,7 @@ import { GstSlabService } from './gst-slab.service';
   controllers: [GstSlabController],
 
   providers: [GstSlabService],
+
+  exports: [GstSlabService],
 })
 export class GstSlabModule {}

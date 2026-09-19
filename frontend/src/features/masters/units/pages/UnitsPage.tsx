@@ -5,6 +5,9 @@ import { toast } from "sonner";
 
 import ERPToolbar from "@/components/erp/crud/ERPToolbar";
 import ERPDeleteDialog from "@/components/erp/crud/ERPDeleteDialog";
+import ImportMastersDialog from "@/components/erp/crud/ImportMastersDialog";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
 import { useUnits } from "../hooks/useUnits";
 import UnitTable from "../components/UnitTable";
@@ -23,6 +26,8 @@ export default function UnitsPage() {
   const [selected, setSelected] = useState<Unit>();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const [importOpen, setImportOpen] = useState(false);
 
   async function deleteUnit() {
     if (!selected) return;
@@ -58,6 +63,15 @@ export default function UnitsPage() {
           setSelected(undefined);
           setDialogOpen(true);
         }}
+        extraActions={
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+        }
       />
 
       <UnitTable
@@ -86,6 +100,16 @@ export default function UnitsPage() {
         description={`Delete "${selected?.name}" ?`}
         onClose={() => setDeleteOpen(false)}
         onConfirm={deleteUnit}
+      />
+
+      <ImportMastersDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="Import Units"
+        entity="unit"
+        templateHeaders={["Name", "Short Name"]}
+        templateSample={["Pieces", "PCS"]}
+        onSuccess={refetch}
       />
 
     </div>

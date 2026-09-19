@@ -5,6 +5,9 @@ import { toast } from "sonner";
 
 import ERPToolbar from "@/components/erp/crud/ERPToolbar";
 import ERPDeleteDialog from "@/components/erp/crud/ERPDeleteDialog";
+import ImportMastersDialog from "@/components/erp/crud/ImportMastersDialog";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
 import { useSuppliers } from "../hooks/useSuppliers";
 import SupplierTable from "../components/SupplierTable";
@@ -30,6 +33,9 @@ export default function SuppliersPage() {
     useState<Supplier>();
 
   const [deleteOpen, setDeleteOpen] =
+    useState(false);
+
+  const [importOpen, setImportOpen] =
     useState(false);
 
   async function deleteSupplier() {
@@ -74,6 +80,15 @@ export default function SuppliersPage() {
           setSelected(undefined);
           setDialogOpen(true);
         }}
+        extraActions={
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+        }
       />
 
       <SupplierTable
@@ -104,6 +119,39 @@ export default function SuppliersPage() {
           setDeleteOpen(false)
         }
         onConfirm={deleteSupplier}
+      />
+
+      <ImportMastersDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="Import Suppliers"
+        entity="supplier"
+        templateHeaders={[
+          "Name",
+          "GST Type",
+          "GSTIN",
+          "Mobile",
+          "Email",
+          "Address",
+          "City",
+          "State",
+          "Pincode",
+          "Opening Balance",
+        ]}
+        templateSample={[
+          "ABC Traders",
+          "Registered",
+          "",
+          "9876543210",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "0",
+        ]}
+        helpText='GST Type: "Registered" or "Unregistered". Supplier code is generated automatically.'
+        onSuccess={refetch}
       />
     </div>
   );

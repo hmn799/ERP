@@ -5,6 +5,9 @@ import { toast } from "sonner";
 
 import ERPToolbar from "@/components/erp/crud/ERPToolbar";
 import ERPDeleteDialog from "@/components/erp/crud/ERPDeleteDialog";
+import ImportMastersDialog from "@/components/erp/crud/ImportMastersDialog";
+import { Button } from "@/components/ui/button";
+import { Upload } from "lucide-react";
 
 import { useItems } from "../hooks/useItems";
 import ItemTable from "../components/ItemTable";
@@ -79,6 +82,9 @@ export default function ItemsPage() {
   const [deleteOpen, setDeleteOpen] =
     useState(false);
 
+  const [importOpen, setImportOpen] =
+    useState(false);
+
   async function deleteItem() {
     if (!selected) return;
 
@@ -117,6 +123,15 @@ export default function ItemsPage() {
           setSelected(undefined);
           setDialogOpen(true);
         }}
+        extraActions={
+          <Button
+            variant="outline"
+            onClick={() => setImportOpen(true)}
+          >
+            <Upload className="mr-2 h-4 w-4" />
+            Import
+          </Button>
+        }
       />
 
       <ItemTable
@@ -151,6 +166,47 @@ export default function ItemsPage() {
           setDeleteOpen(false)
         }
         onConfirm={deleteItem}
+      />
+
+      <ImportMastersDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        title="Import Items"
+        entity="item"
+        templateHeaders={[
+          "Item Name",
+          "HSN Code",
+          "Barcode",
+          "Category",
+          "Sub Category",
+          "Brand",
+          "GST Slab",
+          "Base Unit",
+          "Purchase Unit",
+          "Sale Unit",
+          "MRP",
+          "Purchase Rate",
+          "Min Qty",
+          "Reorder Qty",
+        ]}
+        templateSample={[
+          "Surf Excel 1kg",
+          "34022090",
+          "",
+          "Detergent",
+          "",
+          "Surf",
+          "18",
+          "PCS",
+          "",
+          "",
+          "150",
+          "120",
+          "0",
+          "0",
+        ]}
+        helpText="Category, Sub Category, Brand, GST Slab, and Unit names must already exist in their masters - rows with an unrecognized name are skipped. Leave Purchase/Sale Unit blank to use Base Unit for both."
+        onSuccess={refetch}
       />
     </div>
   );

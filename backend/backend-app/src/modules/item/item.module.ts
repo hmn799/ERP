@@ -17,5 +17,9 @@ import { ItemService } from './item.service';
   providers: [
     ItemService,
   ],
+
+  exports: [
+    ItemService,
+  ],
 })
 export class ItemModule {}

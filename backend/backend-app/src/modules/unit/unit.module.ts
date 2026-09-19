@@ -17,5 +17,9 @@ import { UnitService } from './unit.service';
   providers: [
     UnitService,
   ],
+
+  exports: [
+    UnitService,
+  ],
 })
 export class UnitModule {}

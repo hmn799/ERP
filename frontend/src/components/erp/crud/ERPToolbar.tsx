@@ -1,5 +1,7 @@
 "use client";
 
+import { ReactNode } from "react";
+
 import { Plus, RefreshCw, Search } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -15,6 +17,13 @@ interface ERPToolbarProps {
 
   addLabel?: string;
   loading?: boolean;
+
+  /*
+   * Rendered before the Refresh/Add buttons - e.g. an "Import"
+   * button - so callers that need one don't have to reimplement the
+   * whole toolbar layout.
+   */
+  extraActions?: ReactNode;
 }
 
 export default function ERPToolbar({
@@ -25,6 +34,7 @@ export default function ERPToolbar({
   onRefresh,
   addLabel = "Add",
   loading = false,
+  extraActions,
 }: ERPToolbarProps) {
   return (
     <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
@@ -40,6 +50,8 @@ export default function ERPToolbar({
       </div>
 
       <div className="flex gap-2">
+        {extraActions}
+
         <Button
           variant="outline"
           disabled={loading}
