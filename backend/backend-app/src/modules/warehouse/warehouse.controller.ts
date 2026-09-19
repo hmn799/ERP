@@ -9,6 +9,7 @@ import {
 } from "@nestjs/common";
 
 import { WarehouseService } from "./warehouse.service";
+import { WarehouseStockService } from "./services/warehouse-stock.service";
 import { CreateWarehouseDto } from "./dto/create-warehouse.dto";
 import { UpdateWarehouseDto } from "./dto/update-warehouse.dto";
 
@@ -16,7 +17,15 @@ import { UpdateWarehouseDto } from "./dto/update-warehouse.dto";
 export class WarehouseController {
   constructor(
     private readonly warehouseService: WarehouseService,
+    private readonly warehouseStockService: WarehouseStockService,
   ) {}
+
+  @Get(":id/stock")
+  getStock(
+    @Param("id") id: string,
+  ) {
+    return this.warehouseStockService.getWarehouseStock(id);
+  }
 
   @Post()
   create(

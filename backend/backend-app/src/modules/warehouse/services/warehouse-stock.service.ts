@@ -134,4 +134,47 @@ export class WarehouseStockService {
       },
     });
   }
+
+  /*
+   * Every item+batch with stock actually available in one warehouse -
+   * powers the Stock Transfer picker, which must only ever offer
+   * combinations that can really be moved out of the source warehouse.
+   */
+  async getWarehouseStock(warehouseId: string) {
+    return this.prisma.warehouseStock.findMany({
+      where: {
+        warehouseId,
+        quantity: {
+          gt: 0,
+        },
+      },
+
+      include: {
+        item: {
+          select: {
+            id: true,
+            itemCode: true,
+            name: true,
+          },
+        },
+
+        batch: {
+          select: {
+            id: true,
+            batchNo: true,
+            mrp: true,
+            expiryDate: true,
+          },
+        },
+      },
+
+      orderBy: [
+        {
+          item: {
+            name: "asc",
+          },
+        },
+      ],
+    });
+  }
 }
