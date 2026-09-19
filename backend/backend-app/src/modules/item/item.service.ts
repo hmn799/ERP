@@ -1,4 +1,7 @@
-import { Injectable } from "@nestjs/common";
+import {
+  Injectable,
+  NotFoundException,
+} from "@nestjs/common";
 
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -112,6 +115,47 @@ export class ItemService {
         saleUnit: true,
       },
     });
+  }
+
+  /*
+   * Read-only combined view for the item edit dialog: the item's own
+   * single barcode field plus every barcode (primary or alternate)
+   * recorded against any of its active batches. Actual add/remove/
+   * set-primary happens per-batch via the batch barcode endpoints,
+   * since a barcode is really tied to a specific purchase lot.
+   */
+  async getBarcodes(id: string) {
+    const item = await this.prisma.item.findUnique({
+      where: { id },
+      select: {
+        barcode: true,
+        batches: {
+          where: { isActive: true },
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            batchNo: true,
+            barcodes: {
+              select: { id: true, barcode: true, isPrimary: true },
+              orderBy: { isPrimary: "desc" },
+            },
+          },
+        },
+      },
+    });
+
+    if (!item) {
+      throw new NotFoundException("Item not found.");
+    }
+
+    return {
+      itemBarcode: item.barcode,
+      batches: item.batches.map((batch) => ({
+        batchId: batch.id,
+        batchNo: batch.batchNo,
+        barcodes: batch.barcodes,
+      })),
+    };
   }
 
   update(

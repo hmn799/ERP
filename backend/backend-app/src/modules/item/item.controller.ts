@@ -43,6 +43,13 @@ lookup() {
     return this.itemService.findOne(id);
   }
 
+  @Get(":id/barcodes")
+  getBarcodes(
+    @Param("id") id: string,
+  ) {
+    return this.itemService.getBarcodes(id);
+  }
+
   @Patch(":id")
   update(
     @Param("id") id: string,

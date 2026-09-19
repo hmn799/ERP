@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/tabs";
 
 import ERPDataTable from "@/components/erp/crud/ERPDataTable";
+import { Button } from "@/components/ui/button";
 
 import ReportsService, {
   BatchStockRow,
@@ -22,6 +23,7 @@ import ReportsService, {
 } from "@/services/reports/reports.service";
 
 import ReportHeader from "../../components/ReportHeader";
+import ManageBatchBarcodesDialog from "../components/ManageBatchBarcodesDialog";
 import { downloadCsv, type CsvColumn } from "@/lib/csv";
 import { downloadXlsx } from "@/lib/xlsx";
 
@@ -38,28 +40,47 @@ const currentColumns: ColumnDef<StockRow>[] = [
   { accessorKey: "stock", header: "Stock" },
 ];
 
-const batchColumns: ColumnDef<BatchStockRow>[] = [
-  { accessorKey: "itemCode", header: "Item Code" },
-  { accessorKey: "itemName", header: "Item Name" },
-  { accessorKey: "batchNo", header: "Batch No" },
-  { accessorKey: "stock", header: "Stock" },
-  {
-    accessorKey: "mrp",
-    header: "MRP",
-    cell: ({ row }) =>
-      `₹${money(row.original.mrp)}`,
-  },
-  {
-    accessorKey: "expiryDate",
-    header: "Expiry",
-    cell: ({ row }) =>
-      row.original.expiryDate
-        ? new Date(
-            row.original.expiryDate,
-          ).toLocaleDateString("en-IN")
-        : "-",
-  },
-];
+function getBatchColumns(
+  onManageBarcodes: (batchId: string) => void,
+): ColumnDef<BatchStockRow>[] {
+  return [
+    { accessorKey: "itemCode", header: "Item Code" },
+    { accessorKey: "itemName", header: "Item Name" },
+    { accessorKey: "batchNo", header: "Batch No" },
+    { accessorKey: "stock", header: "Stock" },
+    {
+      accessorKey: "mrp",
+      header: "MRP",
+      cell: ({ row }) =>
+        `₹${money(row.original.mrp)}`,
+    },
+    {
+      accessorKey: "expiryDate",
+      header: "Expiry",
+      cell: ({ row }) =>
+        row.original.expiryDate
+          ? new Date(
+              row.original.expiryDate,
+            ).toLocaleDateString("en-IN")
+          : "-",
+    },
+    {
+      id: "actions",
+      header: "Actions",
+      cell: ({ row }) => (
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() =>
+            onManageBarcodes(row.original.batchId)
+          }
+        >
+          Barcodes
+        </Button>
+      ),
+    },
+  ];
+}
 
 const valuationColumns: ColumnDef<StockValuationRow>[] =
   [
@@ -170,6 +191,19 @@ function StockReportContent() {
   );
 
   const [search, setSearch] = useState("");
+
+  const [
+    manageBarcodesBatchId,
+    setManageBarcodesBatchId,
+  ] = useState<string | null>(null);
+
+  const batchColumns = useMemo(
+    () =>
+      getBatchColumns((batchId) =>
+        setManageBarcodesBatchId(batchId),
+      ),
+    [],
+  );
 
   const {
     data: current = [],
@@ -351,6 +385,13 @@ function StockReportContent() {
           />
         </TabsContent>
       </Tabs>
+
+      <ManageBatchBarcodesDialog
+        batchId={manageBarcodesBatchId}
+        onOpenChange={(open) =>
+          !open && setManageBarcodesBatchId(null)
+        }
+      />
     </div>
   );
 }

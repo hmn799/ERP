@@ -48,6 +48,7 @@ async function main() {
     "MANAGE_BACKUPS",
     "VIEW_MONITORING",
     "MANAGE_BANK_RECONCILIATION",
+    "MANAGE_BATCH_BARCODES",
   ];
 
   for (const code of permissions) {
