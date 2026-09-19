@@ -24,7 +24,7 @@ export default function AppHeader() {
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
-    <header className="sticky top-0 z-50 border-b bg-background">
+    <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur supports-backdrop-filter:bg-background/80">
 
       <div className="flex h-16 items-center justify-between px-5">
 
@@ -38,7 +38,7 @@ export default function AppHeader() {
 
             <Input
               placeholder="Search items, customers, bills..."
-              className="pl-10"
+              className="border-transparent bg-muted pl-10 focus-visible:border-ring focus-visible:bg-background"
             />
 
           </div>
