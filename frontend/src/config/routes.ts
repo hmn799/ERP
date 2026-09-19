@@ -22,11 +22,13 @@ export const ROUTES = {
   PURCHASE_RETURN: "/purchase-return",
   PURCHASE_ORDER: "/purchase-order",
 
-  // Inventory
-  STOCK: "/inventory/stock",
-  BATCH: "/inventory/batch",
+  // Inventory - Stock/Batch/Stock Ledger are tabs of the same
+  // report page (frontend/src/features/reports/stock), not separate
+  // pages, so they're routed there with a `tab` query param.
+  STOCK: "/reports/stock?tab=current",
+  BATCH: "/reports/stock?tab=batch",
   STOCK_TRANSFER: "/inventory/stock-transfer",
-  STOCK_LEDGER: "/inventory/stock-ledger",
+  STOCK_LEDGER: "/reports/stock?tab=movement",
 
   // Accounts
   RECEIPTS: "/accounts/receipts",

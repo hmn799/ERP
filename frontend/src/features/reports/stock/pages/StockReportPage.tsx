@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { Suspense, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { ColumnDef } from "@tanstack/react-table";
 
@@ -99,8 +100,25 @@ const movementColumns: ColumnDef<StockLedgerRow>[] = [
   { accessorKey: "balance", header: "Balance" },
 ];
 
-export default function StockReportPage() {
-  const [tab, setTab] = useState("current");
+const VALID_TABS = [
+  "current",
+  "batch",
+  "valuation",
+  "movement",
+];
+
+function StockReportContent() {
+  const searchParams = useSearchParams();
+
+  const initialTab =
+    searchParams.get("tab") ?? "current";
+
+  const [tab, setTab] = useState(
+    VALID_TABS.includes(initialTab)
+      ? initialTab
+      : "current",
+  );
+
   const [search, setSearch] = useState("");
 
   const {
@@ -322,5 +340,19 @@ export default function StockReportPage() {
         </TabsContent>
       </Tabs>
     </div>
+  );
+}
+
+export default function StockReportPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="p-6">
+          Loading stock report...
+        </div>
+      }
+    >
+      <StockReportContent />
+    </Suspense>
   );
 }
