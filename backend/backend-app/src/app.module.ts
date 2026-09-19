@@ -44,6 +44,7 @@ import { BankModule } from './modules/bank/bank.module';
 import { CompanyModule } from './modules/company/company.module';
 import { AccountGroupModule } from './modules/account-group/account-group.module';
 import { UserModule } from './modules/user/user.module';
+import { PermissionModule } from './modules/permission/permission.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -85,6 +86,7 @@ import { UserModule } from './modules/user/user.module';
      ShortcutModule,
      RoleModule,
      UserModule,
+     PermissionModule,
 
   ],
   controllers: [AppController],
