@@ -4,6 +4,8 @@ import { PrismaModule } from '../prisma/prisma.module';
 import { LedgerModule } from '../ledger/ledger.module';
 import { DocumentNumberModule } from '../../core/document-number/document-number.module';
 import { SchemeModule } from '../scheme/scheme.module';
+import { PdfModule } from '../../core/pdf/pdf.module';
+import { CompanyModule } from '../company/company.module';
 
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
@@ -22,6 +24,8 @@ import { HeldSaleService } from './services/held-sale.service';
     LedgerModule,
     DocumentNumberModule,
     SchemeModule,
+    PdfModule,
+    CompanyModule,
   ],
 
   controllers: [

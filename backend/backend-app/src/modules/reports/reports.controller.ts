@@ -3,9 +3,12 @@ import {
   Get,
   Param,
   Query,
+  Res,
   UseGuards,
   UseInterceptors,
 } from '@nestjs/common';
+
+import type { Response } from 'express';
 
 import { ReportsService } from './reports.service';
 
@@ -78,6 +81,50 @@ export class ReportsController {
       from,
       to,
     );
+  }
+
+  @Get('customer-statement/:id/pdf')
+  async customerStatementPdf(
+    @Param('id') id: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Res() res: Response,
+  ) {
+    const doc = await this.reportsService.customerStatementPdf(
+      id,
+      from,
+      to,
+    );
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="customer-statement.pdf"`,
+    );
+
+    doc.pipe(res);
+  }
+
+  @Get('supplier-statement/:id/pdf')
+  async supplierStatementPdf(
+    @Param('id') id: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @Res() res: Response,
+  ) {
+    const doc = await this.reportsService.supplierStatementPdf(
+      id,
+      from,
+      to,
+    );
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="supplier-statement.pdf"`,
+    );
+
+    doc.pipe(res);
   }
 
   @Get('day-book')

@@ -3,11 +3,15 @@ import {
   Controller,
   Delete,
   Get,
+  NotFoundException,
   Param,
   Post,
   Put,
+  Res,
   UseGuards,
 } from '@nestjs/common';
+
+import type { Response } from 'express';
 
 import { SalesService } from './sales.service';
 
@@ -23,6 +27,9 @@ import { OptionalJwtAuthGuard } from '../auth/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../auth/decorators/current-user.decorator';
 import type { AuthUser } from '../auth/types/auth-user.type';
 
+import { PdfService } from '../../core/pdf/pdf.service';
+import { CompanyService } from '../company/company.service';
+
 @Controller('sales')
 export class SalesController {
  constructor(
@@ -30,6 +37,8 @@ export class SalesController {
   private readonly salesStockService: SalesStockService,
   private readonly salesUpdateService: SalesUpdateService,
   private readonly heldSaleService: HeldSaleService,
+  private readonly pdfService: PdfService,
+  private readonly companyService: CompanyService,
 ) {}
 
   @Post()
@@ -154,5 +163,32 @@ update(
     @Param('id') id: string,
   ) {
     return this.salesService.findOne(id);
+  }
+
+  @Get(':id/invoice-pdf')
+  async invoicePdf(
+    @Param('id') id: string,
+    @Res() res: Response,
+  ) {
+    const bill = await this.salesService.findOne(id);
+
+    if (!bill) {
+      throw new NotFoundException('Sales bill not found.');
+    }
+
+    const company = await this.companyService.getProfile();
+
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader(
+      'Content-Disposition',
+      `inline; filename="${bill.billNo}.pdf"`,
+    );
+
+    const doc = this.pdfService.generateInvoicePdf(
+      bill as any,
+      company,
+    );
+
+    doc.pipe(res);
   }
 }

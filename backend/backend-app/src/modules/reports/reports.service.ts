@@ -2,12 +2,16 @@ import { Injectable } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 import { SettingsService } from '../settings/settings.service';
+import { PdfService } from '../../core/pdf/pdf.service';
+import { CompanyService } from '../company/company.service';
 
 @Injectable()
 export class ReportsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly settingsService: SettingsService,
+    private readonly pdfService: PdfService,
+    private readonly companyService: CompanyService,
   ) {}
 
   /*
@@ -368,6 +372,75 @@ async supplierStatement(
     closingBalance: runningBalance,
   };
 }
+
+  // =========================================================
+  // STATEMENT PDFs
+  // =========================================================
+
+  async customerStatementPdf(
+    customerId: string,
+    from: string,
+    to: string,
+  ) {
+    const [customer, statement, company] = await Promise.all([
+      this.prisma.customer.findUnique({
+        where: { id: customerId },
+      }),
+      this.customerStatement(customerId, from, to),
+      this.companyService.getProfile(),
+    ]);
+
+    if (!customer) {
+      throw new Error('Customer not found.');
+    }
+
+    return this.pdfService.generateStatementPdf(
+      {
+        name: customer.name,
+        code: customer.customerCode,
+        gstin: customer.gstin,
+        address: customer.address,
+        mobile: customer.mobile,
+      },
+      statement,
+      company,
+      from,
+      to,
+    );
+  }
+
+  async supplierStatementPdf(
+    supplierId: string,
+    from: string,
+    to: string,
+  ) {
+    const [supplier, statement, company] = await Promise.all([
+      this.prisma.supplier.findUnique({
+        where: { id: supplierId },
+      }),
+      this.supplierStatement(supplierId, from, to),
+      this.companyService.getProfile(),
+    ]);
+
+    if (!supplier) {
+      throw new Error('Supplier not found.');
+    }
+
+    return this.pdfService.generateStatementPdf(
+      {
+        name: supplier.name,
+        code: supplier.supplierCode,
+        gstin: supplier.gstin,
+        address: supplier.address,
+        mobile: supplier.mobile,
+      },
+      statement,
+      company,
+      from,
+      to,
+    );
+  }
+
     async dayBook(
   from: string,
   to: string,

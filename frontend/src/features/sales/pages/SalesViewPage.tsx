@@ -9,6 +9,7 @@ import SalesReceiptPrint from "../components/SalesReceiptPrint";
 
 import CompanyService from "@/services/company/company.service";
 import { CompanyProfile } from "@/features/settings/types/company.types";
+import { openInvoicePdf } from "@/lib/pdf";
 
 import {
   formatCurrency,
@@ -171,6 +172,14 @@ export default function SalesViewPage({
     className="rounded-md border px-4 py-2 text-sm hover:bg-muted"
   >
     Print
+  </button>
+
+  <button
+    type="button"
+    onClick={() => openInvoicePdf(sale.id)}
+    className="rounded-md border px-4 py-2 text-sm hover:bg-muted"
+  >
+    Download PDF
   </button>
 
   <button
