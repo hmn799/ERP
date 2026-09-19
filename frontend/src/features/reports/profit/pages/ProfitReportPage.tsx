@@ -11,7 +11,8 @@ import ReportsService, {
 } from "@/services/reports/reports.service";
 
 import ReportHeader from "../../components/ReportHeader";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, type CsvColumn } from "@/lib/csv";
+import { downloadXlsx } from "@/lib/xlsx";
 
 function money(value: number) {
   return value.toLocaleString("en-IN", {
@@ -54,6 +55,34 @@ const columns: ColumnDef<ProfitRow>[] = [
   },
 ];
 
+const exportColumns: CsvColumn<ProfitRow>[] = [
+  {
+    header: "Item Code",
+    accessor: (r) => r.itemCode,
+  },
+  {
+    header: "Item Name",
+    accessor: (r) => r.itemName,
+  },
+  {
+    header: "Batch",
+    accessor: (r) => r.batchNo,
+  },
+  { header: "Qty", accessor: (r) => r.qty },
+  {
+    header: "Sale Value",
+    accessor: (r) => r.saleValue,
+  },
+  {
+    header: "Cost Value",
+    accessor: (r) => r.costValue,
+  },
+  {
+    header: "Profit",
+    accessor: (r) => r.profit,
+  },
+];
+
 export default function ProfitReportPage() {
   const [search, setSearch] = useState("");
 
@@ -90,33 +119,10 @@ export default function ProfitReportPage() {
         onSearch={setSearch}
         searchPlaceholder="Search by item..."
         onExport={() =>
-          downloadCsv("profit-report", filtered, [
-            {
-              header: "Item Code",
-              accessor: (r) => r.itemCode,
-            },
-            {
-              header: "Item Name",
-              accessor: (r) => r.itemName,
-            },
-            {
-              header: "Batch",
-              accessor: (r) => r.batchNo,
-            },
-            { header: "Qty", accessor: (r) => r.qty },
-            {
-              header: "Sale Value",
-              accessor: (r) => r.saleValue,
-            },
-            {
-              header: "Cost Value",
-              accessor: (r) => r.costValue,
-            },
-            {
-              header: "Profit",
-              accessor: (r) => r.profit,
-            },
-          ])
+          downloadCsv("profit-report", filtered, exportColumns)
+        }
+        onExportExcel={() =>
+          downloadXlsx("profit-report", filtered, exportColumns)
         }
       />
 

@@ -12,7 +12,8 @@ import ReportsService, {
 import BankAccountService from "@/services/bank/bank-account.service";
 
 import ReportHeader from "../../components/ReportHeader";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, type CsvColumn } from "@/lib/csv";
+import { downloadXlsx } from "@/lib/xlsx";
 
 function money(value: number) {
   return value.toLocaleString("en-IN", {
@@ -88,6 +89,35 @@ const columns: ColumnDef<BankBookRow>[] = [
   },
 ];
 
+const exportColumns: CsvColumn<BankBookRow>[] = [
+  {
+    header: "Date",
+    accessor: (r) =>
+      new Date(r.date).toLocaleDateString("en-IN"),
+  },
+  { header: "Type", accessor: (r) => r.type },
+  {
+    header: "Party",
+    accessor: (r) => r.partyName,
+  },
+  {
+    header: "Deposit",
+    accessor: (r) => r.deposit,
+  },
+  {
+    header: "Withdrawal",
+    accessor: (r) => r.withdrawal,
+  },
+  {
+    header: "Balance",
+    accessor: (r) => r.balance,
+  },
+  {
+    header: "Remarks",
+    accessor: (r) => r.remarks ?? "",
+  },
+];
+
 export default function BankBookPage() {
   const [bankAccountId, setBankAccountId] =
     useState("");
@@ -148,36 +178,10 @@ export default function BankBookPage() {
         title="Bank Book"
         description="Deposits and withdrawals for one bank account, with a running balance."
         onExport={() =>
-          downloadCsv("bank-book", data, [
-            {
-              header: "Date",
-              accessor: (r) =>
-                new Date(
-                  r.date,
-                ).toLocaleDateString("en-IN"),
-            },
-            { header: "Type", accessor: (r) => r.type },
-            {
-              header: "Party",
-              accessor: (r) => r.partyName,
-            },
-            {
-              header: "Deposit",
-              accessor: (r) => r.deposit,
-            },
-            {
-              header: "Withdrawal",
-              accessor: (r) => r.withdrawal,
-            },
-            {
-              header: "Balance",
-              accessor: (r) => r.balance,
-            },
-            {
-              header: "Remarks",
-              accessor: (r) => r.remarks ?? "",
-            },
-          ])
+          downloadCsv("bank-book", data, exportColumns)
+        }
+        onExportExcel={() =>
+          downloadXlsx("bank-book", data, exportColumns)
         }
         exportDisabled={data.length === 0}
       />

@@ -14,6 +14,7 @@ interface ReportHeaderProps {
   searchPlaceholder?: string;
 
   onExport?(): void;
+  onExportExcel?(): void;
   exportDisabled?: boolean;
 }
 
@@ -24,6 +25,7 @@ export default function ReportHeader({
   onSearch,
   searchPlaceholder = "Search...",
   onExport,
+  onExportExcel,
   exportDisabled,
 }: ReportHeaderProps) {
   return (
@@ -61,6 +63,18 @@ export default function ReportHeader({
           >
             <Download className="mr-1.5 h-4 w-4" />
             Export CSV
+          </Button>
+        )}
+
+        {onExportExcel && (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={exportDisabled}
+            onClick={onExportExcel}
+          >
+            <Download className="mr-1.5 h-4 w-4" />
+            Export Excel
           </Button>
         )}
       </div>

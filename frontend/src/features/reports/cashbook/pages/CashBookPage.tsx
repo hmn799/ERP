@@ -11,7 +11,8 @@ import ReportsService, {
 } from "@/services/reports/reports.service";
 
 import ReportHeader from "../../components/ReportHeader";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, type CsvColumn } from "@/lib/csv";
+import { downloadXlsx } from "@/lib/xlsx";
 
 function money(value: number) {
   return value.toLocaleString("en-IN", {
@@ -87,6 +88,35 @@ const columns: ColumnDef<CashBookRow>[] = [
   },
 ];
 
+const exportColumns: CsvColumn<CashBookRow>[] = [
+  {
+    header: "Date",
+    accessor: (r) =>
+      new Date(r.date).toLocaleDateString("en-IN"),
+  },
+  { header: "Type", accessor: (r) => r.type },
+  {
+    header: "Party",
+    accessor: (r) => r.partyName,
+  },
+  {
+    header: "Cash In",
+    accessor: (r) => r.receipt,
+  },
+  {
+    header: "Cash Out",
+    accessor: (r) => r.payment,
+  },
+  {
+    header: "Balance",
+    accessor: (r) => r.balance,
+  },
+  {
+    header: "Remarks",
+    accessor: (r) => r.remarks ?? "",
+  },
+];
+
 export default function CashBookPage() {
   const [from, setFrom] = useState(
     firstDayOfMonth(),
@@ -127,36 +157,10 @@ export default function CashBookPage() {
         title="Cash Book"
         description="Cash-in-hand receipts and payments with a running balance. Bank transactions are excluded - see Bank Book for those."
         onExport={() =>
-          downloadCsv("cash-book", data, [
-            {
-              header: "Date",
-              accessor: (r) =>
-                new Date(
-                  r.date,
-                ).toLocaleDateString("en-IN"),
-            },
-            { header: "Type", accessor: (r) => r.type },
-            {
-              header: "Party",
-              accessor: (r) => r.partyName,
-            },
-            {
-              header: "Cash In",
-              accessor: (r) => r.receipt,
-            },
-            {
-              header: "Cash Out",
-              accessor: (r) => r.payment,
-            },
-            {
-              header: "Balance",
-              accessor: (r) => r.balance,
-            },
-            {
-              header: "Remarks",
-              accessor: (r) => r.remarks ?? "",
-            },
-          ])
+          downloadCsv("cash-book", data, exportColumns)
+        }
+        onExportExcel={() =>
+          downloadXlsx("cash-book", data, exportColumns)
         }
         exportDisabled={data.length === 0}
       />

@@ -22,7 +22,8 @@ import ReportsService, {
 } from "@/services/reports/reports.service";
 
 import ReportHeader from "../../components/ReportHeader";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, type CsvColumn } from "@/lib/csv";
+import { downloadXlsx } from "@/lib/xlsx";
 
 function money(value: number) {
   return value.toLocaleString("en-IN", {
@@ -98,6 +99,55 @@ const movementColumns: ColumnDef<StockLedgerRow>[] = [
   { accessorKey: "qtyIn", header: "Qty In" },
   { accessorKey: "qtyOut", header: "Qty Out" },
   { accessorKey: "balance", header: "Balance" },
+];
+
+const currentExportColumns: CsvColumn<StockRow>[] = [
+  { header: "Item Code", accessor: (r) => r.itemCode },
+  { header: "Item Name", accessor: (r) => r.itemName },
+  { header: "Stock", accessor: (r) => r.stock },
+];
+
+const batchExportColumns: CsvColumn<BatchStockRow>[] = [
+  { header: "Item Code", accessor: (r) => r.itemCode },
+  { header: "Item Name", accessor: (r) => r.itemName },
+  { header: "Batch No", accessor: (r) => r.batchNo },
+  { header: "Stock", accessor: (r) => r.stock },
+  { header: "MRP", accessor: (r) => r.mrp },
+  {
+    header: "Expiry",
+    accessor: (r) => r.expiryDate,
+  },
+];
+
+const valuationExportColumns: CsvColumn<StockValuationRow>[] = [
+  { header: "Item Code", accessor: (r) => r.itemCode },
+  { header: "Item Name", accessor: (r) => r.itemName },
+  { header: "Stock", accessor: (r) => r.stock },
+  {
+    header: "Purchase Rate",
+    accessor: (r) => r.purchaseRate,
+  },
+  {
+    header: "Stock Value",
+    accessor: (r) => r.stockValue,
+  },
+];
+
+const movementExportColumns: CsvColumn<StockLedgerRow>[] = [
+  { header: "Date", accessor: (r) => r.date },
+  { header: "Item", accessor: (r) => r.itemName },
+  { header: "Batch", accessor: (r) => r.batchNo },
+  {
+    header: "Warehouse",
+    accessor: (r) => r.warehouse,
+  },
+  {
+    header: "Type",
+    accessor: (r) => r.transactionType,
+  },
+  { header: "Qty In", accessor: (r) => r.qtyIn },
+  { header: "Qty Out", accessor: (r) => r.qtyOut },
+  { header: "Balance", accessor: (r) => r.balance },
 ];
 
 const VALID_TABS = [
@@ -214,60 +264,21 @@ function StockReportContent() {
     [movement, search],
   );
 
-  function handleExport() {
+  function handleExport(format: "csv" | "xlsx") {
+    const download = format === "csv" ? downloadCsv : downloadXlsx;
+
     if (tab === "current") {
-      downloadCsv("stock-current", filteredCurrent, [
-        { header: "Item Code", accessor: (r) => r.itemCode },
-        { header: "Item Name", accessor: (r) => r.itemName },
-        { header: "Stock", accessor: (r) => r.stock },
-      ]);
+      download("stock-current", filteredCurrent, currentExportColumns);
     } else if (tab === "batch") {
-      downloadCsv("stock-batch-wise", filteredBatches, [
-        { header: "Item Code", accessor: (r) => r.itemCode },
-        { header: "Item Name", accessor: (r) => r.itemName },
-        { header: "Batch No", accessor: (r) => r.batchNo },
-        { header: "Stock", accessor: (r) => r.stock },
-        { header: "MRP", accessor: (r) => r.mrp },
-        {
-          header: "Expiry",
-          accessor: (r) => r.expiryDate,
-        },
-      ]);
+      download("stock-batch-wise", filteredBatches, batchExportColumns);
     } else if (tab === "valuation") {
-      downloadCsv(
+      download(
         "stock-valuation",
         filteredValuation,
-        [
-          { header: "Item Code", accessor: (r) => r.itemCode },
-          { header: "Item Name", accessor: (r) => r.itemName },
-          { header: "Stock", accessor: (r) => r.stock },
-          {
-            header: "Purchase Rate",
-            accessor: (r) => r.purchaseRate,
-          },
-          {
-            header: "Stock Value",
-            accessor: (r) => r.stockValue,
-          },
-        ],
+        valuationExportColumns,
       );
     } else {
-      downloadCsv("stock-movement", filteredMovement, [
-        { header: "Date", accessor: (r) => r.date },
-        { header: "Item", accessor: (r) => r.itemName },
-        { header: "Batch", accessor: (r) => r.batchNo },
-        {
-          header: "Warehouse",
-          accessor: (r) => r.warehouse,
-        },
-        {
-          header: "Type",
-          accessor: (r) => r.transactionType,
-        },
-        { header: "Qty In", accessor: (r) => r.qtyIn },
-        { header: "Qty Out", accessor: (r) => r.qtyOut },
-        { header: "Balance", accessor: (r) => r.balance },
-      ]);
+      download("stock-movement", filteredMovement, movementExportColumns);
     }
   }
 
@@ -279,7 +290,8 @@ function StockReportContent() {
         search={search}
         onSearch={setSearch}
         searchPlaceholder="Search..."
-        onExport={handleExport}
+        onExport={() => handleExport("csv")}
+        onExportExcel={() => handleExport("xlsx")}
       />
 
       <Tabs value={tab} onValueChange={setTab}>

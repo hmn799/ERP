@@ -11,7 +11,8 @@ import ReportsService, {
 } from "@/services/reports/reports.service";
 
 import ReportHeader from "../../components/ReportHeader";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, type CsvColumn } from "@/lib/csv";
+import { downloadXlsx } from "@/lib/xlsx";
 
 function money(value: number) {
   return value.toLocaleString("en-IN", {
@@ -50,6 +51,29 @@ const columns: ColumnDef<PurchaseRegisterRow>[] = [
   },
 ];
 
+const exportColumns: CsvColumn<PurchaseRegisterRow>[] = [
+  {
+    header: "Bill No",
+    accessor: (r) => r.billNo,
+  },
+  {
+    header: "Date",
+    accessor: (r) => r.billDate,
+  },
+  {
+    header: "Supplier",
+    accessor: (r) => r.supplierName,
+  },
+  {
+    header: "Taxable",
+    accessor: (r) => r.taxableAmount,
+  },
+  {
+    header: "Net Amount",
+    accessor: (r) => r.netAmount,
+  },
+];
+
 export default function PurchaseReportPage() {
   const [search, setSearch] = useState("");
 
@@ -84,28 +108,14 @@ export default function PurchaseReportPage() {
           downloadCsv(
             "purchase-register",
             filtered,
-            [
-              {
-                header: "Bill No",
-                accessor: (r) => r.billNo,
-              },
-              {
-                header: "Date",
-                accessor: (r) => r.billDate,
-              },
-              {
-                header: "Supplier",
-                accessor: (r) => r.supplierName,
-              },
-              {
-                header: "Taxable",
-                accessor: (r) => r.taxableAmount,
-              },
-              {
-                header: "Net Amount",
-                accessor: (r) => r.netAmount,
-              },
-            ],
+            exportColumns,
+          )
+        }
+        onExportExcel={() =>
+          downloadXlsx(
+            "purchase-register",
+            filtered,
+            exportColumns,
           )
         }
       />

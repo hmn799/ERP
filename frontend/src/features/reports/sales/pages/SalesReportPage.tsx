@@ -20,7 +20,8 @@ import ReportsService, {
 } from "@/services/reports/reports.service";
 
 import ReportHeader from "../../components/ReportHeader";
-import { downloadCsv } from "@/lib/csv";
+import { downloadCsv, type CsvColumn } from "@/lib/csv";
+import { downloadXlsx } from "@/lib/xlsx";
 
 function money(value: number) {
   return value.toLocaleString("en-IN", {
@@ -76,6 +77,65 @@ const itemColumns: ColumnDef<ItemSalesRow>[] = [
     header: "Sales Value",
     cell: ({ row }) =>
       `₹${money(row.original.salesValue)}`,
+  },
+];
+
+const billExportColumns: CsvColumn<SalesRegisterRow>[] = [
+  { header: "Bill No", accessor: (r) => r.billNo },
+  { header: "Date", accessor: (r) => r.billDate },
+  {
+    header: "Customer",
+    accessor: (r) => r.customerName,
+  },
+  {
+    header: "Type",
+    accessor: (r) => (r.isCredit ? "Credit" : "Cash"),
+  },
+  {
+    header: "Taxable",
+    accessor: (r) => r.taxableAmount,
+  },
+  {
+    header: "Net Amount",
+    accessor: (r) => r.netAmount,
+  },
+];
+
+const itemExportColumns: CsvColumn<ItemSalesRow>[] = [
+  {
+    header: "Item Code",
+    accessor: (r) => r.itemCode,
+  },
+  {
+    header: "Item Name",
+    accessor: (r) => r.itemName,
+  },
+  {
+    header: "Qty Sold",
+    accessor: (r) => r.qtySold,
+  },
+  {
+    header: "Sales Value",
+    accessor: (r) => r.salesValue,
+  },
+];
+
+const partyExportColumns: CsvColumn<PartySalesRow>[] = [
+  {
+    header: "Customer Code",
+    accessor: (r) => r.customerCode,
+  },
+  {
+    header: "Customer Name",
+    accessor: (r) => r.customerName,
+  },
+  {
+    header: "Bills",
+    accessor: (r) => r.billCount,
+  },
+  {
+    header: "Sales Value",
+    accessor: (r) => r.salesValue,
   },
 ];
 
@@ -166,67 +226,15 @@ export default function SalesReportPage() {
     [parties, search],
   );
 
-  function handleExport() {
+  function handleExport(format: "csv" | "xlsx") {
+    const download = format === "csv" ? downloadCsv : downloadXlsx;
+
     if (tab === "bill") {
-      downloadCsv("sales-bill-wise", filteredBills, [
-        { header: "Bill No", accessor: (r) => r.billNo },
-        { header: "Date", accessor: (r) => r.billDate },
-        {
-          header: "Customer",
-          accessor: (r) => r.customerName,
-        },
-        {
-          header: "Type",
-          accessor: (r) =>
-            r.isCredit ? "Credit" : "Cash",
-        },
-        {
-          header: "Taxable",
-          accessor: (r) => r.taxableAmount,
-        },
-        {
-          header: "Net Amount",
-          accessor: (r) => r.netAmount,
-        },
-      ]);
+      download("sales-bill-wise", filteredBills, billExportColumns);
     } else if (tab === "item") {
-      downloadCsv("sales-item-wise", filteredItems, [
-        {
-          header: "Item Code",
-          accessor: (r) => r.itemCode,
-        },
-        {
-          header: "Item Name",
-          accessor: (r) => r.itemName,
-        },
-        {
-          header: "Qty Sold",
-          accessor: (r) => r.qtySold,
-        },
-        {
-          header: "Sales Value",
-          accessor: (r) => r.salesValue,
-        },
-      ]);
+      download("sales-item-wise", filteredItems, itemExportColumns);
     } else {
-      downloadCsv("sales-party-wise", filteredParties, [
-        {
-          header: "Customer Code",
-          accessor: (r) => r.customerCode,
-        },
-        {
-          header: "Customer Name",
-          accessor: (r) => r.customerName,
-        },
-        {
-          header: "Bills",
-          accessor: (r) => r.billCount,
-        },
-        {
-          header: "Sales Value",
-          accessor: (r) => r.salesValue,
-        },
-      ]);
+      download("sales-party-wise", filteredParties, partyExportColumns);
     }
   }
 
@@ -238,7 +246,8 @@ export default function SalesReportPage() {
         search={search}
         onSearch={setSearch}
         searchPlaceholder="Search..."
-        onExport={handleExport}
+        onExport={() => handleExport("csv")}
+        onExportExcel={() => handleExport("xlsx")}
       />
 
       <Tabs value={tab} onValueChange={setTab}>
