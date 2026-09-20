@@ -87,9 +87,26 @@ interface PaymentRow {
   id: number;
   paymentMode: SalesPaymentMode;
   amount: number;
-  cardSurcharge: number;
+  surchargeType: "AMOUNT" | "PERCENT";
+  surchargeValue: number;
   transactionNo: string;
   remarks: string;
+}
+
+function getSurchargeAmount(
+  row: Pick<
+    PaymentRow,
+    "amount" | "surchargeType" | "surchargeValue"
+  >,
+) {
+  return row.surchargeType === "PERCENT"
+    ? Number(
+        (
+          (row.amount * row.surchargeValue) /
+          100
+        ).toFixed(2),
+      )
+    : Number(row.surchargeValue.toFixed(2));
 }
 
 interface SalesPageProps {
@@ -322,8 +339,15 @@ const [originalRows, setOriginalRows] =
   ] = useState(0);
 
   const [
-    cardSurcharge,
-    setCardSurcharge,
+    surchargeType,
+    setSurchargeType,
+  ] = useState<"AMOUNT" | "PERCENT">(
+    "AMOUNT",
+  );
+
+  const [
+    surchargeValue,
+    setSurchargeValue,
   ] = useState(0);
 
   const [
@@ -566,9 +590,15 @@ setRows(
                     payment.amount,
                   ),
 
-                cardSurcharge:
+                surchargeType:
+                  payment.surchargeType ===
+                  "PERCENT"
+                    ? "PERCENT"
+                    : "AMOUNT",
+
+                surchargeValue:
                   getNumber(
-                    payment.cardSurcharge,
+                    payment.surchargeValue,
                   ),
 
                 transactionNo:
@@ -1368,8 +1398,33 @@ setRows(
           getNumber(
             payment.amount,
           ) +
+          getSurchargeAmount(
+            payment,
+          ),
+        0,
+      ),
+    [payments],
+  );
+
+  /*
+   * =====================================================
+   * APPLIED AMOUNT
+   * =====================================================
+   *
+   * Surcharge is additive - money collected on top of the bill (a
+   * card fee passed to the customer), not part of covering it - so
+   * the bill's own remaining balance only tracks `amount`, never
+   * surcharge. `paidAmount` above (amount + surcharge) is for the
+   * "Total Paid" display only.
+   */
+
+  const appliedAmount = useMemo(
+    () =>
+      payments.reduce(
+        (sum, payment) =>
+          sum +
           getNumber(
-            payment.cardSurcharge,
+            payment.amount,
           ),
         0,
       ),
@@ -1385,7 +1440,7 @@ setRows(
   const paymentBalance =
     Math.max(
       finalPayable -
-        paidAmount,
+        appliedAmount,
       0,
     );
 
@@ -1441,6 +1496,90 @@ setRows(
             ),
           0,
         );
+
+  /*
+   * =====================================================
+   * CURRENT ROW SHORTFALL
+   *
+   * How much of the bill balance the amount currently entered would
+   * leave uncovered - drives the "Mark as Short" hint. Surcharge is
+   * additive (collected on top of the bill, not part of covering
+   * it), so it never offsets this.
+   * =====================================================
+   */
+
+  const currentRowAmount =
+    paymentMode === "CASH"
+      ? Math.min(
+          Math.max(
+            cashReceived,
+            0,
+          ),
+          paymentBalance,
+        )
+      : Math.max(
+          Number(
+            paymentAmount,
+          ) || 0,
+          0,
+        );
+
+  const currentRowSurcharge =
+    getSurchargeAmount({
+      amount: currentRowAmount,
+      surchargeType,
+      surchargeValue,
+    });
+
+  const currentRowShortfall =
+    Number(
+      (
+        paymentBalance -
+        currentRowAmount
+      ).toFixed(2),
+    );
+
+  /*
+   * =====================================================
+   * MIXED MODE - CHOOSE THE NEXT ROW'S MODE
+   *
+   * Same field reset as selectPaymentMode, but doesn't touch
+   * mixedPayment - picking CASH for the next row shouldn't exit
+   * Mixed mode.
+   * =====================================================
+   */
+
+  function selectMixedRowMode(
+    mode:
+      | "CASH"
+      | "UPI"
+      | "CARD",
+  ) {
+    setPaymentError(null);
+
+    setChangeToReturn(0);
+
+    setPaymentMode(mode);
+
+    setSurchargeType(
+      "AMOUNT",
+    );
+
+    setSurchargeValue(0);
+
+    const remaining =
+      Math.max(
+        finalPayable -
+          appliedAmount,
+        0,
+      );
+
+    setPaymentAmount(
+      Number(
+        remaining.toFixed(2),
+      ),
+    );
+  }
 
   /*
    * =====================================================
@@ -1519,26 +1658,22 @@ setRows(
 
       setMixedPayment(false);
 
-      if (isCredit) {
-        setPaymentMode(
-          "CREDIT",
-        );
+      setPaymentMode(
+        "CASH",
+      );
 
-        setPaymentAmount(0);
-      } else {
-        setPaymentMode(
-          "CASH",
-        );
+      setPaymentAmount(
+        Math.round(
+          totals.net +
+            automatic,
+        ),
+      );
 
-        setPaymentAmount(
-          Math.round(
-            totals.net +
-              automatic,
-          ),
-        );
-      }
+      setSurchargeType(
+        "AMOUNT",
+      );
 
-      setCardSurcharge(0);
+      setSurchargeValue(0);
 
       setCashReceived(
         Math.round(
@@ -1552,24 +1687,16 @@ setRows(
       setTransactionNo("");
 
       setPaymentRemarks("");
-    } else {
+    } else if (!isCredit) {
       /*
-       * EDIT MODE
+       * EDIT MODE (not a credit sale)
        *
        * Keep existing payments.
        * Determine the current payment mode from
        * the existing payment rows.
        */
 
-      if (isCredit) {
-        setPaymentMode(
-          "CREDIT",
-        );
-
-        setMixedPayment(false);
-
-        setPaymentAmount(0);
-      } else if (
+      if (
         payments.length === 1
       ) {
         setPaymentMode(
@@ -1582,7 +1709,7 @@ setRows(
         setPaymentAmount(
           Math.max(
             finalPayable -
-              paidAmount,
+              appliedAmount,
             0,
           ),
         );
@@ -1598,7 +1725,7 @@ setRows(
         setPaymentAmount(
           Math.max(
             finalPayable -
-              paidAmount,
+              appliedAmount,
             0,
           ),
         );
@@ -1632,59 +1759,38 @@ setRows(
 
   function selectPaymentMode(
     mode:
-      | SalesPaymentMode
+      | "CASH"
+      | "UPI"
+      | "CARD"
       | "MIXED",
   ) {
     setPaymentError(null);
 
-    if (mode === "MIXED") {
-      setMixedPayment(true);
-
-      setChangeToReturn(0);
-
-      setPaymentMode(
-        "CASH",
-      );
-
-      const remaining =
-        Math.max(
-          finalPayable -
-            paidAmount,
-          0,
-        );
-
-      setPaymentAmount(
-        Number(
-          remaining.toFixed(
-            2,
-          ),
-        ),
-      );
-
-      setCardSurcharge(0);
-
-      return;
-    }
-
-    setMixedPayment(false);
-
     setChangeToReturn(0);
 
-    setPaymentMode(mode);
+    setSurchargeType(
+      "AMOUNT",
+    );
+
+    setSurchargeValue(0);
 
     const remaining =
       Math.max(
         finalPayable -
-          paidAmount,
+          appliedAmount,
         0,
       );
 
-    if (
-      mode === "CREDIT"
-    ) {
-      setPaymentAmount(0);
-      setCardSurcharge(0);
-      return;
+    if (mode === "MIXED") {
+      setMixedPayment(true);
+
+      setPaymentMode(
+        "CASH",
+      );
+    } else {
+      setMixedPayment(false);
+
+      setPaymentMode(mode);
     }
 
     setPaymentAmount(
@@ -1692,37 +1798,28 @@ setRows(
         remaining.toFixed(2),
       ),
     );
-
-    if (mode !== "CARD") {
-      setCardSurcharge(0);
-    }
   }
 
   /*
    * =====================================================
-   * ADD PAYMENT
+   * BUILD A PAYMENT ROW FROM THE CURRENT FIELDS
    * =====================================================
+   *
+   * Pure - returns the row (or null + sets an error) without
+   * touching state, so it can either be pushed onto the running
+   * `payments[]` list (Mixed mode's "+ Add Row") or handed straight
+   * to saveSale for the common single-mode, one-step case.
    */
 
-  function addPayment() {
+  function buildPaymentRow(): PaymentRow | null {
     setPaymentError(null);
-
-    if (
-      paymentMode ===
-      "CREDIT"
-    ) {
-      setPaymentError(
-        "Credit is not added as a payment row. Use CREDIT mode for a credit sale.",
-      );
-      return;
-    }
 
     const remaining =
       Math.max(
         Number(
           (
             finalPayable -
-            paidAmount
+            appliedAmount
           ).toFixed(2),
         ),
         0,
@@ -1732,7 +1829,7 @@ setRows(
       setPaymentError(
         "The bill is already fully paid.",
       );
-      return;
+      return null;
     }
 
     let amount =
@@ -1760,7 +1857,7 @@ setRows(
         setPaymentError(
           "Enter the cash received from the customer.",
         );
-        return;
+        return null;
       }
 
       amount = Math.min(
@@ -1768,14 +1865,6 @@ setRows(
         remaining,
       );
     }
-
-    const surcharge =
-      paymentMode ===
-      "CARD"
-        ? Number(
-            cardSurcharge,
-          )
-        : 0;
 
     if (
       !Number.isFinite(
@@ -1786,31 +1875,28 @@ setRows(
       setPaymentError(
         "Enter a valid payment amount.",
       );
-      return;
+      return null;
     }
 
     if (
       !Number.isFinite(
-        surcharge,
+        surchargeValue,
       ) ||
-      surcharge < 0
+      surchargeValue < 0
     ) {
       setPaymentError(
-        "Enter a valid card surcharge.",
+        "Enter a valid surcharge.",
       );
-      return;
+      return null;
     }
 
-    const totalThisPayment =
+    const roundedAmount =
       Number(
-        (
-          amount +
-          surcharge
-        ).toFixed(2),
+        amount.toFixed(2),
       );
 
     if (
-      totalThisPayment >
+      roundedAmount >
       remaining + 0.01
     ) {
       setPaymentError(
@@ -1818,53 +1904,89 @@ setRows(
           2,
         )}.`,
       );
-      return;
+      return null;
     }
 
     if (
       paymentMode ===
       "CASH"
     ) {
-      const change =
+      setChangeToReturn(
         Math.max(
           Number(
             (
               received -
-              amount
+              roundedAmount
             ).toFixed(2),
           ),
           0,
-        );
-
-      setChangeToReturn(
-        change,
+        ),
       );
     } else {
       setChangeToReturn(0);
     }
 
-    const newPayment: PaymentRow =
-      {
-        id: Date.now(),
+    return {
+      id: Date.now(),
 
-        paymentMode,
+      paymentMode,
 
-        amount:
-          Number(
-            amount.toFixed(2),
+      amount: roundedAmount,
+
+      surchargeType,
+      surchargeValue:
+        Number(
+          surchargeValue.toFixed(
+            2,
           ),
+        ),
 
-        cardSurcharge:
-          Number(
-            surcharge.toFixed(2),
-          ),
+      transactionNo:
+        transactionNo.trim(),
 
-        transactionNo:
-          transactionNo.trim(),
+      remarks:
+        paymentRemarks.trim(),
+    };
+  }
 
-        remarks:
-          paymentRemarks.trim(),
-      };
+  function resetPaymentRowFields(
+    remaining: number,
+  ) {
+    setPaymentAmount(
+      Number(
+        remaining.toFixed(2),
+      ),
+    );
+
+    setSurchargeType(
+      "AMOUNT",
+    );
+
+    setSurchargeValue(0);
+
+    setTransactionNo("");
+
+    setPaymentRemarks("");
+
+    if (
+      paymentMode ===
+      "CASH"
+    ) {
+      setCashReceived(0);
+    }
+  }
+
+  /*
+   * =====================================================
+   * ADD PAYMENT (Mixed mode - one row at a time)
+   * =====================================================
+   */
+
+  function addPayment() {
+    const newPayment =
+      buildPaymentRow();
+
+    if (!newPayment) return;
 
     setPayments(
       (current) => [
@@ -1877,32 +1999,69 @@ setRows(
       Math.max(
         Number(
           (
-            remaining -
-            totalThisPayment
+            finalPayable -
+            appliedAmount -
+            newPayment.amount
           ).toFixed(2),
         ),
         0,
       );
 
-    setPaymentAmount(
-      Number(
-        nextRemaining.toFixed(
-          2,
+    resetPaymentRowFields(
+      nextRemaining,
+    );
+  }
+
+  /*
+   * =====================================================
+   * CONFIRM PAYMENT (single mode - one step)
+   *
+   * Cash/Card/UPI don't need the extra "+ Add Payment" click Mixed
+   * mode needs for building up several rows - build the one row
+   * this bill needs and save immediately.
+   * =====================================================
+   */
+
+  function confirmSinglePayment() {
+    const newPayment =
+      buildPaymentRow();
+
+    if (!newPayment) return;
+
+    saveSale([
+      ...payments,
+      newPayment,
+    ]);
+  }
+
+  /*
+   * =====================================================
+   * MARK REMAINING BALANCE AS SHORT
+   * =====================================================
+   *
+   * e.g. bill is 303, customer hands over 300 - rather than forcing
+   * the operator to compute "3" by hand and type it into Short
+   * Amount separately, this reads the shortfall straight off
+   * whatever they've already entered as the payment amount.
+   */
+
+  function markRemainingAsShort() {
+    const shortfall =
+      currentRowShortfall;
+
+    if (shortfall <= 0) return;
+
+    setShortAmount(
+      (current) =>
+        Number(
+          (
+            current + shortfall
+          ).toFixed(2),
         ),
-      ),
     );
 
-    setCardSurcharge(0);
-
-    setTransactionNo("");
-
-    setPaymentRemarks("");
-
-    if (
-      paymentMode ===
-      "CASH"
-    ) {
-      setCashReceived(0);
+    if (paymentMode === "CASH") {
+      setChangeToReturn(0);
     }
   }
 
@@ -1971,7 +2130,13 @@ setRows(
           return;
         }
       } else {
-        const totalPaid =
+        /*
+         * Surcharge is additive - collected on top of the bill, not
+         * part of covering it - so only `amount` needs to reconcile
+         * against finalPayable (matches the backend's own check).
+         */
+
+        const totalApplied =
           paymentsToSave.reduce(
             (
               sum,
@@ -1980,23 +2145,20 @@ setRows(
               sum +
               getNumber(
                 payment.amount,
-              ) +
-              getNumber(
-                payment.cardSurcharge,
               ),
             0,
           );
 
         if (
           Math.abs(
-            totalPaid -
+            totalApplied -
               finalPayable,
           ) > 0.01
         ) {
           setPaymentError(
             `Payment is incomplete. Balance: ₹${Math.max(
               finalPayable -
-                totalPaid,
+                totalApplied,
               0,
             ).toFixed(2)}`,
           );
@@ -2066,8 +2228,11 @@ setRows(
             amount:
               payment.amount,
 
-            cardSurcharge:
-              payment.cardSurcharge,
+            surchargeType:
+              payment.surchargeType,
+
+            surchargeValue:
+              payment.surchargeValue,
 
             transactionNo:
               payment.transactionNo ||
@@ -2638,16 +2803,6 @@ setRows(
         event.preventDefault();
 
         selectPaymentMode(
-          "CREDIT",
-        );
-
-        return;
-      }
-
-      if (event.key === "F5") {
-        event.preventDefault();
-
-        selectPaymentMode(
           "MIXED",
         );
 
@@ -2675,13 +2830,14 @@ setRows(
 
         event.preventDefault();
 
-        if (
-          paymentMode ===
-          "CREDIT"
-        ) {
+        if (isCredit) {
           saveSale([]);
-        } else {
+        } else if (
+          mixedPayment
+        ) {
           addPayment();
+        } else {
+          confirmSinglePayment();
         }
       }
     }
@@ -2700,8 +2856,10 @@ setRows(
   }, [
     paymentOpen,
     paymentMode,
+    mixedPayment,
     paymentAmount,
-    cardSurcharge,
+    surchargeType,
+    surchargeValue,
     transactionNo,
     paymentRemarks,
     payments,
@@ -3058,7 +3216,7 @@ setRows(
 
       {paymentOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-white shadow-2xl">
+          <div className="flex max-h-[92vh] w-full max-w-4xl flex-col overflow-hidden rounded-2xl bg-card shadow-2xl">
 
             <div className="flex items-center justify-between border-b px-6 py-4">
               <div>
@@ -3068,7 +3226,7 @@ setRows(
                     : "Payment"}
                 </h2>
 
-                <p className="text-sm text-gray-500">
+                <p className="text-sm text-muted-foreground">
                   Bill {billNo}
                 </p>
               </div>
@@ -3080,7 +3238,7 @@ setRows(
                     false,
                   )
                 }
-                className="rounded-lg px-3 py-1 text-2xl text-gray-500 hover:bg-gray-100"
+                className="rounded-lg px-3 py-1 text-2xl text-muted-foreground hover:bg-muted"
               >
                 ×
               </button>
@@ -3090,16 +3248,16 @@ setRows(
               <div className="space-y-5">
 
                 {paymentError && (
-                  <div className="rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                  <div className="rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive">
                     {paymentError}
                   </div>
                 )}
 
-                <div className="rounded-xl border bg-gray-50 p-4">
+                <div className="rounded-xl border bg-muted p-4">
                   <div className="grid gap-4 md:grid-cols-4">
 
                     <div>
-                      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Net Amount
                       </div>
 
@@ -3112,7 +3270,7 @@ setRows(
                     </div>
 
                     <div>
-                      <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Round Off
                       </label>
 
@@ -3134,7 +3292,7 @@ setRows(
                             ),
                           )
                         }
-                        className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-right font-semibold"
+                        className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-right font-semibold"
                       />
 
                       <button
@@ -3144,7 +3302,7 @@ setRows(
                             automaticRoundOff,
                           )
                         }
-                        className="mt-1 text-xs font-medium text-blue-600 hover:underline"
+                        className="mt-1 text-xs font-medium text-primary hover:underline"
                       >
                         Auto:{" "}
                         {automaticRoundOff >=
@@ -3159,7 +3317,7 @@ setRows(
                     </div>
 
                     <div>
-                      <label className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                      <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Short Amount
                       </label>
 
@@ -3185,16 +3343,16 @@ setRows(
                             ),
                           )
                         }
-                        className="mt-1 w-full rounded-lg border bg-white px-3 py-2 text-right font-semibold"
+                        className="mt-1 w-full rounded-lg border bg-background px-3 py-2 text-right font-semibold"
                       />
 
-                      <div className="mt-1 text-xs text-gray-500">
+                      <div className="mt-1 text-xs text-muted-foreground">
                         Customer pays less than payable.
                       </div>
                     </div>
 
-                    <div className="rounded-lg bg-white p-3 ring-1 ring-gray-200">
-                      <div className="text-xs font-medium uppercase tracking-wide text-gray-500">
+                    <div className="rounded-lg bg-background p-3 ring-1 ring-border">
+                      <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                         Amount Payable
                       </div>
 
@@ -3209,63 +3367,14 @@ setRows(
                   </div>
                 </div>
 
-                <div>
-                  <div className="mb-2 text-sm font-semibold">
-                    Payment Method
-                  </div>
+                {isCredit ? (
+                  <div className="rounded-xl border border-warning/30 bg-warning/10 p-4">
 
-                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-5">
-
-                    {([
-                      "CASH",
-                      "UPI",
-                      "CARD",
-                      "MIXED",
-                      "CREDIT",
-                    ] as const).map(
-                      (mode) => {
-                        const active =
-                          mode ===
-                          "MIXED"
-                            ? mixedPayment
-                            : !mixedPayment &&
-                              paymentMode ===
-                                mode;
-
-                        return (
-                          <button
-                            key={mode}
-                            type="button"
-                            onClick={() =>
-                              selectPaymentMode(
-                                mode,
-                              )
-                            }
-                            className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
-                              active
-                                ? "border-black bg-black text-white"
-                                : "bg-white hover:bg-gray-50"
-                            }`}
-                          >
-                            {mode}
-                          </button>
-                        );
-                      },
-                    )}
-
-                  </div>
-                </div>
-
-                {paymentMode ===
-                  "CREDIT" &&
-                !mixedPayment ? (
-                  <div className="rounded-xl border border-yellow-200 bg-yellow-50 p-4">
-
-                    <div className="font-semibold text-yellow-900">
+                    <div className="font-semibold text-warning">
                       Credit Sale
                     </div>
 
-                    <p className="mt-1 text-sm text-yellow-800">
+                    <p className="mt-1 text-sm text-foreground">
                       No immediate payment will be collected. ₹
                       {finalPayable.toFixed(
                         2,
@@ -3274,7 +3383,7 @@ setRows(
                     </p>
 
                     {!customerId && (
-                      <p className="mt-2 text-sm font-semibold text-red-600">
+                      <p className="mt-2 text-sm font-semibold text-destructive">
                         A customer is required for credit sales.
                       </p>
                     )}
@@ -3282,21 +3391,103 @@ setRows(
                   </div>
                 ) : (
                   <>
+                    <div>
+                      <div className="mb-2 text-sm font-semibold">
+                        Payment Method
+                      </div>
+
+                      <div className="grid grid-cols-4 gap-2">
+
+                        {([
+                          "CASH",
+                          "UPI",
+                          "CARD",
+                          "MIXED",
+                        ] as const).map(
+                          (mode) => {
+                            const active =
+                              mode ===
+                              "MIXED"
+                                ? mixedPayment
+                                : !mixedPayment &&
+                                  paymentMode ===
+                                    mode;
+
+                            return (
+                              <button
+                                key={mode}
+                                type="button"
+                                onClick={() =>
+                                  selectPaymentMode(
+                                    mode,
+                                  )
+                                }
+                                className={`rounded-xl border px-3 py-3 text-sm font-bold transition ${
+                                  active
+                                    ? "border-primary bg-primary text-primary-foreground"
+                                    : "bg-background hover:bg-muted"
+                                }`}
+                              >
+                                {mode}
+                              </button>
+                            );
+                          },
+                        )}
+
+                      </div>
+                    </div>
+
+                    {mixedPayment && (
+                      <div>
+                        <div className="mb-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                          Next Payment's Mode
+                        </div>
+
+                        <div className="flex gap-2">
+                          {(
+                            [
+                              "CASH",
+                              "UPI",
+                              "CARD",
+                            ] as const
+                          ).map((mode) => (
+                            <button
+                              key={mode}
+                              type="button"
+                              onClick={() =>
+                                selectMixedRowMode(
+                                  mode,
+                                )
+                              }
+                              className={`rounded-lg border px-3 py-1.5 text-sm font-semibold transition ${
+                                paymentMode ===
+                                mode
+                                  ? "border-primary bg-primary/10 text-primary"
+                                  : "bg-background hover:bg-muted"
+                              }`}
+                            >
+                              {mode}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="rounded-xl border p-4">
 
                       <div className="mb-4 flex items-center justify-between">
 
                         <div>
                           <div className="font-semibold">
-                            {paymentMode ===
-                            "CASH"
-                              ? "Cash Payment"
-                              : mixedPayment
-                                ? `Add ${paymentMode} Payment`
+                            {mixedPayment
+                              ? `Add ${paymentMode} Payment`
+                              : paymentMode ===
+                                  "CASH"
+                                ? "Cash Payment"
                                 : `${paymentMode} Payment`}
                           </div>
 
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             {paymentMode ===
                             "CASH"
                               ? "Enter the physical cash received from the customer."
@@ -3305,7 +3496,7 @@ setRows(
                         </div>
 
                         <div className="text-right">
-                          <div className="text-xs text-gray-500">
+                          <div className="text-xs text-muted-foreground">
                             Balance
                           </div>
 
@@ -3386,24 +3577,23 @@ setRows(
                           />
                         </div>
 
-                        {paymentMode ===
-                        "CARD" ? (
-                          <div>
-                            <label className="mb-1 block text-sm font-medium">
-                              Card Surcharge
-                            </label>
+                        <div>
+                          <label className="mb-1 block text-sm font-medium">
+                            Surcharge
+                          </label>
 
+                          <div className="flex gap-2">
                             <input
                               type="number"
                               min="0"
                               step="0.01"
                               value={
-                                cardSurcharge
+                                surchargeValue
                               }
                               onChange={(
                                 event,
                               ) =>
-                                setCardSurcharge(
+                                setSurchargeValue(
                                   Number(
                                     event
                                       .target
@@ -3414,45 +3604,124 @@ setRows(
                               }
                               className="w-full rounded-xl border px-4 py-3 text-right font-semibold"
                             />
+
+                            <div className="flex rounded-xl border p-1">
+                              {(
+                                [
+                                  ["AMOUNT", "₹"],
+                                  ["PERCENT", "%"],
+                                ] as const
+                              ).map(
+                                ([
+                                  type,
+                                  label,
+                                ]) => (
+                                  <button
+                                    key={
+                                      type
+                                    }
+                                    type="button"
+                                    onClick={() =>
+                                      setSurchargeType(
+                                        type,
+                                      )
+                                    }
+                                    className={`rounded-lg px-3 text-sm font-semibold transition ${
+                                      surchargeType ===
+                                      type
+                                        ? "bg-primary text-primary-foreground"
+                                        : "hover:bg-muted"
+                                    }`}
+                                  >
+                                    {
+                                      label
+                                    }
+                                  </button>
+                                ),
+                              )}
+                            </div>
                           </div>
-                        ) : paymentMode ===
-                          "CASH" ? (
-                          <div className="grid grid-cols-2 gap-3">
 
-                            <div className="rounded-xl bg-gray-50 p-3">
-                              <div className="text-xs text-gray-500">
-                                Amount Applied
-                              </div>
-
-                              <div className="mt-1 text-lg font-bold">
-                                ₹
-                                {Math.min(
-                                  Math.max(
-                                    cashReceived,
-                                    0,
-                                  ),
-                                  paymentBalance,
-                                ).toFixed(
+                          {surchargeType ===
+                            "PERCENT" &&
+                            surchargeValue >
+                              0 && (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                = ₹
+                                {currentRowSurcharge.toFixed(
                                   2,
                                 )}
                               </div>
+                            )}
+                        </div>
+
+                      </div>
+
+                      {paymentMode ===
+                        "CASH" && (
+                        <div className="mt-4 grid grid-cols-2 gap-3">
+
+                          <div className="rounded-xl bg-muted p-3">
+                            <div className="text-xs text-muted-foreground">
+                              Amount Applied
                             </div>
 
-                            <div className="rounded-xl bg-green-50 p-3">
-                              <div className="text-xs text-gray-500">
-                                Change / Return
-                              </div>
-
-                              <div className="mt-1 text-lg font-bold text-green-700">
-                                ₹
-                                {cashChange.toFixed(
-                                  2,
-                                )}
-                              </div>
+                            <div className="mt-1 text-lg font-bold">
+                              ₹
+                              {Math.min(
+                                Math.max(
+                                  cashReceived,
+                                  0,
+                                ),
+                                paymentBalance,
+                              ).toFixed(
+                                2,
+                              )}
                             </div>
-
                           </div>
-                        ) : (
+
+                          <div className="rounded-xl bg-success/10 p-3">
+                            <div className="text-xs text-muted-foreground">
+                              Change / Return
+                            </div>
+
+                            <div className="mt-1 text-lg font-bold text-success">
+                              ₹
+                              {cashChange.toFixed(
+                                2,
+                              )}
+                            </div>
+                          </div>
+
+                        </div>
+                      )}
+
+                      {currentRowShortfall >
+                        0.01 && (
+                        <div className="mt-4 flex items-center justify-between rounded-xl border border-warning/30 bg-warning/10 p-3 text-sm">
+                          <span>
+                            Short by ₹
+                            {currentRowShortfall.toFixed(
+                              2,
+                            )}
+                          </span>
+
+                          <button
+                            type="button"
+                            onClick={
+                              markRemainingAsShort
+                            }
+                            className="font-semibold text-warning underline underline-offset-2"
+                          >
+                            Mark as Short
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="mt-4 grid gap-4 md:grid-cols-2">
+
+                        {paymentMode !==
+                          "CASH" && (
                           <div>
                             <label className="mb-1 block text-sm font-medium">
                               Transaction No.
@@ -3483,77 +3752,14 @@ setRows(
                           </div>
                         )}
 
-                      </div>
-
-                      {paymentMode !==
-                        "CASH" && (
-                        <div className="mt-4 grid gap-4 md:grid-cols-2">
-
-                          {paymentMode ===
-                            "CARD" && (
-                            <div>
-                              <label className="mb-1 block text-sm font-medium">
-                                Transaction No.
-                              </label>
-
-                              <input
-                                type="text"
-                                value={
-                                  transactionNo
-                                }
-                                onChange={(
-                                  event,
-                                ) =>
-                                  setTransactionNo(
-                                    event
-                                      .target
-                                      .value,
-                                  )
-                                }
-                                placeholder="Optional"
-                                className="w-full rounded-xl border px-4 py-3"
-                              />
-                            </div>
-                          )}
-
-                          <div
-                            className={
-                              paymentMode ===
-                              "CARD"
-                                ? ""
-                                : "md:col-span-2"
-                            }
-                          >
-                            <label className="mb-1 block text-sm font-medium">
-                              Remarks
-                            </label>
-
-                            <input
-                              type="text"
-                              value={
-                                paymentRemarks
-                              }
-                              onChange={(
-                                event,
-                              ) =>
-                                setPaymentRemarks(
-                                  event
-                                    .target
-                                    .value,
-                                )
-                              }
-                              placeholder="Optional"
-                              className="w-full rounded-xl border px-4 py-3"
-                            />
-                          </div>
-
-                        </div>
-                      )}
-
-                      {paymentMode ===
-                        "CASH" && (
-                        <div className="mt-4">
-
+                        <div
+                          className={
+                            paymentMode !==
+                            "CASH"
+                              ? ""
+                              : "md:col-span-2"
+                          }
+                        >
                           <label className="mb-1 block text-sm font-medium">
                             Remarks
                           </label>
@@ -3575,27 +3781,30 @@ setRows(
                             placeholder="Optional"
                             className="w-full rounded-xl border px-4 py-3"
                           />
-
                         </div>
-                      )}
 
-                      <button
-                        type="button"
-                        onClick={
-                          addPayment
-                        }
-                        className="mt-4 w-full rounded-xl bg-gray-900 px-4 py-3 font-bold text-white hover:bg-gray-800"
-                      >
-                        + Add Payment
-                      </button>
+                      </div>
+
+                      {mixedPayment && (
+                        <button
+                          type="button"
+                          onClick={
+                            addPayment
+                          }
+                          className="mt-4 w-full rounded-xl bg-primary px-4 py-3 font-bold text-primary-foreground hover:bg-primary/90"
+                        >
+                          + Add Payment
+                        </button>
+                      )}
 
                     </div>
 
-                    {payments.length >
-                      0 && (
+                    {mixedPayment &&
+                      payments.length >
+                        0 && (
                       <div className="rounded-xl border">
 
-                        <div className="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+                        <div className="flex items-center justify-between border-b bg-muted px-4 py-3">
 
                           <div className="font-semibold">
                             Payment Breakdown
@@ -3629,7 +3838,7 @@ setRows(
                                 </div>
 
                                 {payment.transactionNo && (
-                                  <div className="text-xs text-gray-500">
+                                  <div className="text-xs text-muted-foreground">
                                     {
                                       payment.transactionNo
                                     }
@@ -3645,8 +3854,8 @@ setRows(
                                     getNumber(
                                       payment.amount,
                                     ) +
-                                    getNumber(
-                                      payment.cardSurcharge,
+                                    getSurchargeAmount(
+                                      payment,
                                     )
                                   ).toFixed(
                                     2,
@@ -3660,7 +3869,7 @@ setRows(
                                       payment.id,
                                     )
                                   }
-                                  className="text-sm font-medium text-red-600 hover:underline"
+                                  className="text-sm font-medium text-destructive hover:underline"
                                 >
                                   Remove
                                 </button>
@@ -3674,81 +3883,89 @@ setRows(
                       </div>
                     )}
 
-                    <div className="rounded-xl border-2 border-gray-200 p-4">
+                    {mixedPayment && (
+                      <div className="rounded-xl border-2 p-4">
 
-                      <div className="grid gap-4 md:grid-cols-4">
+                        <div className="grid gap-4 md:grid-cols-4">
 
-                        <div>
-                          <div className="text-xs text-gray-500">
-                            Amount Payable
+                          <div>
+                            <div className="text-xs text-muted-foreground">
+                              Amount Payable
+                            </div>
+
+                            <div className="mt-1 text-lg font-bold">
+                              ₹
+                              {finalPayable.toFixed(
+                                2,
+                              )}
+                            </div>
                           </div>
 
-                          <div className="mt-1 text-lg font-bold">
-                            ₹
-                            {finalPayable.toFixed(
-                              2,
-                            )}
-                          </div>
-                        </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">
+                              Total Paid
+                            </div>
 
-                        <div>
-                          <div className="text-xs text-gray-500">
-                            Total Paid
-                          </div>
-
-                          <div className="mt-1 text-lg font-bold">
-                            ₹
-                            {paidAmount.toFixed(
-                              2,
-                            )}
-                          </div>
-                        </div>
-
-                        <div>
-                          <div className="text-xs text-gray-500">
-                            Balance
+                            <div className="mt-1 text-lg font-bold">
+                              ₹
+                              {paidAmount.toFixed(
+                                2,
+                              )}
+                            </div>
                           </div>
 
-                          <div
-                            className={`mt-1 text-lg font-bold ${
-                              paymentBalance >
-                              0.01
-                                ? "text-red-600"
-                                : "text-green-600"
-                            }`}
-                          >
-                            ₹
-                            {paymentBalance.toFixed(
-                              2,
-                            )}
-                          </div>
-                        </div>
+                          <div>
+                            <div className="text-xs text-muted-foreground">
+                              Balance
+                            </div>
 
-                        <div>
-                          <div className="text-xs text-gray-500">
-                            Change / Return
+                            <div
+                              className={`mt-1 text-lg font-bold ${
+                                paymentBalance >
+                                0.01
+                                  ? "text-destructive"
+                                  : "text-success"
+                              }`}
+                            >
+                              ₹
+                              {paymentBalance.toFixed(
+                                2,
+                              )}
+                            </div>
                           </div>
 
-                          <div className="mt-1 text-lg font-bold text-green-600">
-                            ₹
-                            {cashChange.toFixed(
-                              2,
-                            )}
+                          <div>
+                            <div className="text-xs text-muted-foreground">
+                              Change / Return
+                            </div>
+
+                            <div className="mt-1 text-lg font-bold text-success">
+                              ₹
+                              {cashChange.toFixed(
+                                2,
+                              )}
+                            </div>
                           </div>
+
                         </div>
 
                       </div>
-
-                    </div>
+                    )}
                   </>
                 )}
               </div>
             </div>
 
-            <div className="flex flex-col gap-3 border-t bg-gray-50 px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 border-t bg-muted px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
 
-              <div className="text-xs text-gray-500">
-                F1 Cash · F2 UPI · F3 Card · F4 Credit · F5 Mixed · ESC Close
+              <div className="text-xs text-muted-foreground">
+                {isCredit
+                  ? "Enter Confirm · ESC Close"
+                  : "F1 Cash · F2 UPI · F3 Card · F4 Mixed · Enter " +
+                    (mixedPayment
+                      ? "Add Row"
+                      : "Confirm") +
+                    " · ESC Close"}
               </div>
 
               <div className="flex gap-3">
@@ -3760,7 +3977,7 @@ setRows(
                       false,
                     )
                   }
-                  className="rounded-xl border px-5 py-2.5 font-semibold hover:bg-white"
+                  className="rounded-xl border px-5 py-2.5 font-semibold hover:bg-muted"
                 >
                   Cancel
                 </button>
@@ -3770,15 +3987,24 @@ setRows(
                   disabled={
                     saving ||
                     (!isCredit &&
+                      mixedPayment &&
                       paymentBalance >
                         0.01)
                   }
-                  onClick={() =>
-                    saveSale(
-                      payments,
-                    )
-                  }
-                  className="rounded-xl bg-black px-6 py-2.5 font-bold text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  onClick={() => {
+                    if (isCredit) {
+                      saveSale([]);
+                    } else if (
+                      mixedPayment
+                    ) {
+                      saveSale(
+                        payments,
+                      );
+                    } else {
+                      confirmSinglePayment();
+                    }
+                  }}
+                  className="rounded-xl bg-primary px-6 py-2.5 font-bold text-primary-foreground hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {saving
                     ? isEditMode

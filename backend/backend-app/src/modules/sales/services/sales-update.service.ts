@@ -116,6 +116,17 @@ export class SalesUpdateService {
           },
         });
 
+        await tx.ledgerEntry.deleteMany({
+          where: {
+            referenceId:
+              existingBill.id,
+            referenceType:
+              'SALES_BILL',
+            transactionType:
+              'SALES_SHORT_AMOUNT',
+          },
+        });
+
         // =====================================================
         // CALCULATE NEW SALE
         // =====================================================
@@ -160,9 +171,15 @@ export class SalesUpdateService {
                       payment.amount,
                     ),
 
-                  cardSurcharge:
+                  surchargeType:
+                    payment.surchargeType?.toUpperCase() ===
+                    'PERCENT'
+                      ? 'PERCENT'
+                      : 'AMOUNT',
+
+                  surchargeValue:
                     Number(
-                      payment.cardSurcharge ||
+                      payment.surchargeValue ||
                         0,
                     ),
 
@@ -183,7 +200,10 @@ export class SalesUpdateService {
                   amount:
                     finalPayable,
 
-                  cardSurcharge: 0,
+                  surchargeType:
+                    'AMOUNT',
+
+                  surchargeValue: 0,
 
                   transactionNo:
                     undefined,
@@ -195,6 +215,10 @@ export class SalesUpdateService {
 
         // =====================================================
         // PAYMENT VALIDATION
+        //
+        // Surcharge is resolved server-side (never trusted from the
+        // client) - AMOUNT is used as-is, PERCENT is applied against
+        // that same row's own `amount`.
         // =====================================================
 
         const allowedModes = [
@@ -205,8 +229,17 @@ export class SalesUpdateService {
         ];
 
         let paymentAmount = 0;
-        let cardSurchargeTotal = 0;
         let creditAmount = 0;
+
+        const resolvedPayments: Array<{
+          paymentMode: string;
+          amount: number;
+          surchargeType: string;
+          surchargeValue: number;
+          transactionNo: string | undefined;
+          remarks: string | undefined;
+          surchargeAmount: number;
+        }> = [];
 
         for (
           const payment of payments
@@ -233,28 +266,32 @@ export class SalesUpdateService {
           }
 
           if (
-            payment.cardSurcharge < 0
+            payment.surchargeValue < 0
           ) {
             throw new Error(
-              'Card surcharge cannot be negative.',
+              'Surcharge cannot be negative.',
             );
           }
 
-          if (
-            payment.cardSurcharge > 0 &&
-            payment.paymentMode !==
-              'CARD'
-          ) {
-            throw new Error(
-              'Card surcharge is allowed only for CARD payments.',
+          const surchargeAmount =
+            Number(
+              (
+                payment.surchargeType ===
+                'PERCENT'
+                  ? (payment.amount *
+                      payment.surchargeValue) /
+                    100
+                  : payment.surchargeValue
+              ).toFixed(2),
             );
-          }
+
+          resolvedPayments.push({
+            ...payment,
+            surchargeAmount,
+          });
 
           paymentAmount +=
             payment.amount;
-
-          cardSurchargeTotal +=
-            payment.cardSurcharge;
 
           if (
             payment.paymentMode ===
@@ -265,19 +302,17 @@ export class SalesUpdateService {
           }
         }
 
-        const payableAmount =
-          Number(
-            (
-              finalPayable +
-              cardSurchargeTotal
-            ).toFixed(2),
-          );
+        /*
+         * Surcharge is additive - money collected on top of the
+         * bill, not part of covering it - so only `amount` needs to
+         * reconcile against finalPayable.
+         */
 
         const paymentDifference =
           Number(
             (
               paymentAmount -
-              payableAmount
+              finalPayable
             ).toFixed(2),
           );
 
@@ -287,7 +322,7 @@ export class SalesUpdateService {
           ) > 0.01
         ) {
           throw new Error(
-            `Payment total mismatch. Bill: ${payableAmount.toFixed(
+            `Payment total mismatch. Bill: ${finalPayable.toFixed(
               2,
             )}, Payment: ${paymentAmount.toFixed(
               2,
@@ -476,11 +511,11 @@ export class SalesUpdateService {
         // =====================================================
 
         for (
-          const payment of payments
+          const payment of resolvedPayments
         ) {
           if (
             payment.amount <= 0 &&
-            payment.cardSurcharge <=
+            payment.surchargeAmount <=
               0
           ) {
             continue;
@@ -497,8 +532,14 @@ export class SalesUpdateService {
               amount:
                 payment.amount,
 
-              cardSurcharge:
-                payment.cardSurcharge,
+              surchargeType:
+                payment.surchargeType,
+
+              surchargeValue:
+                payment.surchargeValue,
+
+              surchargeAmount:
+                payment.surchargeAmount,
 
               transactionNo:
                 payment.transactionNo ||
@@ -523,6 +564,19 @@ export class SalesUpdateService {
             dto.customerId,
             creditAmount,
             existingBill.id,
+            tx,
+          );
+        }
+
+        if (
+          shortAmount > 0 &&
+          dto.customerId
+        ) {
+          await this.ledgerService.postSalesShortAmount(
+            dto.customerId,
+            shortAmount,
+            existingBill.id,
+            existingBill.billNo,
             tx,
           );
         }

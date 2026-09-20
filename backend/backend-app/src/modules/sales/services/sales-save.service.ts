@@ -111,9 +111,15 @@ export class SalesSaveService {
                       payment.amount,
                     ),
 
-                  cardSurcharge:
+                  surchargeType:
+                    payment.surchargeType?.toUpperCase() ===
+                    'PERCENT'
+                      ? 'PERCENT'
+                      : 'AMOUNT',
+
+                  surchargeValue:
                     Number(
-                      payment.cardSurcharge ||
+                      payment.surchargeValue ||
                         0,
                     ),
 
@@ -134,7 +140,10 @@ export class SalesSaveService {
                   amount:
                     finalPayable,
 
-                  cardSurcharge: 0,
+                  surchargeType:
+                    'AMOUNT',
+
+                  surchargeValue: 0,
 
                   transactionNo:
                     undefined,
@@ -146,6 +155,10 @@ export class SalesSaveService {
 
         // =====================================================
         // PAYMENT VALIDATION
+        //
+        // Surcharge is resolved server-side (never trusted from the
+        // client) - AMOUNT is used as-is, PERCENT is applied against
+        // that same row's own `amount`.
         // =====================================================
 
         const allowedModes = [
@@ -156,8 +169,17 @@ export class SalesSaveService {
         ];
 
         let paymentAmount = 0;
-        let cardSurchargeTotal = 0;
         let creditAmount = 0;
+
+        const resolvedPayments: Array<{
+          paymentMode: string;
+          amount: number;
+          surchargeType: string;
+          surchargeValue: number;
+          transactionNo: string | undefined;
+          remarks: string | undefined;
+          surchargeAmount: number;
+        }> = [];
 
         for (
           const payment of payments
@@ -184,29 +206,32 @@ export class SalesSaveService {
           }
 
           if (
-            payment.cardSurcharge < 0
+            payment.surchargeValue < 0
           ) {
             throw new Error(
-              'Card surcharge cannot be negative',
+              'Surcharge cannot be negative',
             );
           }
 
-          if (
-            payment.cardSurcharge >
-              0 &&
-            payment.paymentMode !==
-              'CARD'
-          ) {
-            throw new Error(
-              'Card surcharge is allowed only for CARD payments',
+          const surchargeAmount =
+            Number(
+              (
+                payment.surchargeType ===
+                'PERCENT'
+                  ? (payment.amount *
+                      payment.surchargeValue) /
+                    100
+                  : payment.surchargeValue
+              ).toFixed(2),
             );
-          }
+
+          resolvedPayments.push({
+            ...payment,
+            surchargeAmount,
+          });
 
           paymentAmount +=
             payment.amount;
-
-          cardSurchargeTotal +=
-            payment.cardSurcharge;
 
           if (
             payment.paymentMode ===
@@ -218,31 +243,23 @@ export class SalesSaveService {
         }
 
         // =====================================================
-        // FINAL PAYMENT AMOUNT
+        // PAYMENT MUST MATCH FINAL PAYABLE
+        //
+        // Surcharge is additive - money collected on top of the
+        // bill (e.g. a card processing fee passed to the customer),
+        // not part of covering it - so only the `amount` fields
+        // (never surcharge) need to reconcile against finalPayable.
+        // Cash received / change is handled by frontend. Database
+        // stores only actual amount applied to the bill.
         // =====================================================
-
-        const payableAmount = Number(
-          (
-            finalPayable +
-            cardSurchargeTotal
-          ).toFixed(2),
-        );
 
         const paymentDifference =
           Number(
             (
               paymentAmount -
-              payableAmount
+              finalPayable
             ).toFixed(2),
           );
-
-        // =====================================================
-        // PAYMENT MUST MATCH FINAL PAYABLE
-        //
-        // Cash received / change is handled by frontend.
-        // Database stores only actual amount applied
-        // to the bill.
-        // =====================================================
 
         if (
           Math.abs(
@@ -250,7 +267,7 @@ export class SalesSaveService {
           ) > 0.01
         ) {
           throw new Error(
-            `Payment total mismatch. Bill: ${payableAmount.toFixed(
+            `Payment total mismatch. Bill: ${finalPayable.toFixed(
               2,
             )}, Payment: ${paymentAmount.toFixed(
               2,
@@ -412,11 +429,11 @@ export class SalesSaveService {
         // =====================================================
 
         for (
-          const payment of payments
+          const payment of resolvedPayments
         ) {
           if (
             payment.amount <= 0 &&
-            payment.cardSurcharge <=
+            payment.surchargeAmount <=
               0
           ) {
             continue;
@@ -433,8 +450,14 @@ export class SalesSaveService {
               amount:
                 payment.amount,
 
-              cardSurcharge:
-                payment.cardSurcharge,
+              surchargeType:
+                payment.surchargeType,
+
+              surchargeValue:
+                payment.surchargeValue,
+
+              surchargeAmount:
+                payment.surchargeAmount,
 
               transactionNo:
                 payment.transactionNo ||
@@ -462,6 +485,28 @@ export class SalesSaveService {
             salesBill.customerId,
             creditAmount,
             salesBill.id,
+            tx,
+          );
+        }
+
+        // =====================================================
+        // CUSTOMER LEDGER - SHORT AMOUNT
+        //
+        // Posted as its own distinct entry (not folded into the
+        // SALE/credit entry above) so it stays traceable to this
+        // specific bill. Only possible when there's a customer to
+        // post it against - a walk-in/anonymous sale has no ledger.
+        // =====================================================
+
+        if (
+          shortAmount > 0 &&
+          salesBill.customerId
+        ) {
+          await this.ledgerService.postSalesShortAmount(
+            salesBill.customerId,
+            shortAmount,
+            salesBill.id,
+            billNo,
             tx,
           );
         }

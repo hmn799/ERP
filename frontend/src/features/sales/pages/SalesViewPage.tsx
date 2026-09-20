@@ -132,7 +132,7 @@ export default function SalesViewPage({
         total +
         Number(payment.amount ?? 0) +
         Number(
-          payment.cardSurcharge ?? 0,
+          payment.surchargeAmount ?? 0,
         ),
       0,
     ) ?? 0;
@@ -625,18 +625,22 @@ export default function SalesViewPage({
                         </div>
 
                         {Number(
-                          payment.cardSurcharge ??
+                          payment.surchargeAmount ??
                             0,
                         ) > 0 && (
                           <div className="mt-1 flex justify-between text-sm">
                             <span className="text-muted-foreground">
-                              Card Surcharge
+                              Surcharge
+                              {payment.surchargeType ===
+                              "PERCENT"
+                                ? ` (${payment.surchargeValue}%)`
+                                : ""}
                             </span>
 
                             <span>
                               {formatCurrency(
                                 Number(
-                                  payment.cardSurcharge ??
+                                  payment.surchargeAmount ??
                                     0,
                                 ),
                               )}

@@ -906,11 +906,20 @@ model HeldSale {
 }
 
 model SalesPayment {
-  id            String   @id @default(cuid())
-  salesBillId   String
-  paymentMode   String
-  amount        Decimal  @db.Decimal(14, 2)
-  cardSurcharge Decimal  @default(0) @db.Decimal(14, 2)
+  id          String  @id @default(cuid())
+  salesBillId String
+  paymentMode String
+  amount      Decimal @db.Decimal(14, 2)
+
+  // Surcharge can be entered as a flat AMOUNT or as a PERCENT of this
+  // row's own `amount` - surchargeValue is the raw number the
+  // operator typed (a rupee amount or a percentage), surchargeAmount
+  // is always the resolved rupee value, computed server-side so
+  // downstream totals never have to know which mode was used.
+  surchargeType   String  @default("AMOUNT")
+  surchargeValue  Decimal @default(0) @db.Decimal(14, 2)
+  surchargeAmount Decimal @default(0) @db.Decimal(14, 2)
+
   transactionNo String?
   remarks       String?
   createdAt     DateTime @default(now())

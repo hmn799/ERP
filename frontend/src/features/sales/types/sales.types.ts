@@ -13,12 +13,15 @@ export type SalesPaymentMode =
   | "CARD"
   | "CREDIT";
 
+export type SurchargeType = "AMOUNT" | "PERCENT";
+
 export interface SalesPaymentDto {
   paymentMode: SalesPaymentMode;
 
   amount: number;
 
-  cardSurcharge?: number;
+  surchargeType?: SurchargeType;
+  surchargeValue?: number;
 
   transactionNo?: string;
 
@@ -147,7 +150,9 @@ export interface SalesResponse {
     salesBillId: string;
     paymentMode: SalesPaymentMode;
     amount: number | string;
-    cardSurcharge: number | string;
+    surchargeType: SurchargeType;
+    surchargeValue: number | string;
+    surchargeAmount: number | string;
     transactionNo?: string | null;
     remarks?: string | null;
     createdAt?: string;
@@ -224,7 +229,9 @@ export interface SalesListItem {
     id: string;
     paymentMode: SalesPaymentMode;
     amount: number | string;
-    cardSurcharge: number | string;
+    surchargeType: SurchargeType;
+    surchargeValue: number | string;
+    surchargeAmount: number | string;
     transactionNo?: string | null;
     remarks?: string | null;
   }[];

@@ -20,9 +20,13 @@ export class CreateSalesPaymentDto {
   amount!: number;
 
   @IsOptional()
+  @IsIn(['AMOUNT', 'PERCENT'])
+  surchargeType?: string;
+
+  @IsOptional()
   @IsNumber()
   @Min(0)
-  cardSurcharge?: number;
+  surchargeValue?: number;
 
   @IsOptional()
   @IsString()

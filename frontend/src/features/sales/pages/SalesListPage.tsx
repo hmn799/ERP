@@ -97,7 +97,7 @@ export default function SalesListPage() {
           total +
           getNumber(payment.amount) +
           getNumber(
-            payment.cardSurcharge,
+            payment.surchargeAmount,
           ),
         0,
       ) ?? 0
