@@ -49,44 +49,6 @@ export class LedgerService {
   }
 
   // =========================================================
-  // SALES - SHORT AMOUNT
-  //
-  // A distinct entry from the regular SALE posting above, so a
-  // shortfall stays traceable to its own bill instead of being
-  // silently absorbed into the sale total. Posted as a debit - the
-  // customer took the goods but didn't pay this part, so it is a
-  // real (if usually tiny and uncollected) receivable until written
-  // off or paid via a normal Receipt.
-  // =========================================================
-
-  async postSalesShortAmount(
-    customerId: string,
-    amount: number,
-    salesBillId: string,
-    billNo: string,
-    prisma: Prisma.TransactionClient = this.prisma,
-  ) {
-    return prisma.ledgerEntry.create({
-      data: {
-        transactionDate: new Date(),
-
-        partyType: "CUSTOMER",
-        partyId: customerId,
-
-        transactionType: "SALES_SHORT_AMOUNT",
-
-        referenceType: "SALES_BILL",
-        referenceId: salesBillId,
-
-        debitAmount: amount,
-        creditAmount: 0,
-
-        remarks: `Short amount on bill ${billNo}`,
-      },
-    });
-  }
-
-  // =========================================================
   // SALES RETURN
   // =========================================================
 

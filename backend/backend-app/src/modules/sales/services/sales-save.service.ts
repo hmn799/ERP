@@ -490,28 +490,6 @@ export class SalesSaveService {
         }
 
         // =====================================================
-        // CUSTOMER LEDGER - SHORT AMOUNT
-        //
-        // Posted as its own distinct entry (not folded into the
-        // SALE/credit entry above) so it stays traceable to this
-        // specific bill. Only possible when there's a customer to
-        // post it against - a walk-in/anonymous sale has no ledger.
-        // =====================================================
-
-        if (
-          shortAmount > 0 &&
-          salesBill.customerId
-        ) {
-          await this.ledgerService.postSalesShortAmount(
-            salesBill.customerId,
-            shortAmount,
-            salesBill.id,
-            billNo,
-            tx,
-          );
-        }
-
-        // =====================================================
         // AUDIT: RATE OVERRIDE / MANUAL DISCOUNT
         // =====================================================
 

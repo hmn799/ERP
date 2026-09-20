@@ -116,17 +116,6 @@ export class SalesUpdateService {
           },
         });
 
-        await tx.ledgerEntry.deleteMany({
-          where: {
-            referenceId:
-              existingBill.id,
-            referenceType:
-              'SALES_BILL',
-            transactionType:
-              'SALES_SHORT_AMOUNT',
-          },
-        });
-
         // =====================================================
         // CALCULATE NEW SALE
         // =====================================================
@@ -564,19 +553,6 @@ export class SalesUpdateService {
             dto.customerId,
             creditAmount,
             existingBill.id,
-            tx,
-          );
-        }
-
-        if (
-          shortAmount > 0 &&
-          dto.customerId
-        ) {
-          await this.ledgerService.postSalesShortAmount(
-            dto.customerId,
-            shortAmount,
-            existingBill.id,
-            existingBill.billNo,
             tx,
           );
         }
