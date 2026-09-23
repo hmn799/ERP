@@ -1,0 +1,5 @@
+-- AlterTable
+ALTER TABLE "ItemPrice" ADD COLUMN     "minQty" DECIMAL(10,2) NOT NULL DEFAULT 1;
+
+-- AlterTable
+ALTER TABLE "PartyPrice" ADD COLUMN     "minQty" DECIMAL(10,2) NOT NULL DEFAULT 1;

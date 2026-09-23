@@ -17,8 +17,17 @@ import { getStoredToken } from "@/api/token";
 export interface CustomerPartyPrice {
   id: string;
   itemId: string;
+  minQty?: number | string;
   salePrice: number | string;
   isActive: boolean;
+}
+
+export interface SellingPricePreview {
+  salePrice: number | string;
+  source: "PARTY_PRICE" | "ITEM_PRICE";
+  minimumPrice?: number | string | null;
+  maximumDiscountPercent?: number | string | null;
+  allowManualOverride: boolean;
 }
 
 const API_URL =
@@ -361,6 +370,36 @@ export function getCustomerPartyPrices(
   return get<CustomerPartyPrice[]>(
     `${API_URL}/party-price/customer/${customerId}`,
   );
+}
+
+/*
+ * Live preview of the qty-tiered rate (party price or price-list
+ * item price) for one item at a given qty - null when neither
+ * applies, so the caller falls back to whatever it was already
+ * showing (the batch default). Best-effort: a failed/absent lookup
+ * never blocks billing, since SalesCalculationService resolves the
+ * same rate authoritatively again at save time.
+ */
+export async function getSellingPricePreview(params: {
+  itemId: string;
+  quantity: number;
+  customerId?: string;
+}): Promise<SellingPricePreview | null> {
+  const query = new URLSearchParams({
+    itemId: params.itemId,
+    quantity: String(params.quantity),
+    ...(params.customerId
+      ? { customerId: params.customerId }
+      : {}),
+  });
+
+  const response = await get<{
+    price: SellingPricePreview | null;
+  }>(
+    `${API_URL}/pricing/selling-price?${query.toString()}`,
+  );
+
+  return response.price;
 }
 
 export async function saveCustomerPartyPrice(

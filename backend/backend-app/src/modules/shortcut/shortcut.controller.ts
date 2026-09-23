@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Post,
   Put,
   UseGuards,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import {
 import { ShortcutService } from './shortcut.service';
 import { UpdateShortcutDto } from './dto/update-shortcut.dto';
 import { SetRoleShortcutDto } from './dto/set-role-shortcut.dto';
+import { CreateShortcutDto } from './dto/create-shortcut.dto';
 
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
@@ -25,6 +27,13 @@ export class ShortcutController {
   @Get()
   findAll() {
     return this.shortcutService.findAll();
+  }
+
+  @Post()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('MANAGE_SETTINGS')
+  create(@Body() dto: CreateShortcutDto) {
+    return this.shortcutService.create(dto);
   }
 
   @Get('effective/:roleId')
@@ -71,6 +80,13 @@ export class ShortcutController {
       roleId,
       dto,
     );
+  }
+
+  @Delete(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('MANAGE_SETTINGS')
+  remove(@Param('id') id: string) {
+    return this.shortcutService.remove(id);
   }
 
   @Delete(':id/role/:roleId')

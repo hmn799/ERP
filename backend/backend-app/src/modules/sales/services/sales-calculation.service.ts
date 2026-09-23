@@ -12,6 +12,7 @@ import { PrismaService } from '../../prisma/prisma.service';
 import { SalesStockService } from './sales-stock.service';
 import { SalesGstService } from './sales-gst.service';
 import { SchemeEngineService } from '../../scheme/scheme-engine.service';
+import { PricingEngineService } from '../../../core/pricing-engine/pricing-engine.service';
 
 @Injectable()
 export class SalesCalculationService {
@@ -20,6 +21,7 @@ export class SalesCalculationService {
     private readonly stockService: SalesStockService,
     private readonly gstService: SalesGstService,
     private readonly schemeEngine: SchemeEngineService,
+    private readonly pricingEngine: PricingEngineService,
   ) {}
 
   async calculate(
@@ -191,6 +193,23 @@ export class SalesCalculationService {
         );
       }
 
+      if (
+        batch.item.isGeneralItem &&
+        !item.description?.trim()
+      ) {
+        throw new Error(
+          'A description is required for a general item line.',
+        );
+      }
+
+      const isReturn = Boolean(
+        item.isReturn,
+      );
+
+      const sign = isReturn
+        ? -1
+        : 1;
+
       // ===================================================
       // GST
       //
@@ -255,11 +274,16 @@ export class SalesCalculationService {
       // EFFECTIVE SALE RATE
       //
       // Priority:
-      // 1. Active party-item rate.
-      // 2. A rate deliberately changed from the party default.
-      // 3. Customer default rate (A/B/C, represented by
+      // 1. Best qty-tiered party-item rate (this customer, this
+      //    item, whichever tier's minQty the billed qty reaches).
+      // 2. Best qty-tiered rate from the item's price list - the
+      //    customer's own assigned list, or the system default
+      //    list when the customer has none (or there's no
+      //    customer, e.g. a walk-in sale).
+      // 3. A rate deliberately changed from the party default.
+      // 4. Customer default rate (A/B/C, represented by
       //    Retail/Wholesale/Distributor in existing data).
-      // 4. MRP fallback.
+      // 5. MRP fallback.
       //
       // The UI has historically sent a saleRate for every
       // row, including untouched defaults. A value is only a
@@ -273,40 +297,24 @@ export class SalesCalculationService {
         item.saleRate !==
           null;
 
+      const pricingResult =
+        await this.pricingEngine.getSellingPrice(
+          {
+            customerId: customer?.id,
+            itemId: item.itemId,
+            quantity: item.qty,
+          },
+          tx,
+        );
+
       const partyPrice =
-        customer
-          ? await tx.partyPrice.findFirst({
-              where: {
-                customerId: customer.id,
-                itemId: item.itemId,
-                isActive: true,
-                AND: [
-                  {
-                    OR: [
-                      { effectiveFrom: null },
-                      {
-                        effectiveFrom: {
-                          lte: new Date(),
-                        },
-                      },
-                    ],
-                  },
-                  {
-                    OR: [
-                      { effectiveTo: null },
-                      {
-                        effectiveTo: {
-                          gte: new Date(),
-                        },
-                      },
-                    ],
-                  },
-                ],
-              },
-              orderBy: {
-                updatedAt: 'desc',
-              },
-            })
+        pricingResult?.source === 'PARTY_PRICE'
+          ? pricingResult
+          : null;
+
+      const itemPrice =
+        pricingResult?.source === 'ITEM_PRICE'
+          ? pricingResult
           : null;
 
       const suppliedRate =
@@ -336,9 +344,11 @@ export class SalesCalculationService {
       const resolvedRate =
         partyPrice
           ? Number(partyPrice.salePrice)
-          : hasManualOverride
-            ? suppliedRate
-            : fallbackRate;
+          : itemPrice
+            ? Number(itemPrice.salePrice)
+            : hasManualOverride
+              ? suppliedRate
+              : fallbackRate;
 
       const saleRate =
         toExclusiveRate(
@@ -379,22 +389,33 @@ export class SalesCalculationService {
 
       // ===================================================
       // CURRENT STOCK
+      //
+      // Skipped entirely for a general item - it has no real
+      // stock to track (see SalesStockService.postStock/
+      // reverseStock, which skip it the same way) - and for a
+      // return line, which adds stock back rather than consuming
+      // it, so there's nothing to warn about.
       // ===================================================
 
-      const currentStock =
-        await this.stockService.getCurrentStock(
-          item.itemId,
-          item.batchId,
-          dto.warehouseId,
-          tx,
-        );
-
       if (
-        currentStock < item.qty
+        !batch.item.isGeneralItem &&
+        !isReturn
       ) {
-        console.warn(
-          `Negative stock warning: Available=${currentStock}, Requested=${item.qty}`,
-        );
+        const currentStock =
+          await this.stockService.getCurrentStock(
+            item.itemId,
+            item.batchId,
+            dto.warehouseId,
+            tx,
+          );
+
+        if (
+          currentStock < item.qty
+        ) {
+          console.warn(
+            `Negative stock warning: Available=${currentStock}, Requested=${item.qty}`,
+          );
+        }
       }
 
       // ===================================================
@@ -419,10 +440,10 @@ export class SalesCalculationService {
         );
 
       grossAmount +=
-        calc.grossAmount;
+        sign * calc.grossAmount;
 
       totalItemDiscount +=
-        calc.discountAmount;
+        sign * calc.discountAmount;
 
       itemCalculations.push({
         item,
@@ -433,6 +454,7 @@ export class SalesCalculationService {
         freeQty: item.freeQty || 0,
         schemeId: item.schemeId,
         hasManualOverride,
+        isReturn,
       });
     }
 
@@ -455,17 +477,25 @@ export class SalesCalculationService {
       );
     }
 
+    /*
+     * The bill discount is a discretionary discount on what's being
+     * sold - it never applies to a return line, so both its base and
+     * its per-row allocation below are scoped to sale lines only.
+     */
+
     const itemTaxableBeforeBillDiscount =
       itemCalculations.reduce(
         (
           total,
           row,
         ) =>
-          total +
-          Number(
-            row.calc
-              .taxableAmount,
-          ),
+          row.isReturn
+            ? total
+            : total +
+              Number(
+                row.calc
+                  .taxableAmount,
+              ),
         0,
       );
 
@@ -481,6 +511,12 @@ export class SalesCalculationService {
 
     // =====================================================
     // FINAL TAX CALCULATION
+    //
+    // Every row's own stored amounts (finalTaxable, finalCgst, ...)
+    // stay positive magnitudes - a return line's row looks just
+    // like a sale line's. Only the running bill totals below sign-
+    // flip a return row's contribution, subtracting it instead of
+    // adding it.
     // =====================================================
 
     for (
@@ -496,6 +532,7 @@ export class SalesCalculationService {
         0;
 
       if (
+        !row.isReturn &&
         itemTaxableBeforeBillDiscount >
         0
       ) {
@@ -544,17 +581,22 @@ export class SalesCalculationService {
       row.finalNetAmount =
         netAmount;
 
+      const rowSign =
+        row.isReturn
+          ? -1
+          : 1;
+
       totalTaxable +=
-        finalTaxable;
+        rowSign * finalTaxable;
 
       totalCgst +=
-        cgstAmount;
+        rowSign * cgstAmount;
 
       totalSgst +=
-        sgstAmount;
+        rowSign * sgstAmount;
 
       totalIgst +=
-        igstAmount;
+        rowSign * igstAmount;
     }
 
     // =====================================================

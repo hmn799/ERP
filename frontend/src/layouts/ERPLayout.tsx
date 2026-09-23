@@ -10,6 +10,8 @@ import {
 import AppSidebar from "@/navigation/AppSidebar";
 import AppHeader from "@/navigation/AppHeader";
 
+import { useGlobalNavigationShortcuts } from "@/hooks/useGlobalNavigationShortcuts";
+
 interface ERPLayoutProps {
   children: ReactNode;
 }
@@ -17,6 +19,8 @@ interface ERPLayoutProps {
 export default function ERPLayout({
   children,
 }: ERPLayoutProps) {
+  useGlobalNavigationShortcuts();
+
   return (
     <SidebarProvider defaultOpen>
 

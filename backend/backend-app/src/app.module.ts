@@ -50,6 +50,10 @@ import { OpeningStockModule } from './modules/opening-stock/opening-stock.module
 import { StockTransferModule } from './modules/stock-transfer/stock-transfer.module';
 import { SalesOrderModule } from './modules/sales-order/sales-order.module';
 import { FinancialYearModule } from './modules/financial-year/financial-year.module';
+import { PricingEngineModule } from './core/pricing-engine/pricing-engine.module';
+import { AdjustmentNoteModule } from './modules/adjustment-note/adjustment-note.module';
+import { StockDamageModule } from './modules/stock-damage/stock-damage.module';
+import { PettyExpenseModule } from './modules/petty-expense/petty-expense.module';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
@@ -97,6 +101,10 @@ import { FinancialYearModule } from './modules/financial-year/financial-year.mod
      StockTransferModule,
      SalesOrderModule,
      FinancialYearModule,
+     PricingEngineModule,
+     AdjustmentNoteModule,
+     StockDamageModule,
+     PettyExpenseModule,
 
   ],
   controllers: [AppController],

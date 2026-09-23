@@ -5,6 +5,19 @@ export interface SalesItemDto {
   discountPercent: number;
   gstPercent: number;
   saleRate?: number;
+
+  /*
+   * Free-text description for a general (non-catalog) item line -
+   * required by the backend when the item is flagged isGeneralItem.
+   */
+  description?: string;
+
+  /*
+   * A return taken back within this same bill (an exchange) rather
+   * than a separate SaleReturn document - restores stock and
+   * subtracts from the bill totals instead of adding to them.
+   */
+  isReturn?: boolean;
 }
 
 export type SalesPaymentMode =
@@ -78,6 +91,7 @@ export interface SalesItemResponse {
     name?: string;
     barcode?: string | null;
     hsnCode?: string | null;
+    isGeneralItem?: boolean;
   };
 
   batch?: {
@@ -89,6 +103,10 @@ export interface SalesItemResponse {
     distributorRate?: number | string;
     mrp?: number | string;
   };
+
+  description?: string | null;
+
+  isReturn?: boolean;
 }
 
 export interface SalesResponse {
@@ -328,6 +346,13 @@ export interface SalesItemLookup {
   mrp: number | string;
 
   unit: string;
+
+  /*
+   * Flagged item for billing something not in the catalog - the
+   * operator types a per-line description and rate instead of
+   * picking a real batch/stock. See SalesItemsGrid.
+   */
+  isGeneralItem?: boolean;
 }
 
 export interface SalesBatchLookup {

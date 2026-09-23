@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/providers/AuthProvider";
 
 import NotificationBell from "@/components/erp/notifications/NotificationBell";
+import ShortcutsHelpSheet from "@/components/erp/shortcuts/ShortcutsHelpSheet";
 
 import {
   Search,
@@ -48,6 +49,8 @@ export default function AppHeader() {
         <div className="flex items-center gap-2">
 
           <NotificationBell />
+
+          <ShortcutsHelpSheet />
 
           <Button
             variant="ghost"

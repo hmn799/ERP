@@ -19,7 +19,20 @@ import {
   SaleReturnResponse,
 } from "../services/sale-return.service";
 
-import { SalesResponse } from "@/features/sales/types/sales.types";
+import {
+  getBatches,
+  getCustomers,
+  getItemLookup,
+  getWarehouses,
+} from "@/features/sales/services/sales.service";
+
+import {
+  CustomerLookup,
+  SalesBatchLookup,
+  SalesItemLookup,
+  SalesResponse,
+  WarehouseLookup,
+} from "@/features/sales/types/sales.types";
 
 import {
   formatCurrency,
@@ -77,6 +90,15 @@ function SaleReturnContent() {
   const billId =
     searchParams.get("billId");
 
+  /*
+   * A direct return - no previous sales bill on file. Everything
+   * below reuses the same returnRows/totals/refund-stage machinery
+   * as a bill-anchored return; only how rows get added and what the
+   * final createSaleReturn() payload carries actually differs.
+   */
+
+  const isDirectMode = !billId;
+
   const [sale, setSale] =
     useState<SalesResponse | null>(null);
 
@@ -91,6 +113,36 @@ function SaleReturnContent() {
 
   const [returnRows, setReturnRows] =
     useState<ReturnRow[]>([]);
+
+  /*
+   * =====================================================
+   * DIRECT RETURN - LOOKUPS + SELECTION
+   * =====================================================
+   */
+
+  const [warehouses, setWarehouses] =
+    useState<WarehouseLookup[]>([]);
+
+  const [customers, setCustomers] =
+    useState<CustomerLookup[]>([]);
+
+  const [directItems, setDirectItems] =
+    useState<SalesItemLookup[]>([]);
+
+  const [directBatches, setDirectBatches] =
+    useState<SalesBatchLookup[]>([]);
+
+  const [directWarehouseId, setDirectWarehouseId] =
+    useState("");
+
+  const [directCustomerId, setDirectCustomerId] =
+    useState("");
+
+  const [directSearch, setDirectSearch] =
+    useState("");
+
+  const [directItemError, setDirectItemError] =
+    useState<string | null>(null);
 
   /*
    * =====================================================
@@ -116,10 +168,6 @@ function SaleReturnContent() {
   useEffect(() => {
     async function loadReturnData() {
       if (!billId) {
-        setError(
-          "No sales bill selected.",
-        );
-
         setLoading(false);
 
         return;
@@ -273,6 +321,240 @@ function SaleReturnContent() {
 
     loadReturnData();
   }, [billId]);
+
+  /*
+   * =====================================================
+   * DIRECT RETURN - LOAD LOOKUPS
+   * =====================================================
+   */
+
+  useEffect(() => {
+    if (!isDirectMode) {
+      return;
+    }
+
+    async function loadLookups() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const [
+          warehouseList,
+          customerList,
+          itemList,
+          batchList,
+        ] = await Promise.all([
+          getWarehouses(),
+          getCustomers(),
+          getItemLookup(),
+          getBatches(),
+        ]);
+
+        setWarehouses(warehouseList);
+        setCustomers(customerList);
+        setDirectItems(itemList);
+        setDirectBatches(batchList);
+      } catch (err) {
+        console.error(
+          "Failed to load direct return lookups:",
+          err,
+        );
+
+        setError(
+          "Failed to load items and warehouses.",
+        );
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadLookups();
+  }, [isDirectMode]);
+
+  /*
+   * =====================================================
+   * DIRECT RETURN - ADD / EDIT ROWS
+   * =====================================================
+   */
+
+  function directSearchResults() {
+    const term =
+      directSearch.trim().toLowerCase();
+
+    if (!term) {
+      return [];
+    }
+
+    return directItems
+      .filter((item) =>
+        [
+          item.itemCode,
+          item.name,
+          item.barcode ?? "",
+        ]
+          .join(" ")
+          .toLowerCase()
+          .includes(term),
+      )
+      .slice(0, 10);
+  }
+
+  function addDirectRow(
+    itemId: string,
+  ) {
+    const item =
+      directItems.find(
+        (entry) =>
+          entry.id === itemId,
+      );
+
+    if (!item) {
+      return;
+    }
+
+    const eligibleBatches =
+      directBatches.filter(
+        (batch) =>
+          batch.itemId === itemId,
+      );
+
+    const automaticBatch =
+      eligibleBatches.length === 1
+        ? eligibleBatches[0]
+        : undefined;
+
+    setReturnRows((current) => [
+      ...current,
+      {
+        itemId,
+        batchId:
+          automaticBatch?.id ?? "",
+
+        itemName: item.name,
+        itemCode: item.itemCode,
+        batchNo:
+          automaticBatch?.batchNo ??
+          "",
+
+        saleRate: automaticBatch
+          ? Number(
+              automaticBatch.retailRate,
+            )
+          : Number(item.retailRate),
+
+        gstPercent: Number(
+          (
+            item as SalesItemLookup & {
+              gstPercent?:
+                | number
+                | string;
+            }
+          ).gstPercent ?? 0,
+        ),
+
+        soldQty: 0,
+        returnedQty: 0,
+        returnableQty:
+          Number.POSITIVE_INFINITY,
+
+        returnQty: 1,
+      },
+    ]);
+
+    setDirectSearch("");
+    setDirectItemError(null);
+  }
+
+  function removeDirectRow(
+    index: number,
+  ) {
+    setReturnRows((current) =>
+      current.filter(
+        (_, i) => i !== index,
+      ),
+    );
+  }
+
+  function updateDirectBatch(
+    index: number,
+    batchId: string,
+  ) {
+    const batch =
+      directBatches.find(
+        (entry) =>
+          entry.id === batchId,
+      );
+
+    setReturnRows((current) =>
+      current.map((row, i) =>
+        i === index
+          ? {
+              ...row,
+              batchId,
+              batchNo:
+                batch?.batchNo ?? "",
+              saleRate: batch
+                ? Number(
+                    batch.retailRate,
+                  )
+                : row.saleRate,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function updateDirectRate(
+    index: number,
+    value: string,
+  ) {
+    const numericValue =
+      Number(value);
+
+    setReturnRows((current) =>
+      current.map((row, i) =>
+        i === index
+          ? {
+              ...row,
+              saleRate:
+                value === ""
+                  ? 0
+                  : Number.isFinite(
+                        numericValue,
+                      )
+                    ? numericValue
+                    : row.saleRate,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function updateDirectGst(
+    index: number,
+    value: string,
+  ) {
+    const numericValue =
+      Number(value);
+
+    setReturnRows((current) =>
+      current.map((row, i) =>
+        i === index
+          ? {
+              ...row,
+              gstPercent:
+                value === ""
+                  ? 0
+                  : Number.isFinite(
+                        numericValue,
+                      )
+                    ? numericValue
+                    : row.gstPercent,
+            }
+          : row,
+      ),
+    );
+  }
 
   /*
    * =====================================================
@@ -627,6 +909,30 @@ function SaleReturnContent() {
       return;
     }
 
+    if (isDirectMode) {
+      if (!directWarehouseId) {
+        setDirectItemError(
+          "Select a warehouse before continuing.",
+        );
+
+        return;
+      }
+
+      if (
+        selectedRows.some(
+          (row) => !row.batchId,
+        )
+      ) {
+        setDirectItemError(
+          "Select a batch for every item before continuing.",
+        );
+
+        return;
+      }
+    }
+
+    setDirectItemError(null);
+
     setRefundError(null);
 
     setRefundLines([]);
@@ -664,9 +970,20 @@ function SaleReturnContent() {
     return;
   }
 
-  if (!sale) {
+  if (!isDirectMode && !sale) {
     setRefundError(
       "Sales bill not found.",
+    );
+
+    return;
+  }
+
+  if (
+    isDirectMode &&
+    !directWarehouseId
+  ) {
+    setRefundError(
+      "Select a warehouse before saving.",
     );
 
     return;
@@ -730,14 +1047,21 @@ function SaleReturnContent() {
       new Date().toISOString(),
 
     salesBillId:
-      sale.id,
+      isDirectMode
+        ? undefined
+        : sale!.id,
 
     customerId:
-      sale.customerId ??
-      undefined,
+      isDirectMode
+        ? directCustomerId ||
+          undefined
+        : (sale!.customerId ??
+          undefined),
 
     warehouseId:
-      sale.warehouseId,
+      isDirectMode
+        ? directWarehouseId
+        : sale!.warehouseId,
 
     items,
 
@@ -839,7 +1163,7 @@ function SaleReturnContent() {
    * =====================================================
    */
 
-  if (!sale) {
+  if (!isDirectMode && !sale) {
     return (
       <div className="space-y-4 p-6">
         <div className="rounded-lg border p-4">
@@ -879,7 +1203,9 @@ function SaleReturnContent() {
             </h1>
 
             <p className="text-sm text-muted-foreground">
-              Bill {sale.billNo}
+              {isDirectMode
+                ? "Direct Return (no bill)"
+                : `Bill ${sale?.billNo}`}
             </p>
           </div>
 
@@ -1230,9 +1556,521 @@ function SaleReturnContent() {
 
   /*
    * =====================================================
-   * ITEM SELECTION STAGE
+   * DIRECT RETURN - ITEM SELECTION STAGE
    * =====================================================
    */
+
+  if (isDirectMode) {
+    const searchResults =
+      directSearchResults();
+
+    return (
+      <div className="space-y-6 p-6">
+        {/* HEADER */}
+
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold">
+              Direct Sales Return
+            </h1>
+
+            <p className="text-sm text-muted-foreground">
+              Return items without a
+              previous sales bill
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() =>
+              router.push(
+                "/sales/returns",
+              )
+            }
+            className="rounded-md border px-4 py-2 text-sm hover:bg-muted"
+          >
+            Back
+          </button>
+        </div>
+
+        {/* WAREHOUSE / CUSTOMER */}
+
+        <div className="grid grid-cols-1 gap-4 rounded-lg border bg-background p-5 md:grid-cols-2">
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              Warehouse *
+            </label>
+
+            <select
+              value={
+                directWarehouseId
+              }
+              onChange={(event) =>
+                setDirectWarehouseId(
+                  event.target
+                    .value,
+                )
+              }
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            >
+              <option value="">
+                Select Warehouse
+              </option>
+
+              {warehouses.map(
+                (warehouse) => (
+                  <option
+                    key={
+                      warehouse.id
+                    }
+                    value={
+                      warehouse.id
+                    }
+                  >
+                    {warehouse.name}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-medium text-muted-foreground">
+              Customer (optional)
+            </label>
+
+            <select
+              value={
+                directCustomerId
+              }
+              onChange={(event) =>
+                setDirectCustomerId(
+                  event.target
+                    .value,
+                )
+              }
+              className="w-full rounded-md border px-3 py-2 text-sm"
+            >
+              <option value="">
+                CASH CUSTOMER
+              </option>
+
+              {customers.map(
+                (customer) => (
+                  <option
+                    key={
+                      customer.id
+                    }
+                    value={
+                      customer.id
+                    }
+                  >
+                    {
+                      customer.customerCode
+                    }{" "}
+                    - {customer.name}
+                  </option>
+                ),
+              )}
+            </select>
+          </div>
+        </div>
+
+        {/* ITEM SEARCH */}
+
+        <div className="rounded-lg border bg-background p-5">
+          <h2 className="mb-3 font-semibold">
+            Items
+          </h2>
+
+          <input
+            type="text"
+            value={directSearch}
+            onChange={(event) =>
+              setDirectSearch(
+                event.target.value,
+              )
+            }
+            placeholder="Search item code or name..."
+            className="w-full rounded-md border-2 px-4 py-3 text-sm outline-none focus:border-black"
+          />
+
+          {searchResults.length >
+            0 && (
+            <div className="mt-2 overflow-hidden rounded-md border bg-white shadow">
+              {searchResults.map(
+                (item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() =>
+                      addDirectRow(
+                        item.id,
+                      )
+                    }
+                    className="block w-full border-b px-4 py-3 text-left last:border-b-0 hover:bg-gray-50"
+                  >
+                    <div className="font-medium">
+                      {item.itemCode}{" "}
+                      - {item.name}
+                    </div>
+                  </button>
+                ),
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* ITEMS TABLE */}
+
+        <div className="overflow-hidden rounded-lg border">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-muted/30">
+                <tr className="border-b">
+                  <th className="p-3 text-left">
+                    #
+                  </th>
+
+                  <th className="p-3 text-left">
+                    Item
+                  </th>
+
+                  <th className="p-3 text-left">
+                    Batch
+                  </th>
+
+                  <th className="p-3 text-right">
+                    Qty
+                  </th>
+
+                  <th className="p-3 text-right">
+                    Rate
+                  </th>
+
+                  <th className="p-3 text-right">
+                    GST %
+                  </th>
+
+                  <th className="p-3 text-right">
+                    Amount
+                  </th>
+
+                  <th className="p-3 text-center">
+                    Action
+                  </th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {returnRows.length ===
+                0 ? (
+                  <tr>
+                    <td
+                      colSpan={8}
+                      className="px-4 py-10 text-center text-sm text-muted-foreground"
+                    >
+                      No items added.
+                    </td>
+                  </tr>
+                ) : (
+                  returnRows.map(
+                    (row, index) => {
+                      const itemBatches =
+                        directBatches.filter(
+                          (batch) =>
+                            batch.itemId ===
+                            row.itemId,
+                        );
+
+                      const lineTaxable =
+                        row.returnQty *
+                        row.saleRate;
+
+                      const lineGst =
+                        lineTaxable *
+                        (row.gstPercent /
+                          100);
+
+                      const lineTotal =
+                        lineTaxable +
+                        lineGst;
+
+                      return (
+                        <tr
+                          key={`${row.itemId}-${row.batchId}-${index}`}
+                          className="border-b last:border-b-0"
+                        >
+                          <td className="p-3 align-top">
+                            {index +
+                              1}
+                          </td>
+
+                          <td className="p-3 align-top">
+                            <div className="font-medium">
+                              {
+                                row.itemName
+                              }
+                            </div>
+
+                            <div className="text-xs text-muted-foreground">
+                              {
+                                row.itemCode
+                              }
+                            </div>
+                          </td>
+
+                          <td className="p-2 align-top">
+                            <select
+                              value={
+                                row.batchId
+                              }
+                              onChange={(
+                                event,
+                              ) =>
+                                updateDirectBatch(
+                                  index,
+                                  event
+                                    .target
+                                    .value,
+                                )
+                              }
+                              className="w-full rounded border px-2 py-1.5 text-sm"
+                            >
+                              <option value="">
+                                Select
+                                Batch
+                              </option>
+
+                              {itemBatches.map(
+                                (
+                                  batch,
+                                ) => (
+                                  <option
+                                    key={
+                                      batch.id
+                                    }
+                                    value={
+                                      batch.id
+                                    }
+                                  >
+                                    {
+                                      batch.batchNo
+                                    }
+                                  </option>
+                                ),
+                              )}
+                            </select>
+                          </td>
+
+                          <td className="p-2 text-right align-top">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={
+                                row.returnQty ===
+                                0
+                                  ? ""
+                                  : row.returnQty
+                              }
+                              onChange={(
+                                event,
+                              ) =>
+                                updateReturnQty(
+                                  index,
+                                  event
+                                    .target
+                                    .value,
+                                )
+                              }
+                              className="w-20 rounded border px-2 py-1.5 text-right"
+                              placeholder="0"
+                            />
+                          </td>
+
+                          <td className="p-2 text-right align-top">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={
+                                row.saleRate
+                              }
+                              onChange={(
+                                event,
+                              ) =>
+                                updateDirectRate(
+                                  index,
+                                  event
+                                    .target
+                                    .value,
+                                )
+                              }
+                              className="w-24 rounded border px-2 py-1.5 text-right"
+                            />
+                          </td>
+
+                          <td className="p-2 text-right align-top">
+                            <input
+                              type="number"
+                              min="0"
+                              step="0.01"
+                              value={
+                                row.gstPercent
+                              }
+                              onChange={(
+                                event,
+                              ) =>
+                                updateDirectGst(
+                                  index,
+                                  event
+                                    .target
+                                    .value,
+                                )
+                              }
+                              className="w-20 rounded border px-2 py-1.5 text-right"
+                            />
+                          </td>
+
+                          <td className="p-3 text-right align-top font-medium">
+                            {row.returnQty >
+                            0
+                              ? formatCurrency(
+                                  lineTotal,
+                                )
+                              : "-"}
+                          </td>
+
+                          <td className="p-2 text-center align-top">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                removeDirectRow(
+                                  index,
+                                )
+                              }
+                              className="rounded border px-3 py-1.5 text-xs text-red-600 hover:bg-red-50"
+                            >
+                              Remove
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    },
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* RETURN SUMMARY */}
+
+        <div className="flex justify-end">
+          <div className="w-full max-w-md rounded-lg border bg-background p-5">
+            <div className="mb-4 font-semibold">
+              Return Summary
+            </div>
+
+            <div className="space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Return Quantity
+                </span>
+
+                <span className="font-medium">
+                  {formatInteger(
+                    totalReturnQty,
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  Taxable Amount
+                </span>
+
+                <span className="font-medium">
+                  {formatCurrency(
+                    totalTaxable,
+                  )}
+                </span>
+              </div>
+
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">
+                  GST
+                </span>
+
+                <span className="font-medium">
+                  {formatCurrency(
+                    totalGst,
+                  )}
+                </span>
+              </div>
+
+              <div className="border-t pt-3">
+                <div className="flex justify-between text-base">
+                  <span className="font-semibold">
+                    Refund Amount
+                  </span>
+
+                  <span className="font-bold">
+                    {formatCurrency(
+                      totalReturnAmount,
+                    )}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {directItemError && (
+              <div className="mt-4 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700">
+                {directItemError}
+              </div>
+            )}
+
+            <button
+              type="button"
+              disabled={
+                selectedRows.length ===
+                0
+              }
+              onClick={
+                continueToRefund
+              }
+              className="mt-5 w-full rounded-md bg-black px-4 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              Continue to Refund
+            </button>
+
+            {selectedRows.length ===
+              0 && (
+              <p className="mt-2 text-center text-xs text-muted-foreground">
+                Add at least one item
+                to continue.
+              </p>
+            )}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * =====================================================
+   * ITEM SELECTION STAGE
+   *
+   * isDirectMode is false past this point (handled above), and the
+   * page-level guard already returned when !sale - this re-check
+   * only lets TS narrow `sale` to non-null for the JSX below.
+   * =====================================================
+   */
+
+  if (!sale) {
+    return null;
+  }
 
   return (
     <div className="space-y-6 p-6">

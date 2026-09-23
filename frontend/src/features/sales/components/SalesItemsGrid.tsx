@@ -31,6 +31,19 @@ export interface SalesGridRow {
   saleRate: number;
   discountPercent: number;
   gstPercent: number;
+
+  /*
+   * Free-text line description - only meaningful (and required)
+   * when the row's item is a general (non-catalog) item.
+   */
+  description?: string;
+
+  /*
+   * A return taken back within this same bill (an exchange) rather
+   * than a separate Sale Return document - restores stock and
+   * subtracts from the bill totals instead of adding to them.
+   */
+  isReturn?: boolean;
 }
 
 interface SalesItemsGridProps {
@@ -77,6 +90,15 @@ interface SalesItemsGridProps {
     rate: number,
   ) => void;
 
+  onDescriptionChange: (
+    index: number,
+    description: string,
+  ) => void;
+
+  onToggleReturn: (
+    index: number,
+  ) => void;
+
   onQuickAddItem: (
     itemId: string,
   ) => void;
@@ -118,6 +140,8 @@ export default function SalesItemsGrid({
   onBatchChange,
   onQtyChange,
   onRateChange,
+  onDescriptionChange,
+  onToggleReturn,
   onQuickAddItem,
   onQuickSetQty,
 }: SalesItemsGridProps) {
@@ -380,6 +404,56 @@ export default function SalesItemsGrid({
           false &&
         batch.status !==
           "INACTIVE",
+    );
+  }
+
+  /*
+   * =====================================================
+   * QTY ALREADY RESERVED BY OTHER ROWS IN THIS BILL
+   * =====================================================
+   *
+   * The same item+batch can appear on more than one row (added
+   * separately rather than merged). Physical stock alone would let
+   * two rows each show "Available: 6" against a stock of 6, when
+   * together they need 6 + 6 - only the first one entered can
+   * actually be fulfilled. Subtracting what every OTHER row already
+   * asks for keeps each row's own figure live and self-consuming as
+   * quantities change, not just a stale per-warehouse snapshot.
+   */
+
+  function getReservedQtyForBatch(
+    itemId: string,
+    batchId: string,
+    excludeIndex: number | null,
+  ) {
+    return rows.reduce(
+      (total, row, index) => {
+        if (index === excludeIndex) {
+          return total;
+        }
+
+        if (
+          row.itemId !== itemId ||
+          row.batchId !== batchId
+        ) {
+          return total;
+        }
+
+        /*
+         * A return row restores stock rather than consuming it -
+         * it doesn't compete with other rows for the same pool, so
+         * it never counts as "reserved" here.
+         */
+
+        if (row.isReturn) {
+          return total;
+        }
+
+        return (
+          total + getNumber(row.qty)
+        );
+      },
+      0,
     );
   }
 
@@ -860,6 +934,11 @@ if (rowIndex !== null) {
                           batch.id
                         ] ??
                           0,
+                      ) -
+                      getReservedQtyForBatch(
+                        batch.itemId,
+                        batch.id,
+                        batchPopupRowIndex,
                       );
 
                     const isSelected =
@@ -1202,6 +1281,11 @@ if (rowIndex !== null) {
                         row.itemId,
                     );
 
+                  const isGeneral =
+                    Boolean(
+                      item?.isGeneralItem,
+                    );
+
                   const itemBatches =
                     batches.filter(
                       (
@@ -1281,9 +1365,19 @@ if (rowIndex !== null) {
                           )
                       : 0;
 
+                  const reservedByOtherRows =
+                    row.batchId
+                      ? getReservedQtyForBatch(
+                          row.itemId,
+                          row.batchId,
+                          index,
+                        )
+                      : 0;
+
                   const effectiveAvailableStock =
                     physicalStock +
-                    originalQtyForBatch;
+                    originalQtyForBatch -
+                    reservedByOtherRows;
 
                   const selectedStock =
                     row.batchId
@@ -1291,6 +1385,8 @@ if (rowIndex !== null) {
                       : null;
 
                   const stockExceeded =
+                    !isGeneral &&
+                    !row.isReturn &&
                     !allowNegativeStock &&
                     row.batchId !==
                       "" &&
@@ -1313,7 +1409,11 @@ if (rowIndex !== null) {
                       key={
                         `${row.itemId}-${row.batchId}-${index}`
                       }
-                      className="border-b last:border-b-0"
+                      className={`border-b last:border-b-0 ${
+                        row.isReturn
+                          ? "bg-red-50/60"
+                          : ""
+                      }`}
                     >
 
                       {/* NUMBER */}
@@ -1381,12 +1481,65 @@ if (rowIndex !== null) {
                           </div>
                         )}
 
+                        {isGeneral && (
+                          <input
+                            type="text"
+                            value={
+                              row.description ??
+                              ""
+                            }
+                            onChange={(
+                              event,
+                            ) =>
+                              onDescriptionChange(
+                                index,
+                                event
+                                  .target
+                                  .value,
+                              )
+                            }
+                            placeholder="Describe what this is..."
+                            className={`mt-1 w-full rounded border px-2 py-1 text-xs ${
+                              !row.description?.trim()
+                                ? "border-red-500 bg-red-50"
+                                : ""
+                            }`}
+                          />
+                        )}
+
+                        {row.itemId &&
+                          !isGeneral && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                onToggleReturn(
+                                  index,
+                                )
+                              }
+                              className={`mt-1 w-full rounded border px-2 py-1 text-xs font-medium ${
+                                row.isReturn
+                                  ? "border-red-400 bg-red-100 text-red-700 hover:bg-red-200"
+                                  : "border-dashed text-gray-500 hover:bg-gray-50"
+                              }`}
+                            >
+                              {row.isReturn
+                                ? "↩ Return line - click to undo"
+                                : "Mark as Return"}
+                            </button>
+                          )}
+
                       </td>
 
                       {/* BATCH */}
 
                       <td className="p-2 align-top">
 
+                        {isGeneral ? (
+                          <div className="rounded border border-dashed px-2 py-2 text-xs text-gray-500">
+                            General item - no stock tracking
+                          </div>
+                        ) : (
+                        <>
                         <select
                           value={
                             row.batchId
@@ -1457,9 +1610,17 @@ if (rowIndex !== null) {
                                     0,
                                   );
 
+                              const reservedByOtherRowsForOption =
+                                getReservedQtyForBatch(
+                                  row.itemId,
+                                  batch.id,
+                                  index,
+                                );
+
                               const dropdownAvailable =
                                 stock +
-                                originalBatchQty;
+                                originalBatchQty -
+                                reservedByOtherRowsForOption;
 
                               return (
                                 <option
@@ -1512,6 +1673,9 @@ if (rowIndex !== null) {
                           <div className="mt-1 text-xs font-medium text-red-600">
                             Insufficient stock.
                           </div>
+                        )}
+
+                        </>
                         )}
 
                       </td>
@@ -1589,7 +1753,16 @@ if (rowIndex !== null) {
 
                       {/* AMOUNT */}
 
-                      <td className="px-3 py-3 text-right font-medium align-top">
+                      <td
+                        className={`px-3 py-3 text-right font-medium align-top ${
+                          row.isReturn
+                            ? "text-red-600"
+                            : ""
+                        }`}
+                      >
+                        {row.isReturn
+                          ? "-"
+                          : ""}
                         ₹
                         {net.toFixed(
                           2,

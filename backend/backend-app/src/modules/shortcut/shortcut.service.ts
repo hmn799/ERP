@@ -1,3 +1,5 @@
+import { randomUUID } from 'crypto';
+
 import {
   BadRequestException,
   ConflictException,
@@ -9,6 +11,7 @@ import { PrismaService } from '../prisma/prisma.service';
 
 import { UpdateShortcutDto } from './dto/update-shortcut.dto';
 import { SetRoleShortcutDto } from './dto/set-role-shortcut.dto';
+import { CreateShortcutDto } from './dto/create-shortcut.dto';
 
 /**
  * Normalizes a key combination string so "ctrl+d",
@@ -93,6 +96,70 @@ export class ShortcutService {
     }
 
     return shortcut;
+  }
+
+  /*
+   * A user-created shortcut is always a NAVIGATE one - jump to
+   * `targetPath` - since that's the only action generic enough
+   * for a settings screen to wire up without matching frontend
+   * code elsewhere. actionCode is internal (never shown to the
+   * user - the label is) so a random one is fine.
+   */
+  async create(dto: CreateShortcutDto) {
+    const normalized = normalizeKey(dto.key);
+
+    if (!normalized) {
+      throw new BadRequestException(
+        'Key combination cannot be empty.',
+      );
+    }
+
+    const conflict = await this.prisma.shortcut.findFirst({
+      where: {
+        isEnabled: true,
+        currentKey: normalized,
+      },
+    });
+
+    if (conflict) {
+      throw new ConflictException(
+        `"${normalized}" is already assigned to "${conflict.label}".`,
+      );
+    }
+
+    return this.prisma.shortcut.create({
+      data: {
+        actionCode: `NAV_${randomUUID()}`,
+        label: dto.label,
+        category: dto.category || 'Navigation',
+        defaultKey: normalized,
+        currentKey: normalized,
+        isEnabled: true,
+        actionType: 'NAVIGATE',
+        targetPath: dto.targetPath,
+      },
+      include: {
+        roleOverrides: {
+          include: {
+            role: { select: { id: true, name: true } },
+          },
+        },
+      },
+    });
+  }
+
+  async remove(id: string) {
+    const existing = await this.findOne(id);
+
+    if (existing.actionType !== 'NAVIGATE') {
+      throw new BadRequestException(
+        'Only shortcuts created from this screen can be deleted.',
+      );
+    }
+
+    await this.prisma.shortcut.delete({ where: { id } });
+
+    return { success: true };
   }
 
   async update(id: string, dto: UpdateShortcutDto) {
@@ -241,6 +308,8 @@ export class ShortcutService {
         label: shortcut.label,
         category: shortcut.category,
         key: shortcut.currentKey,
+        actionType: shortcut.actionType,
+        targetPath: shortcut.targetPath,
         enabled:
           shortcut.isEnabled &&
           (override ? override.isEnabled : true),

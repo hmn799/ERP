@@ -33,14 +33,19 @@ export const ROUTES = {
   OPENING_STOCK: "/inventory/opening-stock",
   OPENING_STOCK_BULK: "/inventory/opening-stock/bulk",
   LABEL_PRINT: "/inventory/label-print",
+  DAMAGE_STOCK: "/inventory/damage-stock",
 
   // Accounts
   RECEIPTS: "/accounts/receipts",
   PAYMENTS: "/accounts/payments",
   LEDGER: "/accounts/ledger",
   CASH_BOOK: "/accounts/cash-book",
+  CARD_BOOK: "/accounts/card-book",
+  UPI_BOOK: "/accounts/upi-book",
   BANK_BOOK: "/accounts/bank-book",
   BANK_RECONCILIATION: "/accounts/bank-reconciliation",
+  DEBIT_NOTES: "/accounts/debit-notes",
+  CREDIT_NOTES: "/accounts/credit-notes",
 
   // Reports
   SALES_REPORT: "/reports/sales",

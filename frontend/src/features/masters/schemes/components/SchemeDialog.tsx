@@ -96,6 +96,10 @@ export default function SchemeDialog({
                     ? Number(scheme.discountPercent)
                     : undefined,
                 isActive: scheme.isActive,
+                effectiveFrom:
+                  scheme.effectiveFrom ?? undefined,
+                effectiveTo:
+                  scheme.effectiveTo ?? undefined,
               }
             : undefined
         }

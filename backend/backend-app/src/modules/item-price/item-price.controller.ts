@@ -6,11 +6,16 @@ import {
   Param,
   Patch,
   Post,
+  UseGuards,
 } from '@nestjs/common';
 
 import { ItemPriceService } from './item-price.service';
 import { CreateItemPriceDto } from './dto/create-item-price.dto';
 import { UpdateItemPriceDto } from './dto/update-item-price.dto';
+
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { PermissionsGuard } from '../auth/guards/permissions.guard';
+import { RequirePermissions } from '../auth/decorators/require-permissions.decorator';
 
 @Controller('item-price')
 export class ItemPriceController {
@@ -19,6 +24,8 @@ export class ItemPriceController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('CHANGE_RATE')
   create(
     @Body() createItemPriceDto: CreateItemPriceDto,
   ) {
@@ -52,6 +59,8 @@ export class ItemPriceController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('CHANGE_RATE')
   update(
     @Param('id') id: string,
     @Body() updateItemPriceDto: UpdateItemPriceDto,
@@ -63,6 +72,8 @@ export class ItemPriceController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @RequirePermissions('CHANGE_RATE')
   remove(
     @Param('id') id: string,
   ) {

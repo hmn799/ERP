@@ -3,6 +3,8 @@ import {
   NotFoundException,
 } from "@nestjs/common";
 
+import { Item, Prisma } from "@prisma/client";
+
 import { PrismaService } from "../prisma/prisma.service";
 
 import { CreateItemDto } from "./dto/create-item.dto";
@@ -38,68 +40,158 @@ export class ItemService {
       .toString()
       .padStart(5, "0")}`;
 
-    return this.prisma.item.create({
+    return this.prisma.$transaction(async (tx) => {
+      const item = await tx.item.create({
+        data: {
+          itemCode,
+
+          name: dto.name,
+
+          hsnCode: dto.hsnCode,
+
+          barcode: dto.barcode,
+
+          categoryId: dto.categoryId,
+
+          subCategoryId: dto.subCategoryId,
+
+          brandId: dto.brandId,
+
+          gstSlabId: dto.gstSlabId,
+
+          baseUnitId: dto.baseUnitId,
+
+          purchaseUnitId: dto.purchaseUnitId,
+
+          saleUnitId: dto.saleUnitId,
+
+          mrp: dto.mrp,
+
+          purchaseRate: dto.purchaseRate,
+
+          minQty: dto.minQty ?? 0,
+
+          reorderQty: dto.reorderQty ?? 0,
+
+          isActive: dto.isActive ?? true,
+
+          isGeneralItem: dto.isGeneralItem ?? false,
+        },
+
+        include: {
+          category: true,
+          subCategory: true,
+          brand: true,
+          gstSlab: true,
+          baseUnit: true,
+          purchaseUnit: true,
+          saleUnit: true,
+        },
+      });
+
+      if (dto.isGeneralItem) {
+        await this.createPlaceholderBatch(item, tx);
+      }
+
+      return item;
+    });
+  }
+
+  /*
+   * A general item is never purchased, so it has no batch of its
+   * own from the normal purchase flow - this stands in for one so
+   * it can be added to a sale immediately. Rates are all 0; the
+   * operator types the actual price on the bill itself.
+   */
+  private createPlaceholderBatch(
+    item: Item,
+    tx: Prisma.TransactionClient,
+  ) {
+    return tx.batch.create({
       data: {
-        itemCode,
-
-        name: dto.name,
-
-        hsnCode: dto.hsnCode,
-
-        barcode: dto.barcode,
-
-        categoryId: dto.categoryId,
-
-        subCategoryId: dto.subCategoryId,
-
-        brandId: dto.brandId,
-
-        gstSlabId: dto.gstSlabId,
-
-        baseUnitId: dto.baseUnitId,
-
-        purchaseUnitId: dto.purchaseUnitId,
-
-        saleUnitId: dto.saleUnitId,
-
-        mrp: dto.mrp,
-
-        purchaseRate: dto.purchaseRate,
-
-        minQty: dto.minQty ?? 0,
-
-        reorderQty: dto.reorderQty ?? 0,
-
-        isActive: dto.isActive ?? true,
-      },
-
-      include: {
-        category: true,
-        subCategory: true,
-        brand: true,
-        gstSlab: true,
-        baseUnit: true,
-        purchaseUnit: true,
-        saleUnit: true,
+        batchNo: `GEN-${item.itemCode}`,
+        itemId: item.id,
+        purchaseRate: item.purchaseRate,
+        retailRate: 0,
+        wholesaleRate: 0,
+        distributorRate: 0,
+        mrp: item.mrp,
+        status: "ACTIVE",
+        creationReason: "GENERAL_ITEM",
+        isActive: true,
       },
     });
   }
 
-  findAll() {
-    return this.prisma.item.findMany({
-      include: {
-        category: true,
-        subCategory: true,
-        brand: true,
-        gstSlab: true,
-        baseUnit: true,
-        purchaseUnit: true,
-        saleUnit: true,
-      },
-      orderBy: {
-        name: "asc",
+  async findAll() {
+    const [items, supplierMap] = await Promise.all([
+      this.prisma.item.findMany({
+        include: {
+          category: true,
+          subCategory: true,
+          brand: true,
+          gstSlab: true,
+          baseUnit: true,
+          purchaseUnit: true,
+          saleUnit: true,
+        },
+        orderBy: {
+          name: "asc",
+        },
+      }),
+      this.getItemSupplierMap(),
+    ]);
+
+    return items.map((item) => ({
+      ...item,
+      distributors: supplierMap.get(item.id) ?? [],
+    }));
+  }
+
+  /*
+   * Which suppliers an item has actually been bought from, derived
+   * from purchase history rather than a manually-maintained mapping -
+   * an item bought from two different distributors (same item,
+   * different sticker/rate) naturally accumulates both here without
+   * any extra data entry. Powers the Item Master "Distributor" filter.
+   */
+  private async getItemSupplierMap() {
+    const links = await this.prisma.purchaseBillItem.findMany({
+      select: {
+        itemId: true,
+        purchaseBill: {
+          select: {
+            supplier: { select: { id: true, name: true } },
+          },
+        },
       },
     });
+
+    const map = new Map<
+      string,
+      Map<string, { id: string; name: string }>
+    >();
+
+    for (const link of links) {
+      const supplier = link.purchaseBill.supplier;
+
+      if (!map.has(link.itemId)) {
+        map.set(link.itemId, new Map());
+      }
+
+      map.get(link.itemId)!.set(supplier.id, supplier);
+    }
+
+    const result = new Map<
+      string,
+      { id: string; name: string }[]
+    >();
+
+    for (const [itemId, suppliers] of map) {
+      result.set(itemId, Array.from(suppliers.values()));
+    }
+
+    return result;
   }
 
   findOne(id: string) {
@@ -158,54 +250,72 @@ export class ItemService {
     };
   }
 
-  update(
+  async update(
     id: string,
     dto: UpdateItemDto,
   ) {
-    return this.prisma.item.update({
-      where: { id },
+    return this.prisma.$transaction(async (tx) => {
+      const item = await tx.item.update({
+        where: { id },
 
-      data: {
-        name: dto.name,
+        data: {
+          name: dto.name,
 
-        hsnCode: dto.hsnCode,
+          hsnCode: dto.hsnCode,
 
-        barcode: dto.barcode,
+          barcode: dto.barcode,
 
-        categoryId: dto.categoryId,
+          categoryId: dto.categoryId,
 
-        subCategoryId: dto.subCategoryId,
+          subCategoryId: dto.subCategoryId,
 
-        brandId: dto.brandId,
+          brandId: dto.brandId,
 
-        gstSlabId: dto.gstSlabId,
+          gstSlabId: dto.gstSlabId,
 
-        baseUnitId: dto.baseUnitId,
+          baseUnitId: dto.baseUnitId,
 
-        purchaseUnitId: dto.purchaseUnitId,
+          purchaseUnitId: dto.purchaseUnitId,
 
-        saleUnitId: dto.saleUnitId,
+          saleUnitId: dto.saleUnitId,
 
-        mrp: dto.mrp,
+          mrp: dto.mrp,
 
-        purchaseRate: dto.purchaseRate,
+          purchaseRate: dto.purchaseRate,
 
-        minQty: dto.minQty,
+          minQty: dto.minQty,
 
-        reorderQty: dto.reorderQty,
+          reorderQty: dto.reorderQty,
 
-        isActive: dto.isActive,
-      },
+          isActive: dto.isActive,
 
-      include: {
-        category: true,
-        subCategory: true,
-        brand: true,
-        gstSlab: true,
-        baseUnit: true,
-        purchaseUnit: true,
-        saleUnit: true,
-      },
+          isGeneralItem: dto.isGeneralItem,
+        },
+      });
+
+      if (dto.isGeneralItem) {
+        const hasBatch = await tx.batch.findFirst({
+          where: { itemId: item.id },
+          select: { id: true },
+        });
+
+        if (!hasBatch) {
+          await this.createPlaceholderBatch(item, tx);
+        }
+      }
+
+      return tx.item.findUniqueOrThrow({
+        where: { id: item.id },
+        include: {
+          category: true,
+          subCategory: true,
+          brand: true,
+          gstSlab: true,
+          baseUnit: true,
+          purchaseUnit: true,
+          saleUnit: true,
+        },
+      });
     });
   }
 
@@ -233,6 +343,8 @@ export class ItemService {
       purchaseRate: true,
 
       mrp: true,
+
+      isGeneralItem: true,
 
       gstSlab: {
         select: {
@@ -286,6 +398,8 @@ export class ItemService {
     name: item.name,
 
     barcode: item.barcode,
+
+    isGeneralItem: item.isGeneralItem,
 
     // Every barcode ever recorded against any active batch of this
     // item (primary or alternate) - a batch accumulates more than

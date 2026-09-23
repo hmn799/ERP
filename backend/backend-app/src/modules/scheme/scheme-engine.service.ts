@@ -9,6 +9,8 @@ export interface SchemeExpandedItem {
   discountPercent: number;
   gstPercent?: number;
   saleRate?: number;
+  description?: string;
+  isReturn?: boolean;
   freeQty: number;
   schemeId?: string;
 }
@@ -40,6 +42,8 @@ export class SchemeEngineService {
       discountPercent: number;
       gstPercent?: number;
       saleRate?: number;
+      description?: string;
+      isReturn?: boolean;
     }>,
     warehouseId: string,
     tx: Prisma.TransactionClient,
@@ -80,9 +84,17 @@ export class SchemeEngineService {
     const expanded: SchemeExpandedItem[] = [];
 
     for (const item of items) {
-      const matching = schemes.filter(
-        (scheme) => scheme.itemId === item.itemId,
-      );
+      /*
+       * A return line isn't a purchase trigger - schemes (free
+       * quantity, stacked discounts, free-item giveaways) never
+       * apply to it.
+       */
+
+      const matching = item.isReturn
+        ? []
+        : schemes.filter(
+            (scheme) => scheme.itemId === item.itemId,
+          );
 
       let freeQtyForLine = 0;
       let extraDiscount = 0;

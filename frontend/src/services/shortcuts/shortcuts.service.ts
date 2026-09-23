@@ -15,6 +15,8 @@ export interface Shortcut {
   defaultKey: string;
   currentKey: string;
   isEnabled: boolean;
+  actionType: "SYSTEM" | "NAVIGATE";
+  targetPath: string | null;
   roleOverrides: ShortcutRoleOverride[];
 }
 
@@ -23,7 +25,16 @@ export interface EffectiveShortcut {
   label: string;
   category: string | null;
   key: string;
+  actionType: "SYSTEM" | "NAVIGATE";
+  targetPath: string | null;
   enabled: boolean;
+}
+
+export interface CreateShortcutDto {
+  label: string;
+  category?: string;
+  key: string;
+  targetPath: string;
 }
 
 export const ShortcutsService = {
@@ -41,6 +52,20 @@ export const ShortcutsService = {
       `/shortcuts/effective/${roleId}`,
     );
     return data;
+  },
+
+  async create(
+    dto: CreateShortcutDto,
+  ): Promise<Shortcut> {
+    const { data } = await apiClient.post(
+      "/shortcuts",
+      dto,
+    );
+    return data;
+  },
+
+  async remove(id: string): Promise<void> {
+    await apiClient.delete(`/shortcuts/${id}`);
   },
 
   async update(

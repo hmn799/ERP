@@ -60,6 +60,28 @@ export function getSchemeColumns({
         row.original.isActive ? "Yes" : "No",
     },
     {
+      id: "validity",
+      header: "Validity",
+      cell: ({ row }) => {
+        const { effectiveFrom, effectiveTo } =
+          row.original;
+
+        if (!effectiveFrom && !effectiveTo) {
+          return "Always";
+        }
+
+        const from = effectiveFrom
+          ? new Date(effectiveFrom).toLocaleDateString()
+          : "—";
+
+        const to = effectiveTo
+          ? new Date(effectiveTo).toLocaleDateString()
+          : "—";
+
+        return `${from} to ${to}`;
+      },
+    },
+    {
       id: "actions",
       header: "",
       cell: ({ row }) => (

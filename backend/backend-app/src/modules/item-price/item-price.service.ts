@@ -27,6 +27,8 @@ export class ItemPriceService {
           itemId: dto.itemId,
           priceListId: dto.priceListId,
 
+          minQty: dto.minQty,
+
           salePrice: dto.salePrice,
 
           minimumPrice: dto.minimumPrice,
@@ -162,6 +164,7 @@ export class ItemPriceService {
       const updated = await tx.itemPrice.update({
         where: { id },
         data: {
+          minQty: dto.minQty ?? existing.minQty,
           salePrice: dto.salePrice ?? existing.salePrice,
           minimumPrice:
             dto.minimumPrice ?? existing.minimumPrice,
@@ -245,6 +248,22 @@ export class ItemPriceService {
       );
     }
 
+    const duplicateTier =
+      await this.prisma.itemPrice.findFirst({
+        where: {
+          itemId: dto.itemId,
+          priceListId: dto.priceListId,
+          minQty: dto.minQty ?? 1,
+          isActive: true,
+        },
+      });
+
+    if (duplicateTier) {
+      throw new BadRequestException(
+        `A tier starting at qty ${dto.minQty ?? 1} already exists for this item on this price list.`,
+      );
+    }
+
     if (
       dto.minimumPrice !== undefined &&
       dto.minimumPrice > dto.salePrice
@@ -279,6 +298,28 @@ export class ItemPriceService {
     existing: any,
     dto: UpdateItemPriceDto,
   ) {
+    if (
+      dto.minQty !== undefined &&
+      Number(dto.minQty) !== Number(existing.minQty)
+    ) {
+      const duplicateTier =
+        await this.prisma.itemPrice.findFirst({
+          where: {
+            id: { not: existing.id },
+            itemId: existing.itemId,
+            priceListId: existing.priceListId,
+            minQty: dto.minQty,
+            isActive: true,
+          },
+        });
+
+      if (duplicateTier) {
+        throw new BadRequestException(
+          `A tier starting at qty ${dto.minQty} already exists for this item on this price list.`,
+        );
+      }
+    }
+
     const salePrice =
       dto.salePrice ?? Number(existing.salePrice);
 

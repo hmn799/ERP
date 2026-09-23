@@ -9,12 +9,20 @@ export interface BatchBarcode {
 export interface Batch {
   id: string;
   batchNo: string;
+  purchaseRate?: number | string;
   barcodes: BatchBarcode[];
 }
 
 const batchService = {
   async get(id: string): Promise<Batch> {
     const { data } = await apiClient.get(`/batches/${id}`);
+    return data;
+  },
+
+  async getByItem(itemId: string): Promise<Batch[]> {
+    const { data } = await apiClient.get(
+      `/batches/by-item/${itemId}`,
+    );
     return data;
   },
 

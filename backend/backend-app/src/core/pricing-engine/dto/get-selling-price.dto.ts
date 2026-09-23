@@ -1,9 +1,26 @@
-export class GetSellingPriceDto {
-  customerId?: string;
+import {
+  IsDateString,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  Min,
+} from 'class-validator';
 
+export class GetSellingPriceDto {
+  @IsString()
+  @IsNotEmpty()
   itemId: string;
 
+  @IsOptional()
+  @IsString()
+  customerId?: string;
+
+  @IsNumber()
+  @Min(0.01)
   quantity: number;
 
-  billDate?: Date;
+  @IsOptional()
+  @IsDateString()
+  billDate?: string;
 }

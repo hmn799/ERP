@@ -162,6 +162,28 @@ bankBook(
   );
 }
 
+@Get('card-book')
+cardBook(
+  @Query('from') from: string,
+  @Query('to') to: string,
+) {
+  return this.reportsService.cardBook(
+    from,
+    to,
+  );
+}
+
+@Get('upi-book')
+upiBook(
+  @Query('from') from: string,
+  @Query('to') to: string,
+) {
+  return this.reportsService.upiBook(
+    from,
+    to,
+  );
+}
+
 @Get('stock-report')
 stockReport() {
   return this.reportsService.stockReport();

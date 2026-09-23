@@ -5,6 +5,15 @@ export interface SalesRowLike {
   saleRate: number;
   discountPercent: number;
   gstPercent: number;
+
+  /*
+   * A return taken back within this same bill (an exchange) rather
+   * than a separate SaleReturn document. The row's own amounts
+   * below stay positive magnitudes either way - only the bill
+   * totals in sales.totals.ts subtract a return row instead of
+   * adding it.
+   */
+  isReturn?: boolean;
 }
 
 export interface SalesRowAmounts {

@@ -53,6 +53,7 @@ export class AnalyticsService {
         select: {
           itemId: true,
           qty: true,
+          isReturn: true,
           salesBill: { select: { billDate: true } },
         },
       }),
@@ -71,17 +72,27 @@ export class AnalyticsService {
     for (const row of salesRows) {
       const billTime = row.salesBill.billDate.getTime();
 
+      /*
+       * A return line taken back within a bill (an exchange)
+       * subtracts from velocity instead of adding to it - it was
+       * never actually sold out - and never counts as a "last sold"
+       * event on its own.
+       */
+      const sign = row.isReturn ? -1 : 1;
+
       if (billTime >= cutoff) {
         salesWindowMap.set(
           row.itemId,
           (salesWindowMap.get(row.itemId) || 0) +
-            Number(row.qty),
+            sign * Number(row.qty),
         );
       }
 
-      const lastSold = lastSoldMap.get(row.itemId) || 0;
-      if (billTime > lastSold) {
-        lastSoldMap.set(row.itemId, billTime);
+      if (!row.isReturn) {
+        const lastSold = lastSoldMap.get(row.itemId) || 0;
+        if (billTime > lastSold) {
+          lastSoldMap.set(row.itemId, billTime);
+        }
       }
     }
 
@@ -342,10 +353,14 @@ export class AnalyticsService {
       }
 
       const bucket = map.get(categoryId)!;
-      const qty = Number(row.qty);
+
+      // A return line taken back within a bill (an exchange)
+      // subtracts from this category's totals instead of adding.
+      const sign = row.isReturn ? -1 : 1;
+      const qty = sign * Number(row.qty);
 
       bucket.qtySold += qty;
-      bucket.salesValue += Number(row.netAmount);
+      bucket.salesValue += sign * Number(row.netAmount);
       bucket.costValue += qty * Number(row.batch.purchaseRate);
       bucket.itemIds.add(row.itemId);
     }
@@ -435,7 +450,12 @@ export class AnalyticsService {
         if (bill.customerId) customerIds.add(bill.customerId);
 
         for (const line of bill.items) {
+          // A return line taken back within a bill (an exchange)
+          // reverses its cost basis instead of adding to it.
+          const sign = line.isReturn ? -1 : 1;
+
           costValue +=
+            sign *
             Number(line.qty) *
             Number(line.batch.purchaseRate);
         }

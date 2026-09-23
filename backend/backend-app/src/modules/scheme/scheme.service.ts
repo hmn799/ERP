@@ -9,6 +9,22 @@ import { PrismaService } from '../prisma/prisma.service';
 import { CreateSchemeDto } from './dto/create-scheme.dto';
 import { UpdateSchemeDto } from './dto/update-scheme.dto';
 
+/*
+ * The DTO validates effectiveFrom/effectiveTo as date-only or ISO
+ * strings (or null, to clear), but Prisma's DateTime column needs a
+ * real Date - "2026-10-01" alone throws "premature end of input".
+ * undefined passes through unchanged (Prisma treats it as "omit
+ * this field" on update, which is what leaves an untouched date
+ * alone).
+ */
+function toDateTime(
+  value: string | null | undefined,
+): Date | null | undefined {
+  if (value === undefined) return undefined;
+  if (value === null) return null;
+  return new Date(value);
+}
+
 @Injectable()
 export class SchemeService {
   constructor(
@@ -61,8 +77,8 @@ export class SchemeService {
         freeItemId: dto.freeItemId,
         discountPercent: dto.discountPercent,
         isActive: dto.isActive ?? true,
-        effectiveFrom: dto.effectiveFrom,
-        effectiveTo: dto.effectiveTo,
+        effectiveFrom: toDateTime(dto.effectiveFrom),
+        effectiveTo: toDateTime(dto.effectiveTo),
       },
     });
   }
@@ -123,8 +139,8 @@ export class SchemeService {
         freeItemId: dto.freeItemId,
         discountPercent: dto.discountPercent,
         isActive: dto.isActive,
-        effectiveFrom: dto.effectiveFrom,
-        effectiveTo: dto.effectiveTo,
+        effectiveFrom: toDateTime(dto.effectiveFrom),
+        effectiveTo: toDateTime(dto.effectiveTo),
       },
     });
   }

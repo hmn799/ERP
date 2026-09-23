@@ -86,7 +86,7 @@ type SaleReturnViewData = {
 
   returnDate: string;
 
-  salesBillId: string;
+  salesBillId?: string | null;
 
   customerId?: string | null;
 
@@ -316,17 +316,19 @@ export default function SaleReturnViewPage({
             Back to Returns
           </button>
 
-          <button
-            type="button"
-            onClick={() =>
-              router.push(
-                `/sales/view/${data.salesBillId}`,
-              )
-            }
-            className="rounded border px-4 py-2 text-sm hover:bg-muted"
-          >
-            View Sales Bill
-          </button>
+          {data.salesBillId && (
+            <button
+              type="button"
+              onClick={() =>
+                router.push(
+                  `/sales/view/${data.salesBillId}`,
+                )
+              }
+              className="rounded border px-4 py-2 text-sm hover:bg-muted"
+            >
+              View Sales Bill
+            </button>
+          )}
 
         </div>
 
@@ -368,7 +370,7 @@ export default function SaleReturnViewPage({
           <div className="font-medium">
             {data.salesBill
               ?.billNo ??
-              "-"}
+              "Direct Return (no bill)"}
           </div>
         </div>
 

@@ -34,7 +34,13 @@ export interface CreateSaleReturnPaymentDto {
 export interface CreateSaleReturnDto {
   returnNo?: string;
   returnDate: string;
-  salesBillId: string;
+
+  /*
+   * Omitted for a direct return - one taken back without a
+   * previous sales bill on file.
+   */
+  salesBillId?: string;
+
   customerId?: string;
   warehouseId: string;
 
@@ -176,7 +182,7 @@ export interface SaleReturnResponse {
 
   returnDate: string;
 
-  salesBillId: string;
+  salesBillId?: string | null;
 
   customerId?: string | null;
 

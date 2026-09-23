@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 
 import {
@@ -9,13 +9,18 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
 
 import ShortcutsService from "@/services/shortcuts/shortcuts.service";
 import RoleService from "@/services/role/role.service";
 
 import ShortcutRow from "../components/ShortcutRow";
+import CreateShortcutDialog from "../components/CreateShortcutDialog";
 
 export default function ShortcutsPage() {
+  const [createOpen, setCreateOpen] = useState(false);
+
   const {
     data: shortcuts = [],
     isLoading,
@@ -52,17 +57,30 @@ export default function ShortcutsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold">
-          Keyboard Shortcuts
-        </h1>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">
+            Keyboard Shortcuts
+          </h1>
 
-        <p className="text-sm text-muted-foreground">
-          Rebind keys, enable or disable actions, and
-          control which roles can use each shortcut.
-          Click a key to record a new one.
-        </p>
+          <p className="text-sm text-muted-foreground">
+            Rebind keys, enable or disable actions, and
+            control which roles can use each shortcut.
+            Click a key to record a new one.
+          </p>
+        </div>
+
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Shortcut
+        </Button>
       </div>
+
+      <CreateShortcutDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        onSuccess={refetch}
+      />
 
       {isLoading ? (
         <div className="text-sm text-muted-foreground">

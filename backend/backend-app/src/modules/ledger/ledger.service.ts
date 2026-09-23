@@ -11,6 +11,13 @@ import { CreateReceiptDto } from "./dto/create-receipt.dto";
 import { CreatePaymentDto } from "./dto/create-payment.dto";
 import { FinancialYearGuardService } from "../financial-year/financial-year-guard.service";
 
+// Synthetic, non-Customer/Supplier parties for ledger rows that don't
+// belong to a real party - partyId/partyType carry no foreign key, so
+// these are just fixed strings the reports layer recognizes by name.
+export const HOUSE_CASH_SALE_PARTY_ID = "HOUSE_CASH_SALE";
+export const HOUSE_SHORT_EXCESS_PARTY_ID = "HOUSE_SHORT_EXCESS";
+export const HOUSE_PETTY_EXPENSE_PARTY_ID = "HOUSE_PETTY_EXPENSE";
+
 @Injectable()
 export class LedgerService {
   constructor(
@@ -44,6 +51,114 @@ export class LedgerService {
         creditAmount: 0,
 
         remarks: "Credit Sales Bill",
+      },
+    });
+  }
+
+  // =========================================================
+  // SALE - CASH/UPI/CARD SETTLEMENT (paired debit)
+  //
+  // Only used alongside postSaleReceipt() below, when the sale is
+  // tied to a real customer, so the immediate cash/upi/card portion
+  // nets to zero on the customer's outstanding balance - it was
+  // never a receivable, so it must not linger as one.
+  // =========================================================
+
+  async postSaleSettlementDebit(
+    customerId: string,
+    amount: number,
+    salesBillId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.ledgerEntry.create({
+      data: {
+        transactionDate: new Date(),
+
+        partyType: "CUSTOMER",
+        partyId: customerId,
+
+        transactionType: "SALE_SETTLED",
+
+        referenceType: "SALES_BILL",
+        referenceId: salesBillId,
+
+        debitAmount: amount,
+        creditAmount: 0,
+
+        remarks: "Cash/UPI/Card Sale (settled immediately)",
+      },
+    });
+  }
+
+  // =========================================================
+  // SALE - CASH/UPI/CARD RECEIPT
+  //
+  // The money-in leg for a payment collected at the time of sale.
+  // paymentMode drives Cash Book / Card Book / UPI Book filtering.
+  // Posted against the customer (paired with the debit above) when
+  // one is on the bill, otherwise against the HOUSE walk-in party.
+  // =========================================================
+
+  async postSaleReceipt(
+    partyType: "CUSTOMER" | "HOUSE",
+    partyId: string,
+    paymentMode: string,
+    amount: number,
+    salesBillId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.ledgerEntry.create({
+      data: {
+        transactionDate: new Date(),
+
+        partyType,
+        partyId,
+
+        transactionType: "RECEIPT",
+
+        referenceType: "SALES_BILL",
+        referenceId: salesBillId,
+
+        debitAmount: 0,
+        creditAmount: amount,
+
+        paymentMode,
+
+        remarks: `${paymentMode} Sale Receipt`,
+      },
+    });
+  }
+
+  // =========================================================
+  // SHORT AMOUNT - HOUSE WRITE-OFF
+  //
+  // Purely internal bookkeeping - never posted against the
+  // customer, who was never charged this and doesn't owe it.
+  // Lets Day Book show the total short amounts absorbed.
+  // =========================================================
+
+  async postShortAndExcess(
+    amount: number,
+    salesBillId: string,
+    billNo: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.ledgerEntry.create({
+      data: {
+        transactionDate: new Date(),
+
+        partyType: "HOUSE",
+        partyId: HOUSE_SHORT_EXCESS_PARTY_ID,
+
+        transactionType: "SHORT_AND_EXCESS",
+
+        referenceType: "SALES_BILL",
+        referenceId: salesBillId,
+
+        debitAmount: amount,
+        creditAmount: 0,
+
+        remarks: `Short amount on Bill ${billNo}`,
       },
     });
   }
@@ -134,6 +249,143 @@ export class LedgerService {
         creditAmount: 0,
 
         remarks: "Purchase Return",
+      },
+    });
+  }
+
+  // =========================================================
+  // PETTY EXPENSE
+  //
+  // Posted as a PAYMENT against the synthetic HOUSE party (no real
+  // supplier involved) purely so it flows straight into Cash Book
+  // / Card Book / UPI Book alongside every other PAYMENT, with no
+  // changes needed to those reports.
+  // =========================================================
+
+  async postPettyExpense(
+    amount: number,
+    paymentMode: string,
+    pettyExpenseId: string,
+    remarks: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.ledgerEntry.create({
+      data: {
+        transactionDate: new Date(),
+
+        partyType: "HOUSE",
+        partyId: HOUSE_PETTY_EXPENSE_PARTY_ID,
+
+        transactionType: "PAYMENT",
+
+        referenceType: "PETTY_EXPENSE",
+        referenceId: pettyExpenseId,
+
+        debitAmount: amount,
+        creditAmount: 0,
+
+        remarks,
+
+        paymentMode,
+      },
+    });
+  }
+
+  // =========================================================
+  // DEBIT NOTE (standalone adjustment against a supplier -
+  // reduces what we owe them, same sign as PURCHASE_RETURN)
+  // =========================================================
+
+  async postDebitNote(
+    supplierId: string,
+    amount: number,
+    adjustmentNoteId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.ledgerEntry.create({
+      data: {
+        transactionDate: new Date(),
+
+        partyType: "SUPPLIER",
+        partyId: supplierId,
+
+        transactionType: "DEBIT_NOTE",
+
+        referenceType: "ADJUSTMENT_NOTE",
+        referenceId: adjustmentNoteId,
+
+        debitAmount: amount,
+        creditAmount: 0,
+
+        remarks: "Debit Note",
+      },
+    });
+  }
+
+  // =========================================================
+  // CREDIT NOTE (standalone adjustment against a customer -
+  // reduces what they owe us, same sign as RECEIPT)
+  // =========================================================
+
+  async postCreditNote(
+    customerId: string,
+    amount: number,
+    adjustmentNoteId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    return prisma.ledgerEntry.create({
+      data: {
+        transactionDate: new Date(),
+
+        partyType: "CUSTOMER",
+        partyId: customerId,
+
+        transactionType: "CREDIT_NOTE",
+
+        referenceType: "ADJUSTMENT_NOTE",
+        referenceId: adjustmentNoteId,
+
+        debitAmount: 0,
+        creditAmount: amount,
+
+        remarks: "Credit Note",
+      },
+    });
+  }
+
+  /*
+   * Opposite-signed reversal for cancelling a debit/credit note -
+   * the original entry is kept (audit trail), this nets it out.
+   */
+  async reverseAdjustmentNote(
+    partyType: "SUPPLIER" | "CUSTOMER",
+    partyId: string,
+    amount: number,
+    adjustmentNoteId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    const isDebit = partyType === "SUPPLIER";
+
+    return prisma.ledgerEntry.create({
+      data: {
+        transactionDate: new Date(),
+
+        partyType,
+        partyId,
+
+        transactionType: isDebit
+          ? "DEBIT_NOTE_CANCELLED"
+          : "CREDIT_NOTE_CANCELLED",
+
+        referenceType: "ADJUSTMENT_NOTE",
+        referenceId: adjustmentNoteId,
+
+        debitAmount: isDebit ? 0 : amount,
+        creditAmount: isDebit ? amount : 0,
+
+        remarks: isDebit
+          ? "Debit Note Cancelled"
+          : "Credit Note Cancelled",
       },
     });
   }

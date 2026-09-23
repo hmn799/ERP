@@ -302,9 +302,16 @@ export default function SaleReturnListPage() {
 
           <Link
             href="/sales/list"
+            className="rounded-md border px-4 py-2 text-sm font-medium hover:bg-gray-50"
+          >
+            + Return Against a Bill
+          </Link>
+
+          <Link
+            href="/sales/returns/new"
             className="rounded-md bg-black px-4 py-2 text-sm font-medium text-white hover:bg-gray-800"
           >
-            + New Sales Return
+            + Direct Return (No Bill)
           </Link>
 
         </div>

@@ -61,6 +61,8 @@ export default function SchemeForm({
   const [discountPercent, setDiscountPercent] =
     useState("");
   const [isActive, setIsActive] = useState(true);
+  const [effectiveFrom, setEffectiveFrom] = useState("");
+  const [effectiveTo, setEffectiveTo] = useState("");
 
   useEffect(() => {
     if (defaultValues) {
@@ -86,6 +88,16 @@ export default function SchemeForm({
           : "",
       );
       setIsActive(defaultValues.isActive ?? true);
+      setEffectiveFrom(
+        defaultValues.effectiveFrom
+          ? defaultValues.effectiveFrom.slice(0, 10)
+          : "",
+      );
+      setEffectiveTo(
+        defaultValues.effectiveTo
+          ? defaultValues.effectiveTo.slice(0, 10)
+          : "",
+      );
     } else {
       setName("");
       setSchemeType("QUANTITY");
@@ -95,6 +107,8 @@ export default function SchemeForm({
       setFreeItemId("");
       setDiscountPercent("");
       setIsActive(true);
+      setEffectiveFrom("");
+      setEffectiveTo("");
     }
   }, [defaultValues]);
 
@@ -126,6 +140,8 @@ export default function SchemeForm({
               ? Number(discountPercent) || undefined
               : undefined,
           isActive,
+          effectiveFrom: effectiveFrom || null,
+          effectiveTo: effectiveTo || null,
         });
       }}
     >
@@ -262,6 +278,40 @@ export default function SchemeForm({
           />
         </div>
       )}
+
+      <div className="grid grid-cols-2 gap-3">
+        <div className="space-y-2">
+          <Label>Start Date</Label>
+          <Input
+            type="date"
+            value={effectiveFrom}
+            disabled={loading}
+            max={effectiveTo || undefined}
+            onChange={(e) =>
+              setEffectiveFrom(e.target.value)
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label>End Date</Label>
+          <Input
+            type="date"
+            value={effectiveTo}
+            disabled={loading}
+            min={effectiveFrom || undefined}
+            onChange={(e) =>
+              setEffectiveTo(e.target.value)
+            }
+          />
+        </div>
+      </div>
+
+      <p className="text-xs text-gray-500">
+        Leave either date blank for no limit. Outside this
+        window the scheme won&apos;t apply on a bill, even
+        if Active is checked.
+      </p>
 
       <label className="flex items-center gap-2 text-sm">
         <input

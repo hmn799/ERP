@@ -51,6 +51,6 @@ export interface CreateSchemeDto {
 
   isActive?: boolean;
 
-  effectiveFrom?: string;
-  effectiveTo?: string;
+  effectiveFrom?: string | null;
+  effectiveTo?: string | null;
 }

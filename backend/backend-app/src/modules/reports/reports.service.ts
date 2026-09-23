@@ -5,6 +5,14 @@ import { SettingsService } from '../settings/settings.service';
 import { PdfService } from '../../core/pdf/pdf.service';
 import { CompanyService } from '../company/company.service';
 
+// HOUSE partyIds are synthetic (see LedgerService), never rows in
+// the Customer/Supplier tables, so they're named here instead.
+const HOUSE_PARTY_NAMES: Record<string, string> = {
+  HOUSE_CASH_SALE: 'Cash Sale (Walk-in)',
+  HOUSE_SHORT_EXCESS: 'Short & Excess',
+  HOUSE_PETTY_EXPENSE: 'Petty Expense',
+};
+
 @Injectable()
 export class ReportsService {
   constructor(
@@ -490,11 +498,51 @@ async supplierStatement(
      * comment in schema.prisma) - excluding those here is what
      * makes this a cash book rather than a combined cash+bank book
      * (that's bankBook() below, and dayBook() above for everything
-     * unfiltered).
+     * unfiltered). paymentMode null covers legacy/manual RECEIPT
+     * and PAYMENT rows (Receipts/Payments screens, which predate
+     * paymentMode and have no mode of their own to check); 'CASH'
+     * covers the settlement receipts posted at time of sale - see
+     * LedgerService.postSaleReceipt. CARD/UPI sale receipts are
+     * excluded here - see cardBook()/upiBook() below.
      */
     async cashBook(
   from: string,
   to: string,
+) {
+  return this.moneyBook(from, to, [null, 'CASH']);
+}
+
+    /*
+     * CARD BOOK - the CARD portion of postSaleReceipt() settlement
+     * receipts. Mirrors cashBook() exactly but for card collections.
+     */
+    async cardBook(
+  from: string,
+  to: string,
+) {
+  return this.moneyBook(from, to, ['CARD']);
+}
+
+    /*
+     * UPI BOOK - the UPI portion of postSaleReceipt() settlement
+     * receipts. Mirrors cashBook() exactly but for UPI collections.
+     */
+    async upiBook(
+  from: string,
+  to: string,
+) {
+  return this.moneyBook(from, to, ['UPI']);
+}
+
+    /*
+     * Shared by cashBook/cardBook/upiBook - each is the same
+     * RECEIPT/PAYMENT-with-a-running-balance shape, filtered to a
+     * different set of paymentMode values.
+     */
+    private async moneyBook(
+  from: string,
+  to: string,
+  paymentModes: (string | null)[],
 ) {
   const fromDate = new Date(from);
   const toDate = new Date(to);
@@ -509,14 +557,16 @@ async supplierStatement(
 
         bankAccountId: null,
 
-        OR: [
-          {
-            transactionType: 'RECEIPT',
-          },
-          {
-            transactionType: 'PAYMENT',
-          },
-        ],
+        transactionType: {
+          in: ['RECEIPT', 'PAYMENT'],
+        },
+
+        // SQL's IN never matches NULL, so a null mode is spelled
+        // out as its own { paymentMode: null } clause rather than
+        // relied on inside an `in` array.
+        OR: paymentModes.map(
+          (mode) => ({ paymentMode: mode }),
+        ),
       },
 
       orderBy: {
@@ -626,7 +676,8 @@ async supplierStatement(
      * Shared by cashBook/bankBook - a ledger row's partyId is a
      * Customer id (partyType "CUSTOMER") or Supplier id
      * ("SUPPLIER"); look both up in one pass per book rather than
-     * per row.
+     * per row. HOUSE rows (walk-in cash sales, the short & excess
+     * write-off account) aren't real parties - name them statically.
      */
     private async resolvePartyNames(
   rows: { partyType: string; partyId: string }[],
@@ -663,6 +714,16 @@ async supplierStatement(
 
   for (const supplier of suppliers) {
     map.set(supplier.id, supplier.name);
+  }
+
+  for (const row of rows) {
+    if (row.partyType === 'HOUSE') {
+      map.set(
+        row.partyId,
+        HOUSE_PARTY_NAMES[row.partyId] ??
+          row.partyId,
+      );
+    }
   }
 
   return map;
@@ -811,13 +872,28 @@ async profitReport() {
       },
     });
 
+  const damages =
+    await this.prisma.stockDamage.findMany({
+      where: { status: 'ACTIVE' },
+      include: { item: true, batch: true },
+    });
+
   const result: any[] = [];
 
   for (const row of salesItems) {
-    const qty = Number(row.qty);
+    /*
+     * A return line taken back within a bill (an exchange) reverses
+     * both the sale and its cost basis - sign-flipped here so it
+     * shows (and nets) as a negative-qty line rather than being
+     * counted as more of the item sold.
+     */
+
+    const sign = row.isReturn ? -1 : 1;
+
+    const qty = sign * Number(row.qty);
 
     const saleValue =
-      Number(row.netAmount);
+      sign * Number(row.netAmount);
 
     const costValue =
       qty *
@@ -844,6 +920,33 @@ async profitReport() {
       costValue,
 
       profit,
+    });
+  }
+
+  /*
+   * Damaged/written-off stock as a loss line - no sale, its full
+   * cost value straight to a negative profit, so it counts against
+   * Total Profit here and on the dashboard instead of just
+   * disappearing from stock counts with no financial trace.
+   */
+  for (const damage of damages) {
+    const costValue = Number(damage.costValue);
+
+    result.push({
+      itemCode: damage.item.itemCode,
+      itemName: `${damage.item.name} (Damaged: ${damage.reason})`,
+
+      batchNo: damage.batch.batchNo,
+
+      qty: -Number(damage.qty),
+
+      saleRate: 0,
+      saleValue: 0,
+
+      purchaseRate: Number(damage.batch.purchaseRate),
+      costValue,
+
+      profit: -costValue,
     });
   }
 
@@ -875,8 +978,12 @@ async itemSalesReport() {
 
     const current = map.get(itemId);
 
-    current.qtySold += Number(row.qty);
-    current.salesValue += Number(row.netAmount);
+    // A return line within a bill (an exchange) subtracts from
+    // this item's totals instead of adding to them.
+    const sign = row.isReturn ? -1 : 1;
+
+    current.qtySold += sign * Number(row.qty);
+    current.salesValue += sign * Number(row.netAmount);
   }
 
   return Array.from(map.values()).map((x: any) => ({
@@ -1193,6 +1300,16 @@ async dashboard() {
 
     totalProfit +=
       saleValue - costValue;
+  }
+
+  const activeDamages =
+    await this.prisma.stockDamage.findMany({
+      where: { status: 'ACTIVE' },
+      select: { costValue: true },
+    });
+
+  for (const damage of activeDamages) {
+    totalProfit -= Number(damage.costValue);
   }
 
   const deadStock =
@@ -1804,6 +1921,31 @@ async gstr1(month?: string) {
 
   const company = await this.companyGstProfile();
 
+  const creditDebitNoteRows =
+    await this.prisma.adjustmentNote.findMany({
+      where: {
+        noteDate: { gte: start, lte: end },
+        status: 'ACTIVE',
+      },
+      include: { items: true },
+      orderBy: { noteDate: 'asc' },
+    });
+
+  const cdnCustomerIds = creditDebitNoteRows
+    .filter((n) => n.partyType === 'CUSTOMER')
+    .map((n) => n.partyId);
+
+  const cdnCustomers = cdnCustomerIds.length
+    ? await this.prisma.customer.findMany({
+        where: { id: { in: cdnCustomerIds } },
+        select: { id: true, name: true, gstin: true },
+      })
+    : [];
+
+  const cdnCustomerMap = new Map(
+    cdnCustomers.map((c) => [c.id, c]),
+  );
+
   const bills = await this.prisma.salesBill.findMany({
     where: {
       billDate: { gte: start, lte: end },
@@ -1872,6 +2014,11 @@ async gstr1(month?: string) {
       });
     } else {
       for (const line of bill.items) {
+        // A return line taken back within this bill (an exchange)
+        // subtracts from its bucket instead of adding to it - it
+        // was never actually supplied out.
+        const lineSign = line.isReturn ? -1 : 1;
+
         const ratePercent = Number(line.gstPercent);
         const key = `${placeOfSupply}|${ratePercent}`;
 
@@ -1887,16 +2034,18 @@ async gstr1(month?: string) {
         }
 
         const bucket = b2csMap.get(key);
-        bucket.taxableValue += Number(
+        bucket.taxableValue += lineSign * Number(
           line.taxableAmount,
         );
-        bucket.cgst += Number(line.cgstAmount);
-        bucket.sgst += Number(line.sgstAmount);
-        bucket.igst += Number(line.igstAmount);
+        bucket.cgst += lineSign * Number(line.cgstAmount);
+        bucket.sgst += lineSign * Number(line.sgstAmount);
+        bucket.igst += lineSign * Number(line.igstAmount);
       }
     }
 
     for (const line of bill.items) {
+      const lineSign = line.isReturn ? -1 : 1;
+
       const hsn =
         line.item.hsnCode?.trim() || 'UNSPECIFIED';
 
@@ -1912,13 +2061,13 @@ async gstr1(month?: string) {
       }
 
       const bucket = hsnMap.get(hsn);
-      bucket.qty += Number(line.qty);
-      bucket.taxableValue += Number(
+      bucket.qty += lineSign * Number(line.qty);
+      bucket.taxableValue += lineSign * Number(
         line.taxableAmount,
       );
-      bucket.cgst += Number(line.cgstAmount);
-      bucket.sgst += Number(line.sgstAmount);
-      bucket.igst += Number(line.igstAmount);
+      bucket.cgst += lineSign * Number(line.cgstAmount);
+      bucket.sgst += lineSign * Number(line.sgstAmount);
+      bucket.igst += lineSign * Number(line.igstAmount);
     }
   }
 
@@ -1955,11 +2104,35 @@ async gstr1(month?: string) {
         igst: round2(row.igst),
       }),
     ),
+    // CDNR - Credit/Debit Notes Registered. Only customer-side
+    // notes belong in an OUTWARD-supply return; a debit note in
+    // this app is always supplier-side (see AdjustmentNote) and is
+    // excluded here.
+    creditDebitNotes: creditDebitNoteRows
+      .filter((n) => n.partyType === 'CUSTOMER')
+      .map((n) => {
+        const customer = cdnCustomerMap.get(n.partyId);
+
+        return {
+          noteNo: n.noteNo,
+          noteType: n.noteType,
+          noteDate: n.noteDate,
+          partyName: customer?.name ?? 'Unknown',
+          gstin: customer?.gstin ?? null,
+          reason: n.reason,
+          taxableValue: round2(Number(n.taxableAmount)),
+          cgst: round2(Number(n.cgstAmount)),
+          sgst: round2(Number(n.sgstAmount)),
+          igst: round2(Number(n.igstAmount)),
+          netAmount: round2(Number(n.netAmount)),
+        };
+      }),
     notes: [
       ...company.notes,
       'B2C (Large) requires an inter-state invoice over ₹2,50,000. This billing engine currently always computes CGST+SGST (IGST is not yet supported for sales), so this section will stay empty until inter-state billing is implemented.',
       'Nil-rated, exempt, and export supplies are not tracked separately and are not included in this return.',
       'HSN codes are optional on items in this system - lines from items without one are grouped under "UNSPECIFIED".',
+      'Credit/Debit Notes (CDNR) only lists notes raised against customers - a debit note here is always raised against a supplier and affects purchase-side accounting only, not this outward-supply return.',
     ],
   };
 }
@@ -1970,9 +2143,33 @@ async gstr3b(month?: string) {
 
   const company = await this.companyGstProfile();
 
-  const [salesAgg, purchaseAgg] = await Promise.all([
+  const [
+    salesAgg,
+    salesReturnAgg,
+    purchaseAgg,
+    creditNoteAgg,
+  ] = await Promise.all([
     this.prisma.salesBillItem.aggregate({
       where: {
+        isReturn: false,
+        salesBill: {
+          billDate: { gte: start, lte: end },
+        },
+      },
+      _sum: {
+        taxableAmount: true,
+        cgstAmount: true,
+        sgstAmount: true,
+        igstAmount: true,
+      },
+    }),
+
+    // A return line taken back within a bill (an exchange) was
+    // never actually supplied out - subtracted from outward
+    // supplies below instead of being aggregated into them.
+    this.prisma.salesBillItem.aggregate({
+      where: {
+        isReturn: true,
         salesBill: {
           billDate: { gte: start, lte: end },
         },
@@ -1999,23 +2196,45 @@ async gstr3b(month?: string) {
         igstAmount: true,
       },
     }),
+
+    // A credit note (always customer-side) reduces outward supply
+    // value the same way a sales return does - a debit note is
+    // always supplier-side (a purchase-side adjustment) and never
+    // touches outward tax, so only CREDIT is aggregated here.
+    this.prisma.adjustmentNote.aggregate({
+      where: {
+        noteType: 'CREDIT',
+        status: 'ACTIVE',
+        noteDate: { gte: start, lte: end },
+      },
+      _sum: {
+        taxableAmount: true,
+        cgstAmount: true,
+        sgstAmount: true,
+        igstAmount: true,
+      },
+    }),
   ]);
 
   const round2 = (value: number) =>
     Number((value || 0).toFixed(2));
 
-  const outwardTaxable = Number(
-    salesAgg._sum.taxableAmount || 0,
-  );
-  const outwardCgst = Number(
-    salesAgg._sum.cgstAmount || 0,
-  );
-  const outwardSgst = Number(
-    salesAgg._sum.sgstAmount || 0,
-  );
-  const outwardIgst = Number(
-    salesAgg._sum.igstAmount || 0,
-  );
+  const outwardTaxable =
+    Number(salesAgg._sum.taxableAmount || 0) -
+    Number(salesReturnAgg._sum.taxableAmount || 0) -
+    Number(creditNoteAgg._sum.taxableAmount || 0);
+  const outwardCgst =
+    Number(salesAgg._sum.cgstAmount || 0) -
+    Number(salesReturnAgg._sum.cgstAmount || 0) -
+    Number(creditNoteAgg._sum.cgstAmount || 0);
+  const outwardSgst =
+    Number(salesAgg._sum.sgstAmount || 0) -
+    Number(salesReturnAgg._sum.sgstAmount || 0) -
+    Number(creditNoteAgg._sum.sgstAmount || 0);
+  const outwardIgst =
+    Number(salesAgg._sum.igstAmount || 0) -
+    Number(salesReturnAgg._sum.igstAmount || 0) -
+    Number(creditNoteAgg._sum.igstAmount || 0);
 
   const itcTaxable = Number(
     purchaseAgg._sum.taxableAmount || 0,

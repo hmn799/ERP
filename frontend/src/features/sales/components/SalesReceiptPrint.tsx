@@ -197,9 +197,12 @@ export default function SalesReceiptPrint({
             <div className="receipt-item-row">
               <span className="receipt-col-item">
                 {index + 1}.{" "}
-                {item.item?.name ||
+                {item.description ||
+                  item.item?.name ||
                   item.item?.itemCode ||
                   "-"}
+                {item.isReturn &&
+                  " (Return)"}
               </span>
 
               <span className="receipt-col-qty">
@@ -222,6 +225,7 @@ export default function SalesReceiptPrint({
               </span>
 
               <span className="receipt-col-amt">
+                {item.isReturn && "-"}
                 {formatCurrency(
                   Number(item.netAmount ?? 0),
                 )}

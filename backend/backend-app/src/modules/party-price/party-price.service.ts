@@ -32,6 +32,8 @@ export class PartyPriceService {
           customerId: dto.customerId,
           itemId: dto.itemId,
 
+          minQty: dto.minQty,
+
           salePrice: dto.salePrice,
 
           minimumPrice: dto.minimumPrice,
@@ -181,6 +183,9 @@ export class PartyPriceService {
     const updated = await this.prisma.partyPrice.update({
       where: { id },
       data: {
+        minQty:
+          dto.minQty ?? existing.minQty,
+
         salePrice:
           dto.salePrice ?? existing.salePrice,
 
@@ -280,6 +285,22 @@ export class PartyPriceService {
       );
     }
 
+    const duplicateTier =
+      await this.prisma.partyPrice.findFirst({
+        where: {
+          customerId: dto.customerId,
+          itemId: dto.itemId,
+          minQty: dto.minQty ?? 1,
+          isActive: true,
+        },
+      });
+
+    if (duplicateTier) {
+      throw new BadRequestException(
+        `A tier starting at qty ${dto.minQty ?? 1} already exists for this customer and item.`,
+      );
+    }
+
     if (
       dto.minimumPrice !== undefined &&
       dto.minimumPrice > dto.salePrice
@@ -316,6 +337,28 @@ export class PartyPriceService {
     existing: Prisma.PartyPriceGetPayload<{}>,
     dto: UpdatePartyPriceDto,
   ) {
+    if (
+      dto.minQty !== undefined &&
+      Number(dto.minQty) !== Number(existing.minQty)
+    ) {
+      const duplicateTier =
+        await this.prisma.partyPrice.findFirst({
+          where: {
+            id: { not: existing.id },
+            customerId: existing.customerId,
+            itemId: existing.itemId,
+            minQty: dto.minQty,
+            isActive: true,
+          },
+        });
+
+      if (duplicateTier) {
+        throw new BadRequestException(
+          `A tier starting at qty ${dto.minQty} already exists for this customer and item.`,
+        );
+      }
+    }
+
     const salePrice =
       dto.salePrice ??
       Number(existing.salePrice);

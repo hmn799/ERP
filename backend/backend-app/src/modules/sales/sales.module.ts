@@ -6,6 +6,7 @@ import { DocumentNumberModule } from '../../core/document-number/document-number
 import { SchemeModule } from '../scheme/scheme.module';
 import { PdfModule } from '../../core/pdf/pdf.module';
 import { CompanyModule } from '../company/company.module';
+import { PricingEngineModule } from '../../core/pricing-engine/pricing-engine.module';
 
 import { SalesController } from './sales.controller';
 import { SalesService } from './sales.service';
@@ -26,6 +27,7 @@ import { HeldSaleService } from './services/held-sale.service';
     SchemeModule,
     PdfModule,
     CompanyModule,
+    PricingEngineModule,
   ],
 
   controllers: [

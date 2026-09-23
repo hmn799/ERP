@@ -36,6 +36,7 @@ enum BatchCreationReason {
   EXPIRY_CHANGED
   MANUFACTURING_CHANGED
   MANUAL
+  GENERAL_ITEM
 }
 
 enum SchemeType {
@@ -170,6 +171,17 @@ model Shortcut {
 
   isEnabled Boolean @default(true)
 
+  // SYSTEM (seeded, wired to hardcoded behavior in a specific
+  // page - actionCode is meaningless without matching frontend
+  // code) or NAVIGATE (admin-created via the Shortcuts screen -
+  // generic "jump to this page" behavior handled by one shared
+  // listener, so it works immediately with no code changes).
+  actionType String @default("SYSTEM")
+
+  // Only set (and only meaningful) for actionType = NAVIGATE -
+  // the app route the shared navigation listener pushes to.
+  targetPath String?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -276,6 +288,15 @@ model Item {
   minQty     Decimal @default(0) @db.Decimal(12, 2)
   reorderQty Decimal @default(0) @db.Decimal(12, 2)
 
+  // A catch-all item for billing something that isn't in the
+  // catalog (a one-off repair, a service charge, scrap). Sold
+  // through the normal Item/Batch pipeline via one auto-created
+  // placeholder batch, but never stock-tracked - postStock/
+  // reverseStock skip it entirely - and its line's own typed-in
+  // `description` (SalesBillItem.description) stands in for this
+  // item's own name wherever the bill is shown or printed.
+  isGeneralItem Boolean @default(false)
+
   isActive           Boolean              @default(true)
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
@@ -295,6 +316,7 @@ model Item {
   SaleReturnItem     SaleReturnItem[]
   PurchaseReturnItem PurchaseReturnItem[]
   purchaseOrderItems PurchaseOrderItem[]
+  stockDamages       StockDamage[]
   salesOrderItems    SalesOrderItem[]
   itemPrices         ItemPrice[]
   partyPrices        PartyPrice[]
@@ -322,6 +344,7 @@ model Warehouse {
   PurchaseReturn     PurchaseReturn[]
   purchaseOrders     PurchaseOrder[]
   salesOrders        SalesOrder[]
+  stockDamages       StockDamage[]
 }
 
 model SystemSetting {
@@ -410,6 +433,7 @@ model Batch {
   saleReturnItems     SaleReturnItem[]
   stockLedgers        StockLedger[]
   stockTransferItems  StockTransferItem[]
+  stockDamages        StockDamage[]
 
   barcodes BatchBarcode[]
 }
@@ -648,6 +672,11 @@ model PartyPrice {
   customerId String
   itemId     String
 
+  // Same qty-tiering as ItemPrice.minQty - a customer-specific rate
+  // can itself vary by qty, checked before falling back to the
+  // item's price-list tiers.
+  minQty Decimal @default(1) @db.Decimal(10, 2)
+
   salePrice Decimal @db.Decimal(12, 2)
 
   minimumPrice Decimal? @db.Decimal(12, 2)
@@ -799,6 +828,13 @@ model ItemPrice {
   itemId      String
   priceListId String
 
+  // The qty threshold this rate kicks in at - the rate used for a
+  // given sale qty is the tier with the highest minQty not
+  // exceeding it, among all active tiers for this item+price list.
+  // Every item+price list always has at least one tier (minQty 1)
+  // for this to fall back to.
+  minQty Decimal @default(1) @db.Decimal(10, 2)
+
   salePrice Decimal @db.Decimal(12, 2)
 
   minimumPrice Decimal? @db.Decimal(12, 2)
@@ -949,6 +985,21 @@ model SalesBillItem {
   item            Item      @relation(fields: [itemId], references: [id])
   salesBill       SalesBill @relation(fields: [salesBillId], references: [id])
 
+  // Free-text line description, only ever set for a general
+  // (non-catalog) item - what actually sold, since the Item master
+  // itself is just a shared placeholder ("General Item"). Null for
+  // every ordinary catalog item, which keeps showing item.name.
+  description String?
+
+  // A return taken back within this same bill (an exchange: sell
+  // some items, take one back, net the payment) rather than a
+  // separate SaleReturn document. qty/saleRate/taxableAmount/etc.
+  // on this row all stay positive - it's the bill-level totals
+  // (SalesBill.grossAmount, netAmount, ...) that subtract this
+  // row's amounts instead of adding them. Stock is restored for
+  // this row (the opposite of a normal sale line), not consumed.
+  isReturn Boolean @default(false)
+
   /*
    * Scheme applied to this line, if any.
    *
@@ -971,7 +1022,13 @@ model SaleReturn {
   returnNo   String   @unique
   returnDate DateTime
 
-  salesBillId String
+  // Null for a direct return - one taken back without a previous
+  // sales bill on file (a walk-in return, a lost receipt, stock
+  // simply coming back). Every validation that leans on the
+  // original bill (matching warehouse/customer, capping returnable
+  // qty, forcing rate/GST to match) is skipped for these - the
+  // operator's entered item/batch/qty/rate/gst is trusted directly.
+  salesBillId String?
 
   customerId  String?
   warehouseId String
@@ -987,7 +1044,7 @@ model SaleReturn {
 
   createdAt DateTime @default(now())
 
-  salesBill SalesBill @relation(fields: [salesBillId], references: [id])
+  salesBill SalesBill? @relation(fields: [salesBillId], references: [id])
 
   customer Customer? @relation(fields: [customerId], references: [id])
 
@@ -1073,9 +1130,17 @@ model LedgerEntry {
   // (SALE, PURCHASE, etc.).
   bankAccountId String?
 
+  // Set only on the RECEIPT entries posted at the moment of sale
+  // (CASH/UPI/CARD) so Cash Book / Card Book / UPI Book can each
+  // tally against real point-of-sale collections. Left null for
+  // everything else, including manual receipts/payments collected
+  // via the Receipts/Payments screens.
+  paymentMode String?
+
   createdAt DateTime @default(now())
 
   @@index([bankAccountId])
+  @@index([paymentMode])
 }
 
 // Chart-of-accounts style grouping (e.g. Sundry Debtors, Sundry
@@ -1365,3 +1430,140 @@ model DocumentSeries {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+/*
+ * Debit Note (against a SUPPLIER) / Credit Note (against a
+ * CUSTOMER) - a pure accounting adjustment to what a party owes,
+ * raised for a reason that ISN'T a physical goods return (rate
+ * correction, a discount agreed after the bill, interest/penalty,
+ * compensation for damage without a formal return, a rounding
+ * fix...). Purchase Return / Sale Return already cover the
+ * stock-moving case and post their own ledger entries; this is the
+ * no-stock-movement sibling. Always reduces the party's balance -
+ * a debit note lowers what we owe a supplier, a credit note lowers
+ * what a customer owes us - mirroring PURCHASE_RETURN/RECEIPT's own
+ * sign convention in LedgerService.
+ */
+model AdjustmentNote {
+  id String @id @default(cuid())
+
+  noteNo   String @unique
+  noteType String // DEBIT | CREDIT
+
+  noteDate DateTime
+
+  partyType String // SUPPLIER | CUSTOMER
+  partyId   String
+
+  reason String
+
+  referenceType String?
+  referenceId   String?
+
+  taxableAmount Decimal @db.Decimal(14, 2)
+  cgstAmount    Decimal @db.Decimal(14, 2)
+  sgstAmount    Decimal @db.Decimal(14, 2)
+  igstAmount    Decimal @db.Decimal(14, 2)
+  netAmount     Decimal @db.Decimal(14, 2)
+
+  status String @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items AdjustmentNoteItem[]
+
+  @@index([partyType, partyId])
+  @@index([noteType])
+  @@index([noteDate])
+}
+
+model AdjustmentNoteItem {
+  id               String @id @default(cuid())
+  adjustmentNoteId String
+
+  // Free text, not tied to the Item catalog - a debit/credit note
+  // is usually raised for a reason ("rate difference on Bill
+  // #123", "damaged in transit"), not a re-billing of a catalog
+  // item.
+  description String
+  hsnCode     String?
+
+  taxableAmount Decimal @db.Decimal(14, 2)
+  gstPercent    Decimal @db.Decimal(5, 2)
+  cgstAmount    Decimal @db.Decimal(14, 2)
+  sgstAmount    Decimal @db.Decimal(14, 2)
+  igstAmount    Decimal @db.Decimal(14, 2)
+  netAmount     Decimal @db.Decimal(14, 2)
+
+  adjustmentNote AdjustmentNote @relation(fields: [adjustmentNoteId], references: [id], onDelete: Cascade)
+
+  @@index([adjustmentNoteId])
+}
+
+/*
+ * Writes off stock that's expired, broken, or spoiled - removes it
+ * from WarehouseStock/StockLedger like any other outgoing
+ * movement, and books its cost value as a loss (surfaced as a
+ * negative-profit line in the Profit Report and the dashboard's
+ * Total Profit tile) rather than letting it silently vanish from
+ * inventory counts with no financial trace.
+ */
+model StockDamage {
+  id String @id @default(cuid())
+
+  damageNo   String   @unique
+  damageDate DateTime
+
+  warehouseId String
+  itemId      String
+  batchId     String
+
+  qty Decimal @db.Decimal(14, 2)
+
+  // qty * the batch's purchaseRate at the time of write-off - the
+  // loss value booked against Profit Report / dashboard totals.
+  costValue Decimal @db.Decimal(14, 2)
+
+  reason String
+
+  status String @default("ACTIVE")
+
+  createdAt DateTime @default(now())
+
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id])
+  item      Item      @relation(fields: [itemId], references: [id])
+  batch     Batch     @relation(fields: [batchId], references: [id])
+
+  @@index([warehouseId])
+  @@index([itemId])
+  @@index([batchId])
+  @@index([damageDate])
+}
+
+/*
+ * A quick cash-drawer-style expense log (tea, auto fare,
+ * stationery...) - posted as a normal PAYMENT ledger entry against
+ * a synthetic HOUSE party so it automatically shows up in Cash
+ * Book / Card Book / UPI Book alongside everything else, with zero
+ * changes needed to those reports.
+ */
+model PettyExpense {
+  id String @id @default(cuid())
+
+  expenseNo   String   @unique
+  expenseDate DateTime
+
+  category String
+  amount   Decimal @db.Decimal(12, 2)
+
+  paymentMode String @default("CASH")
+
+  remarks String?
+
+  createdAt DateTime @default(now())
+
+  @@index([expenseDate])
+  @@index([category])
+}
+

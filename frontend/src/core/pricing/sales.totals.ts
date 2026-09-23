@@ -20,21 +20,29 @@ export interface SalesTotals {
  * spread across rows proportionally to their own taxable amount,
  * then CGST/SGST are re-derived off the post-discount taxable so
  * the tax always matches what's actually billed.
+ *
+ * A return row (isReturn) is excluded from that discount spread
+ * entirely - a discretionary discount on what's being sold has no
+ * bearing on an item taken back - and its own full amount is
+ * subtracted from the bill total afterward instead. Mirrors the
+ * backend's sales-calculation.service.ts exactly.
  */
 export function calculateSalesTotals(
   rows: SalesRowLike[],
   billDiscountPercent: number,
   taxMode: SalesTaxMode = "EXCLUSIVE",
 ): SalesTotals {
-  let gross = 0;
+  let saleGross = 0;
+  let saleItemDiscount = 0;
+  let saleTaxable = 0;
+  let saleCgst = 0;
+  let saleSgst = 0;
 
-  let itemDiscount = 0;
-
-  let taxable = 0;
-
-  let cgst = 0;
-
-  let sgst = 0;
+  let returnGross = 0;
+  let returnItemDiscount = 0;
+  let returnTaxable = 0;
+  let returnCgst = 0;
+  let returnSgst = 0;
 
   for (const row of rows) {
     const amounts = calculateSalesRowAmounts(
@@ -42,49 +50,80 @@ export function calculateSalesTotals(
       taxMode,
     );
 
-    gross += amounts.grossAmount;
+    if (row.isReturn) {
+      returnGross +=
+        amounts.grossAmount;
 
-    itemDiscount +=
+      returnItemDiscount +=
+        amounts.discountAmount;
+
+      returnTaxable +=
+        amounts.taxableAmount;
+
+      returnCgst +=
+        amounts.cgstAmount;
+
+      returnSgst +=
+        amounts.sgstAmount;
+
+      continue;
+    }
+
+    saleGross += amounts.grossAmount;
+
+    saleItemDiscount +=
       amounts.discountAmount;
 
-    taxable += amounts.taxableAmount;
+    saleTaxable += amounts.taxableAmount;
 
-    cgst += amounts.cgstAmount;
+    saleCgst += amounts.cgstAmount;
 
-    sgst += amounts.sgstAmount;
+    saleSgst += amounts.sgstAmount;
   }
 
   const billDiscount =
-    (taxable * billDiscountPercent) / 100;
+    (saleTaxable * billDiscountPercent) /
+    100;
 
-  const finalTaxable =
-    taxable - billDiscount;
+  const finalSaleTaxable =
+    saleTaxable - billDiscount;
 
-  let finalCgst = cgst;
+  let finalSaleCgst = saleCgst;
 
-  let finalSgst = sgst;
+  let finalSaleSgst = saleSgst;
 
   if (billDiscount > 0) {
     const ratio =
-      taxable > 0
-        ? finalTaxable / taxable
+      saleTaxable > 0
+        ? finalSaleTaxable / saleTaxable
         : 0;
 
-    finalCgst = cgst * ratio;
+    finalSaleCgst = saleCgst * ratio;
 
-    finalSgst = sgst * ratio;
+    finalSaleSgst = saleSgst * ratio;
   }
 
-  const net =
-    finalTaxable + finalCgst + finalSgst;
+  const gross = saleGross - returnGross;
+
+  const itemDiscount =
+    saleItemDiscount - returnItemDiscount;
+
+  const taxable =
+    finalSaleTaxable - returnTaxable;
+
+  const cgst = finalSaleCgst - returnCgst;
+
+  const sgst = finalSaleSgst - returnSgst;
+
+  const net = taxable + cgst + sgst;
 
   return {
     gross,
     itemDiscount,
-    taxable: finalTaxable,
+    taxable,
     billDiscount,
-    cgst: finalCgst,
-    sgst: finalSgst,
+    cgst,
+    sgst,
     net,
   };
 }

@@ -10,8 +10,17 @@ import {
   MaxLength,
   Min,
 } from 'class-validator';
+import { Transform } from 'class-transformer';
 
 import { SchemeType } from '@prisma/client';
+
+/*
+ * "" (the date input cleared) becomes null - explicitly clear the
+ * date on update - rather than failing @IsDateString(), which
+ * @IsOptional() only skips for null/undefined, not "".
+ */
+const emptyToNull = ({ value }: { value: unknown }) =>
+  value === '' ? null : value;
 
 export class CreateSchemeDto {
   @IsString()
@@ -51,10 +60,12 @@ export class CreateSchemeDto {
   isActive?: boolean;
 
   @IsOptional()
+  @Transform(emptyToNull)
   @IsDateString()
-  effectiveFrom?: string;
+  effectiveFrom?: string | null;
 
   @IsOptional()
+  @Transform(emptyToNull)
   @IsDateString()
-  effectiveTo?: string;
+  effectiveTo?: string | null;
 }

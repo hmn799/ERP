@@ -19,8 +19,13 @@ export class CreateSaleReturnDto {
   @IsDateString()
   returnDate!: string;
 
+  /*
+   * Omitted for a direct return - one taken back without a
+   * previous sales bill on file. See SaleReturn.salesBillId.
+   */
+  @IsOptional()
   @IsString()
-  salesBillId!: string;
+  salesBillId?: string;
 
   @IsOptional()
   @IsString()

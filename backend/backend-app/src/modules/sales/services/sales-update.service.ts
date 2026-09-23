@@ -4,7 +4,10 @@
 } from '@nestjs/common';
 
 import { PrismaService } from '../../prisma/prisma.service';
-import { LedgerService } from '../../ledger/ledger.service';
+import {
+  LedgerService,
+  HOUSE_CASH_SALE_PARTY_ID,
+} from '../../ledger/ledger.service';
 
 import { CreateSalesDto } from '../dto/create-sales.dto';
 
@@ -63,7 +66,11 @@ export class SalesUpdateService {
               id: salesBillId,
             },
             include: {
-              items: true,
+              items: {
+                include: {
+                  item: true,
+                },
+              },
               payments: true,
               saleReturns: true,
             },
@@ -91,6 +98,23 @@ export class SalesUpdateService {
         for (
           const oldItem of existingBill.items
         ) {
+          if (oldItem.item.isGeneralItem) {
+            continue;
+          }
+
+          if (oldItem.isReturn) {
+            await this.stockService.reverseReturnStock(
+              oldItem.itemId,
+              oldItem.batchId,
+              existingBill.warehouseId,
+              Number(oldItem.qty),
+              existingBill.id,
+              tx,
+            );
+
+            continue;
+          }
+
           await this.stockService.reverseStock(
             oldItem.itemId,
             oldItem.batchId,
@@ -113,6 +137,40 @@ export class SalesUpdateService {
               'SALE',
             transactionType:
               'SALE',
+          },
+        });
+
+        // =====================================================
+        // REMOVE OLD CASH/UPI/CARD SETTLEMENT + SHORT LEDGER
+        //
+        // The RECEIPT filter is scoped to paymentMode != null so
+        // this never touches a manual receipt collected later via
+        // the Receipts screen against the same bill.
+        // =====================================================
+
+        await tx.ledgerEntry.deleteMany({
+          where: {
+            referenceId:
+              existingBill.id,
+            referenceType:
+              'SALES_BILL',
+            OR: [
+              {
+                transactionType:
+                  'SALE_SETTLED',
+              },
+              {
+                transactionType:
+                  'SHORT_AND_EXCESS',
+              },
+              {
+                transactionType:
+                  'RECEIPT',
+                paymentMode: {
+                  not: null,
+                },
+              },
+            ],
           },
         });
 
@@ -482,8 +540,34 @@ export class SalesUpdateService {
               schemeId:
                 row.schemeId ||
                 undefined,
+
+              description:
+                row.item
+                  .description ||
+                undefined,
+
+              isReturn:
+                row.isReturn ||
+                false,
             },
           });
+
+          if (row.batch.item.isGeneralItem) {
+            continue;
+          }
+
+          if (row.isReturn) {
+            await this.stockService.postReturnStock(
+              row.item.itemId,
+              row.item.batchId,
+              dto.warehouseId,
+              row.item.qty,
+              existingBill.id,
+              tx,
+            );
+
+            continue;
+          }
 
           await this.stockService.postStock(
             row.item.itemId,
@@ -553,6 +637,76 @@ export class SalesUpdateService {
             dto.customerId,
             creditAmount,
             existingBill.id,
+            tx,
+          );
+        }
+
+        // =====================================================
+        // CASH / UPI / CARD SETTLEMENT LEDGER
+        //
+        // See sales-save.service.ts for the full rationale - this
+        // mirrors it exactly for edits, after the reversal above.
+        // =====================================================
+
+        for (
+          const payment of resolvedPayments
+        ) {
+          if (
+            payment.paymentMode ===
+            'CREDIT'
+          ) {
+            continue;
+          }
+
+          const settledAmount =
+            Number(
+              (
+                payment.amount +
+                payment.surchargeAmount
+              ).toFixed(2),
+            );
+
+          if (settledAmount <= 0) {
+            continue;
+          }
+
+          if (dto.customerId) {
+            await this.ledgerService.postSaleSettlementDebit(
+              dto.customerId,
+              settledAmount,
+              existingBill.id,
+              tx,
+            );
+
+            await this.ledgerService.postSaleReceipt(
+              'CUSTOMER',
+              dto.customerId,
+              payment.paymentMode,
+              settledAmount,
+              existingBill.id,
+              tx,
+            );
+          } else {
+            await this.ledgerService.postSaleReceipt(
+              'HOUSE',
+              HOUSE_CASH_SALE_PARTY_ID,
+              payment.paymentMode,
+              settledAmount,
+              existingBill.id,
+              tx,
+            );
+          }
+        }
+
+        // =====================================================
+        // SHORT AMOUNT - HOUSE WRITE-OFF LEDGER
+        // =====================================================
+
+        if (shortAmount > 0) {
+          await this.ledgerService.postShortAndExcess(
+            shortAmount,
+            existingBill.id,
+            existingBill.billNo,
             tx,
           );
         }

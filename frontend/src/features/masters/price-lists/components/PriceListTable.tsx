@@ -11,18 +11,21 @@ interface PriceListTableProps {
 
   onEdit(priceList: PriceList): void;
   onDelete(priceList: PriceList): void;
+  onRates(priceList: PriceList): void;
 }
 
 export default function PriceListTable({
   data,
   onEdit,
   onDelete,
+  onRates,
 }: PriceListTableProps) {
   return (
     <ERPDataTable
       columns={getPriceListColumns({
         onEdit,
         onDelete,
+        onRates,
       })}
       data={data}
     />

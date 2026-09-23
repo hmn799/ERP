@@ -115,6 +115,10 @@ async function main() {
   ["SR", "Sales Return"],
   ["ST", "Stock Transfer"],
   ["BATCH", "Batch Number"],
+  ["DN", "Debit Note"],
+  ["CN", "Credit Note"],
+  ["DMG", "Damage Stock"],
+  ["PE", "Petty Expense"],
 ] as const;
 
   for (const [documentType, name] of series) {

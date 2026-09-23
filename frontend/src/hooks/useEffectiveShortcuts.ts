@@ -40,6 +40,8 @@ export function useEffectiveShortcuts() {
         label: shortcut.label,
         category: shortcut.category,
         key: shortcut.currentKey,
+        actionType: shortcut.actionType,
+        targetPath: shortcut.targetPath,
         enabled: shortcut.isEnabled,
       }));
     },

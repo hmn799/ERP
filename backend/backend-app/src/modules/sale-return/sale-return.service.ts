@@ -148,25 +148,38 @@ export class SaleReturnService {
             prisma,
           );
 
-        const salesBill =
-          await prisma.salesBill.findUnique({
-            where: {
-              id: dto.salesBillId,
-            },
-            include: {
-              items: true,
-            },
-          });
+        /*
+         * A direct return (no salesBillId) skips every check below
+         * that leans on an original bill - there simply isn't one.
+         * The operator's entered item/batch/qty/rate/gst is trusted
+         * directly, the same way a fresh sale trusts what's typed.
+         */
 
-        if (!salesBill) {
+        const salesBill =
+          dto.salesBillId
+            ? await prisma.salesBill.findUnique({
+                where: {
+                  id: dto.salesBillId,
+                },
+                include: {
+                  items: true,
+                },
+              })
+            : null;
+
+        if (
+          dto.salesBillId &&
+          !salesBill
+        ) {
           throw new NotFoundException(
             'Original sales bill not found.',
           );
         }
 
         if (
+          salesBill &&
           salesBill.warehouseId !==
-          dto.warehouseId
+            dto.warehouseId
         ) {
           throw new BadRequestException(
             'Return warehouse must match the original sales bill warehouse.',
@@ -174,6 +187,7 @@ export class SaleReturnService {
         }
 
         if (
+          salesBill &&
           dto.customerId &&
           dto.customerId !==
             salesBill.customerId
@@ -186,18 +200,23 @@ export class SaleReturnService {
         /*
          * =====================================================
          * PREVIOUS RETURNS
+         *
+         * Only meaningful against a bill - a direct return has no
+         * "originally sold" quantity to cap against.
          * =====================================================
          */
 
         const previousReturns =
-          await prisma.saleReturnItem.findMany({
-            where: {
-              saleReturn: {
-                salesBillId:
-                  dto.salesBillId,
-              },
-            },
-          });
+          dto.salesBillId
+            ? await prisma.saleReturnItem.findMany({
+                where: {
+                  saleReturn: {
+                    salesBillId:
+                      dto.salesBillId,
+                  },
+                },
+              })
+            : [];
 
         const returnedQtyMap =
           new Map<string, number>();
@@ -274,36 +293,6 @@ export class SaleReturnService {
          */
 
         for (const item of dto.items) {
-          const salesItem =
-            salesBill.items.find(
-              (line) =>
-                line.itemId ===
-                  item.itemId &&
-                line.batchId ===
-                  item.batchId,
-            );
-
-          if (!salesItem) {
-            throw new BadRequestException(
-              'Item/batch was not sold on the original sales bill.',
-            );
-          }
-
-          const originalQty =
-            Number(salesItem.qty);
-
-          const key =
-            item.itemId +
-            ':' +
-            item.batchId;
-
-          const alreadyReturned =
-            returnedQtyMap.get(key) ?? 0;
-
-          const remainingQty =
-            originalQty -
-            alreadyReturned;
-
           if (
             item.qty <= 0
           ) {
@@ -312,49 +301,118 @@ export class SaleReturnService {
             );
           }
 
-          if (
-            item.qty >
-            remainingQty
-          ) {
-            throw new BadRequestException(
-              `Cannot return ${item.qty}. Remaining returnable quantity: ${remainingQty}.`,
-            );
-          }
+          let originalRate: number;
+          let originalGst: number;
 
-          /*
-           * Original sale values are authoritative.
-           */
+          if (salesBill) {
+            const salesItem =
+              salesBill.items.find(
+                (line) =>
+                  line.itemId ===
+                    item.itemId &&
+                  line.batchId ===
+                    item.batchId,
+              );
 
-          const originalRate =
-            Number(
-              salesItem.saleRate,
-            );
+            if (!salesItem) {
+              throw new BadRequestException(
+                'Item/batch was not sold on the original sales bill.',
+              );
+            }
 
-          const originalGst =
-            Number(
-              salesItem.gstPercent,
-            );
+            const originalQty =
+              Number(salesItem.qty);
 
-          if (
-            Math.abs(
-              item.saleRate -
-                originalRate,
-            ) > 0.000001
-          ) {
-            throw new BadRequestException(
-              `Sale rate must match the original sale rate: ${originalRate}.`,
-            );
-          }
+            const key =
+              item.itemId +
+              ':' +
+              item.batchId;
 
-          if (
-            Math.abs(
-              item.gstPercent -
-                originalGst,
-            ) > 0.000001
-          ) {
-            throw new BadRequestException(
-              `GST must match the original GST: ${originalGst}%.`,
-            );
+            const alreadyReturned =
+              returnedQtyMap.get(key) ?? 0;
+
+            const remainingQty =
+              originalQty -
+              alreadyReturned;
+
+            if (
+              item.qty >
+              remainingQty
+            ) {
+              throw new BadRequestException(
+                `Cannot return ${item.qty}. Remaining returnable quantity: ${remainingQty}.`,
+              );
+            }
+
+            /*
+             * Original sale values are authoritative.
+             */
+
+            originalRate =
+              Number(
+                salesItem.saleRate,
+              );
+
+            originalGst =
+              Number(
+                salesItem.gstPercent,
+              );
+
+            if (
+              Math.abs(
+                item.saleRate -
+                  originalRate,
+              ) > 0.000001
+            ) {
+              throw new BadRequestException(
+                `Sale rate must match the original sale rate: ${originalRate}.`,
+              );
+            }
+
+            if (
+              Math.abs(
+                item.gstPercent -
+                  originalGst,
+              ) > 0.000001
+            ) {
+              throw new BadRequestException(
+                `GST must match the original GST: ${originalGst}%.`,
+              );
+            }
+          } else {
+            /*
+             * Direct return - no original bill line to check
+             * against. Just confirm the batch is real and belongs
+             * to the item before stock gets restored to it.
+             */
+
+            const batch =
+              await prisma.batch.findUnique({
+                where: {
+                  id: item.batchId,
+                },
+              });
+
+            if (!batch) {
+              throw new BadRequestException(
+                `Batch not found: ${item.batchId}`,
+              );
+            }
+
+            if (
+              batch.itemId !==
+              item.itemId
+            ) {
+              throw new BadRequestException(
+                `Batch does not belong to item ${item.itemId}.`,
+              );
+            }
+
+            originalRate =
+              item.saleRate;
+
+            originalGst =
+              item.gstPercent;
           }
 
           /*
@@ -464,7 +522,8 @@ export class SaleReturnService {
 
         const returnCustomerId =
           dto.customerId ??
-          salesBill.customerId;
+          salesBill?.customerId ??
+          undefined;
 
         if (
           creditRefundAmount > 0 &&

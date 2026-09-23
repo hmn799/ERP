@@ -34,6 +34,7 @@ import {
   getHeldSales,
   getItemLookup,
   getSaleById,
+  getSellingPricePreview,
   getWarehouses,
   holdSale,
   previewSale,
@@ -989,19 +990,34 @@ setRows(
         entry.id === itemId,
     );
 
+    /*
+     * A general item has exactly one (placeholder) batch, with
+     * nothing to disambiguate - resolve it immediately instead of
+     * making the operator open a one-option dropdown.
+     */
+
+    const generalBatchId =
+      item?.isGeneralItem
+        ? (batches.find(
+            (b) =>
+              b.itemId === itemId,
+          )?.id ?? "")
+        : "";
+
     setRows((current) =>
       current.map((row, i) =>
         i === index
           ? {
               ...row,
               itemId,
-              batchId: "",
+              batchId: generalBatchId,
               saleRate: item
                 ? getPartyPriceOrDefault(
                     itemId,
                     getNumber(item.retailRate),
                   )
                 : 0,
+              description: "",
               gstPercent:
                 getNumber(
                   (
@@ -1029,20 +1045,90 @@ setRows(
         entry.id === batchId,
     );
 
+    const row = rows[index];
+
+    const isGeneral = Boolean(
+      items.find(
+        (entry) =>
+          entry.id === row?.itemId,
+      )?.isGeneralItem,
+    );
+
+    /*
+     * Same item + same batch + same sale/return direction already
+     * on another row - fold this row's qty into that one instead of
+     * leaving two rows selling the same batch side by side. Skipped
+     * for a general item: its one placeholder batch is shared by
+     * every ad-hoc line, so two rows sharing it are two unrelated
+     * charges, not a duplicate. A sale row and a return row never
+     * merge even when they match otherwise - they move stock in
+     * opposite directions, so combining their qty would be wrong.
+     */
+
+    const mergeIndex =
+      batchId && row && !isGeneral
+        ? rows.findIndex(
+            (other, i) =>
+              i !== index &&
+              other.itemId ===
+                row.itemId &&
+              other.batchId ===
+                batchId &&
+              Boolean(
+                other.isReturn,
+              ) ===
+                Boolean(
+                  row.isReturn,
+                ),
+          )
+        : -1;
+
+    if (mergeIndex >= 0) {
+      setRows((current) =>
+        current
+          .map((other, i) =>
+            i === mergeIndex
+              ? {
+                  ...other,
+                  qty:
+                    getNumber(
+                      other.qty,
+                    ) +
+                    getNumber(
+                      current[index]
+                        ?.qty,
+                    ),
+                }
+              : other,
+          )
+          .filter(
+            (_, i) => i !== index,
+          ),
+      );
+
+      setActiveRowIndex(
+        mergeIndex > index
+          ? mergeIndex - 1
+          : mergeIndex,
+      );
+
+      return;
+    }
+
     setRows((current) =>
-      current.map((row, i) =>
+      current.map((r, i) =>
         i === index
           ? {
-              ...row,
+              ...r,
               batchId,
               saleRate: batch
                 ? getPartyPriceOrDefault(
-                    row.itemId,
+                    r.itemId,
                     getNumber(batch.retailRate),
                   )
-                : row.saleRate,
+                : r.saleRate,
             }
-          : row,
+          : r,
       ),
     );
 
@@ -1065,6 +1151,77 @@ setRows(
     );
 
     setActiveRowIndex(index);
+
+    /*
+     * A qty-wise rate tier (party price or price-list item price)
+     * can kick in as qty crosses a threshold - re-check live so the
+     * bill shows the correct rate before saving, where the same
+     * lookup runs again authoritatively regardless of what the
+     * screen showed.
+     */
+    const row = rows[index];
+
+    if (!row?.itemId || qty <= 0) {
+      return;
+    }
+
+    getSellingPricePreview({
+      itemId: row.itemId,
+      quantity: qty,
+      customerId: customerId || undefined,
+    })
+      .then((preview) => {
+        if (!preview) return;
+
+        setRows((current) =>
+          current.map((r, i) =>
+            i === index &&
+            getNumber(r.qty) === qty
+              ? {
+                  ...r,
+                  saleRate: getNumber(
+                    preview.salePrice,
+                  ),
+                }
+              : r,
+          ),
+        );
+      })
+      .catch(() => {
+        // Best-effort preview only - save-time calculation
+        // resolves the real rate regardless.
+      });
+  }
+
+  function changeDescription(
+    index: number,
+    description: string,
+  ) {
+    setRows((current) =>
+      current.map((row, i) =>
+        i === index
+          ? {
+              ...row,
+              description,
+            }
+          : row,
+      ),
+    );
+  }
+
+  function toggleReturn(
+    index: number,
+  ) {
+    setRows((current) =>
+      current.map((row, i) =>
+        i === index
+          ? {
+              ...row,
+              isReturn: !row.isReturn,
+            }
+          : row,
+      ),
+    );
   }
 
   async function changeRate(
@@ -1126,16 +1283,36 @@ setRows(
     }
   }
 
+  /*
+   * A new row always starts at qty 1, so this only needs the
+   * minQty<=1 base tier - a party price can itself be qty-tiered
+   * (10+ units at a lower rate), and the base tier is whichever
+   * one of those has the highest minQty still at or under 1
+   * (normally just the minQty=1 row). Tiers for qty > 1 are
+   * resolved live as the operator edits qty - see changeQty.
+   */
   function getPartyPriceOrDefault(
     itemId: string,
     fallbackRate: number,
   ) {
-    const partyPrice = partyPrices.find(
-      (price) => price.itemId === itemId,
+    const tiers = partyPrices.filter(
+      (price) =>
+        price.itemId === itemId &&
+        getNumber(price.minQty ?? 1) <= 1,
     );
 
-    return partyPrice
-      ? getNumber(partyPrice.salePrice)
+    const baseTier = tiers.reduce<
+      CustomerPartyPrice | undefined
+    >((best, price) => {
+      if (!best) return price;
+      return getNumber(price.minQty ?? 1) >
+        getNumber(best.minQty ?? 1)
+        ? price
+        : best;
+    }, undefined);
+
+    return baseTier
+      ? getNumber(baseTier.salePrice)
       : fallbackRate;
   }
 
@@ -1204,15 +1381,22 @@ setRows(
             item.retailRate,
           );
 
+    /*
+     * A general item's one placeholder batch is shared by every
+     * ad-hoc line - each scan/selection is its own distinct charge
+     * with its own description, so it always gets a new row rather
+     * than merging into an existing one.
+     */
+
     const existingIndex =
-      rows.findIndex(
-        (row) =>
-          row.itemId === itemId &&
-          row.batchId === batchId &&
-          getNumber(
-            row.saleRate,
-          ) === saleRate,
-      );
+      !item.isGeneralItem
+        ? rows.findIndex(
+            (row) =>
+              row.itemId === itemId &&
+              row.batchId === batchId &&
+              !row.isReturn,
+          )
+        : -1;
 
     if (existingIndex >= 0) {
       setRows((current) =>
@@ -1251,6 +1435,8 @@ setRows(
       ),
 
       discountPercent: 0,
+
+      description: "",
 
       gstPercent:
         getNumber(
@@ -2111,6 +2297,40 @@ setRows(
         return;
       }
 
+      const missingGeneralDescription =
+        rows.some((row) => {
+          const rowItem = items.find(
+            (entry) =>
+              entry.id === row.itemId,
+          );
+
+          return (
+            rowItem?.isGeneralItem &&
+            !row.description?.trim()
+          );
+        });
+
+      if (missingGeneralDescription) {
+        setPaymentError(
+          "Enter a description for every general item on the bill.",
+        );
+
+        return;
+      }
+
+      if (
+        totals.net +
+          roundOff -
+          shortAmount <
+        -0.01
+      ) {
+        setPaymentError(
+          "Return amount exceeds the sale amount. Reduce the return quantity or add more items to sell.",
+        );
+
+        return;
+      }
+
       const paymentsToSave =
         finalPayments ??
         payments;
@@ -2297,6 +2517,14 @@ setRows(
 
             gstPercent:
               row.gstPercent,
+
+            description:
+              row.description ||
+              undefined,
+
+            isReturn:
+              row.isReturn ||
+              undefined,
           }),
         ),
       };
@@ -3031,6 +3259,12 @@ setRows(
         }
         onRateChange={
           changeRate
+        }
+        onDescriptionChange={
+          changeDescription
+        }
+        onToggleReturn={
+          toggleReturn
         }
         onQuickAddItem={
           quickAddItem

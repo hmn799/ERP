@@ -186,6 +186,11 @@ export const NAVIGATION: NavigationGroup[] = [
         title: "Stock Ledger",
         href: ROUTES.STOCK_LEDGER,
       },
+      {
+        id: "damage-stock",
+        title: "Damage Stock",
+        href: ROUTES.DAMAGE_STOCK,
+      },
     ],
   },
 
@@ -215,6 +220,16 @@ export const NAVIGATION: NavigationGroup[] = [
         href: ROUTES.CASH_BOOK,
       },
       {
+        id: "card-book",
+        title: "Card Book",
+        href: ROUTES.CARD_BOOK,
+      },
+      {
+        id: "upi-book",
+        title: "UPI Book",
+        href: ROUTES.UPI_BOOK,
+      },
+      {
         id: "bank-book",
         title: "Bank Book",
         href: ROUTES.BANK_BOOK,
@@ -224,6 +239,16 @@ export const NAVIGATION: NavigationGroup[] = [
         title: "Bank Reconciliation",
         href: ROUTES.BANK_RECONCILIATION,
         permission: "MANAGE_BANK_RECONCILIATION",
+      },
+      {
+        id: "debit-notes",
+        title: "Debit Notes",
+        href: ROUTES.DEBIT_NOTES,
+      },
+      {
+        id: "credit-notes",
+        title: "Credit Notes",
+        href: ROUTES.CREDIT_NOTES,
       },
     ],
   },

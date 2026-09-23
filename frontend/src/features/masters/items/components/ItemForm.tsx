@@ -55,6 +55,8 @@ export interface ItemFormValues {
   reorderQty?: number;
 
   isActive: boolean;
+
+  isGeneralItem?: boolean;
 }
 
 interface Props {
@@ -99,6 +101,7 @@ export default function ItemForm({
   const [reorderQty, setReorderQty] = useState("0");
 
   const [isActive, setIsActive] = useState(true);
+  const [isGeneralItem, setIsGeneralItem] = useState(false);
 
   useEffect(() => {
     categoryService.getAll().then(setCategories);
@@ -140,6 +143,9 @@ export default function ItemForm({
     );
 
     setIsActive(defaultValues.isActive);
+    setIsGeneralItem(
+      defaultValues.isGeneralItem ?? false,
+    );
   }, [defaultValues]);
 
   return (
@@ -174,6 +180,8 @@ export default function ItemForm({
           reorderQty: Number(reorderQty),
 
           isActive,
+
+          isGeneralItem,
         });
       }}
     >
@@ -396,6 +404,28 @@ export default function ItemForm({
         />
 
         <span>Active</span>
+      </div>
+
+      <div className="space-y-2 rounded-md border border-dashed p-3">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            checked={isGeneralItem}
+            onCheckedChange={(v) =>
+              setIsGeneralItem(Boolean(v))
+            }
+          />
+
+          <span>
+            General Item (no stock tracking)
+          </span>
+        </div>
+
+        <p className="text-xs text-gray-500">
+          For billing something not in the catalog - a repair, a
+          service charge, scrap. Sold with a typed description and
+          rate on the bill itself; MRP/Purchase Rate above are
+          ignored and stock is never tracked for it.
+        </p>
       </div>
     </form>
   );

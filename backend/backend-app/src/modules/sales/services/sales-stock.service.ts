@@ -344,4 +344,163 @@ export class SalesStockService {
       },
     });
   }
+
+  // =====================================================
+  // POST RETURN-LINE STOCK
+  //
+  // For a return line taken back within a sales bill (an exchange -
+  // see SalesBillItem.isReturn). Restores stock instead of
+  // consuming it, and never blocks on insufficient stock - you can
+  // always give stock back.
+  // =====================================================
+
+  async postReturnStock(
+    itemId: string,
+    batchId: string,
+    warehouseId: string,
+    qty: number,
+    salesBillId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    if (qty <= 0) {
+      throw new BadRequestException(
+        'Return quantity must be greater than zero.',
+      );
+    }
+
+    await prisma.warehouseStock.upsert({
+      where: {
+        warehouseId_itemId_batchId: {
+          warehouseId,
+          itemId,
+          batchId,
+        },
+      },
+
+      create: {
+        warehouseId,
+        itemId,
+        batchId,
+        quantity: qty,
+      },
+
+      update: {
+        quantity: {
+          increment: qty,
+        },
+      },
+    });
+
+    await prisma.stockLedger.create({
+      data: {
+        transactionDate: new Date(),
+
+        transactionType: 'SALE_RETURN',
+
+        itemId,
+        batchId,
+        warehouseId,
+
+        qtyIn: qty,
+        qtyOut: 0,
+
+        referenceType: 'SALES_BILL',
+        referenceId: salesBillId,
+
+        remarks:
+          'Return line within sales bill',
+      },
+    });
+  }
+
+  // =====================================================
+  // REVERSE RETURN-LINE STOCK
+  //
+  // Used when an existing sales bill is edited - undoes the stock
+  // postReturnStock() restored, the same way reverseStock() undoes
+  // a normal sale line's deduction. Respects the negative-stock
+  // setting, since this is functionally a fresh stock deduction.
+  // =====================================================
+
+  async reverseReturnStock(
+    itemId: string,
+    batchId: string,
+    warehouseId: string,
+    qty: number,
+    salesBillId: string,
+    prisma: Prisma.TransactionClient = this.prisma,
+  ) {
+    if (qty <= 0) {
+      throw new BadRequestException(
+        'Reverse quantity must be greater than zero.',
+      );
+    }
+
+    const currentStock =
+      await this.getCurrentStock(
+        itemId,
+        batchId,
+        warehouseId,
+        prisma,
+      );
+
+    const allowNegativeStock =
+      await this.isNegativeStockAllowed(
+        prisma,
+      );
+
+    if (
+      !allowNegativeStock &&
+      qty > currentStock
+    ) {
+      throw new BadRequestException(
+        `Insufficient stock to reverse this return. Available: ${currentStock}. Requested: ${qty}.`,
+      );
+    }
+
+    await prisma.warehouseStock.upsert({
+      where: {
+        warehouseId_itemId_batchId: {
+          warehouseId,
+          itemId,
+          batchId,
+        },
+      },
+
+      create: {
+        warehouseId,
+        itemId,
+        batchId,
+        quantity: -qty,
+      },
+
+      update: {
+        quantity: {
+          decrement: qty,
+        },
+      },
+    });
+
+    await prisma.stockLedger.create({
+      data: {
+        transactionDate: new Date(),
+
+        transactionType:
+          'SALE_RETURN_REVERSAL',
+
+        itemId,
+        batchId,
+        warehouseId,
+
+        qtyIn: 0,
+        qtyOut: qty,
+
+        referenceType: 'SALE_EDIT',
+        referenceId: salesBillId,
+
+        remarks:
+          'Sales Edit - Return Line Reversed',
+      },
+    });
+  }
 }

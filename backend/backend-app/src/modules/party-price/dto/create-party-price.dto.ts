@@ -18,6 +18,13 @@ export class CreatePartyPriceDto {
   @IsNotEmpty()
   itemId: string;
 
+  // The qty this tier starts applying at - e.g. 1 for the base
+  // rate, 10 for a "10 or more" rate.
+  @IsOptional()
+  @IsNumber()
+  @Min(0.01)
+  minQty?: number;
+
   @IsNumber()
   @Min(0)
   salePrice: number;

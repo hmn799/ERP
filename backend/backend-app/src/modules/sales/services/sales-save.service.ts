@@ -8,7 +8,10 @@ import { CreateSalesDto } from '../dto/create-sales.dto';
 import { SalesStockService } from './sales-stock.service';
 import { SalesGstService } from './sales-gst.service';
 import { SalesCalculationService } from './sales-calculation.service';
-import { LedgerService } from '../../ledger/ledger.service';
+import {
+  LedgerService,
+  HOUSE_CASH_SALE_PARTY_ID,
+} from '../../ledger/ledger.service';
 import { DocumentNumberService } from '../../../core/document-number/document-number.service';
 import { DocumentType } from '../../../core/document-number/document-type.enum';
 import { AuditService, AuditActor } from '../../audit/audit.service';
@@ -411,8 +414,34 @@ export class SalesSaveService {
               schemeId:
                 row.schemeId ||
                 undefined,
+
+              description:
+                row.item
+                  .description ||
+                undefined,
+
+              isReturn:
+                row.isReturn ||
+                false,
             },
           });
+
+          if (row.batch.item.isGeneralItem) {
+            continue;
+          }
+
+          if (row.isReturn) {
+            await this.stockService.postReturnStock(
+              row.item.itemId,
+              row.item.batchId,
+              dto.warehouseId,
+              row.item.qty,
+              salesBill.id,
+              tx,
+            );
+
+            continue;
+          }
 
           await this.stockService.postStock(
             row.item.itemId,
@@ -485,6 +514,84 @@ export class SalesSaveService {
             salesBill.customerId,
             creditAmount,
             salesBill.id,
+            tx,
+          );
+        }
+
+        // =====================================================
+        // CASH / UPI / CARD SETTLEMENT LEDGER
+        //
+        // Money actually collected at the time of sale (never the
+        // CREDIT portion, tracked above). Posted so Cash Book /
+        // Card Book / UPI Book tally against real point-of-sale
+        // collections. When a customer is on the bill, a paired
+        // SALE_SETTLED debit is posted alongside the RECEIPT credit
+        // so their outstanding balance nets to zero - it was never
+        // a receivable.
+        // =====================================================
+
+        for (
+          const payment of resolvedPayments
+        ) {
+          if (
+            payment.paymentMode ===
+            'CREDIT'
+          ) {
+            continue;
+          }
+
+          const settledAmount =
+            Number(
+              (
+                payment.amount +
+                payment.surchargeAmount
+              ).toFixed(2),
+            );
+
+          if (settledAmount <= 0) {
+            continue;
+          }
+
+          if (salesBill.customerId) {
+            await this.ledgerService.postSaleSettlementDebit(
+              salesBill.customerId,
+              settledAmount,
+              salesBill.id,
+              tx,
+            );
+
+            await this.ledgerService.postSaleReceipt(
+              'CUSTOMER',
+              salesBill.customerId,
+              payment.paymentMode,
+              settledAmount,
+              salesBill.id,
+              tx,
+            );
+          } else {
+            await this.ledgerService.postSaleReceipt(
+              'HOUSE',
+              HOUSE_CASH_SALE_PARTY_ID,
+              payment.paymentMode,
+              settledAmount,
+              salesBill.id,
+              tx,
+            );
+          }
+        }
+
+        // =====================================================
+        // SHORT AMOUNT - HOUSE WRITE-OFF LEDGER
+        //
+        // Purely internal - never posted to the customer's ledger,
+        // since they were never charged this and don't owe it.
+        // =====================================================
+
+        if (shortAmount > 0) {
+          await this.ledgerService.postShortAndExcess(
+            shortAmount,
+            salesBill.id,
+            billNo,
             tx,
           );
         }

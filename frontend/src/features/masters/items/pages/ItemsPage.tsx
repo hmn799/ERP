@@ -7,6 +7,13 @@ import ERPToolbar from "@/components/erp/crud/ERPToolbar";
 import ERPDeleteDialog from "@/components/erp/crud/ERPDeleteDialog";
 import ImportMastersDialog from "@/components/erp/crud/ImportMastersDialog";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Upload } from "lucide-react";
 
 import { useItems } from "../hooks/useItems";
@@ -19,6 +26,7 @@ import categoryService from "@/services/category/category.service";
 import subCategoryService from "@/services/sub-category/sub-category.service";
 import brandService from "@/services/brand/brand.service";
 import gstSlabService from "@/services/gst-slab/gst-slab.service";
+import SupplierService from "@/services/supplier/supplier.service";
 
 import type { Item, CreateItemDto } from "../types/item.types";
 
@@ -45,6 +53,14 @@ export default function ItemsPage() {
     InlineOption[]
   >([]);
 
+  const [suppliers, setSuppliers] = useState<
+    InlineOption[]
+  >([]);
+
+  const [brandFilter, setBrandFilter] = useState("__all__");
+  const [distributorFilter, setDistributorFilter] =
+    useState("__all__");
+
   useEffect(() => {
     categoryService.getAll().then(setCategories);
     subCategoryService
@@ -52,6 +68,7 @@ export default function ItemsPage() {
       .then(setSubCategories);
     brandService.getAll().then(setBrands);
     gstSlabService.getAll().then(setGstSlabs);
+    SupplierService.getAll().then(setSuppliers);
   }, []);
 
   /*
@@ -101,15 +118,31 @@ export default function ItemsPage() {
     }
   }
 
-  const filtered = data.filter(
-    (x) =>
+  const filtered = data.filter((x) => {
+    const matchesSearch =
       x.name
         .toLowerCase()
         .includes(search.toLowerCase()) ||
       x.itemCode
         .toLowerCase()
-        .includes(search.toLowerCase())
-  );
+        .includes(search.toLowerCase());
+
+    const matchesBrand =
+      brandFilter === "__all__" ||
+      x.brandId === brandFilter;
+
+    const matchesDistributor =
+      distributorFilter === "__all__" ||
+      (x.distributors ?? []).some(
+        (s) => s.id === distributorFilter,
+      );
+
+    return (
+      matchesSearch &&
+      matchesBrand &&
+      matchesDistributor
+    );
+  });
 
   return (
     <div className="space-y-6">
@@ -133,6 +166,53 @@ export default function ItemsPage() {
           </Button>
         }
       />
+
+      <div className="flex flex-wrap gap-3">
+        <Select
+          value={brandFilter}
+          onValueChange={setBrandFilter}
+        >
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="All companies" />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="__all__">
+              All companies
+            </SelectItem>
+
+            {brands.map((brand) => (
+              <SelectItem key={brand.id} value={brand.id}>
+                {brand.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+
+        <Select
+          value={distributorFilter}
+          onValueChange={setDistributorFilter}
+        >
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="All distributors" />
+          </SelectTrigger>
+
+          <SelectContent>
+            <SelectItem value="__all__">
+              All distributors
+            </SelectItem>
+
+            {suppliers.map((supplier) => (
+              <SelectItem
+                key={supplier.id}
+                value={supplier.id}
+              >
+                {supplier.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
 
       <ItemTable
         items={filtered}

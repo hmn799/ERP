@@ -29,6 +29,8 @@ export interface Item {
 
   isActive: boolean;
 
+  isGeneralItem?: boolean;
+
   category?: {
     id: string;
     name: string;
@@ -64,6 +66,14 @@ export interface Item {
     id: string;
     name: string;
   };
+
+  // Every supplier this item has ever been purchased from, derived
+  // from purchase history (not a manually-maintained field). Powers
+  // the Item Master "Distributor" filter.
+  distributors?: {
+    id: string;
+    name: string;
+  }[];
 }
 
 export interface CreateItemDto {
@@ -96,4 +106,6 @@ export interface CreateItemDto {
   reorderQty?: number;
 
   isActive?: boolean;
+
+  isGeneralItem?: boolean;
 }

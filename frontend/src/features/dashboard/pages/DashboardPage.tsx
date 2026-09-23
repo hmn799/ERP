@@ -10,6 +10,7 @@ import SalesChart from "../components/SalesChart";
 import RecentBills from "../components/RecentBills";
 import TopSellingItems from "../components/TopSellingItems";
 import LowStock from "../components/LowStock";
+import PettyExpenseWidget from "../components/PettyExpenseWidget";
 
 export default function DashboardPage() {
   const {
@@ -68,7 +69,11 @@ export default function DashboardPage() {
         />
       </div>
 
-      <LowStock items={lowStock} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        <LowStock items={lowStock} />
+
+        <PettyExpenseWidget />
+      </div>
     </div>
   );
 }

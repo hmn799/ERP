@@ -66,4 +66,8 @@ export class CreateItemDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @IsOptional()
+  @IsBoolean()
+  isGeneralItem?: boolean;
 }

@@ -344,7 +344,11 @@ export default function SalesViewPage({
                       item.id ??
                       index
                     }
-                    className="border-b"
+                    className={`border-b ${
+                      item.isReturn
+                        ? "bg-red-50/60"
+                        : ""
+                    }`}
                   >
                     <td className="p-3">
                       {index + 1}
@@ -352,8 +356,15 @@ export default function SalesViewPage({
 
                     <td className="p-3">
                       <div className="font-medium">
-                        {item.item?.name ||
+                        {item.description ||
+                          item.item?.name ||
                           "-"}
+
+                        {item.isReturn && (
+                          <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                            Return
+                          </span>
+                        )}
                       </div>
 
                       <div className="text-xs text-muted-foreground">
@@ -401,7 +412,16 @@ export default function SalesViewPage({
                       %
                     </td>
 
-                    <td className="p-3 text-right font-medium">
+                    <td
+                      className={`p-3 text-right font-medium ${
+                        item.isReturn
+                          ? "text-red-600"
+                          : ""
+                      }`}
+                    >
+                      {item.isReturn
+                        ? "-"
+                        : ""}
                       {formatCurrency(
                         Number(
                           item.netAmount ??

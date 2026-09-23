@@ -137,6 +137,32 @@ export default function ShortcutRow({
     }
   }
 
+  async function handleDelete() {
+    if (
+      !confirm(
+        `Delete the "${shortcut.label}" shortcut?`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await ShortcutsService.remove(shortcut.id);
+      toast.success(`"${shortcut.label}" deleted.`);
+      onChanged();
+    } catch (error: any) {
+      const message =
+        error?.response?.data?.message ??
+        "Failed to delete shortcut.";
+
+      toast.error(
+        Array.isArray(message)
+          ? message.join(", ")
+          : message,
+      );
+    }
+  }
+
   async function toggleRole(
     roleId: string,
     enabledForRole: boolean,
@@ -179,7 +205,10 @@ export default function ShortcutRow({
           </div>
 
           <div className="text-xs text-muted-foreground">
-            {shortcut.actionCode}
+            {shortcut.actionType === "NAVIGATE" &&
+            shortcut.targetPath
+              ? `Jumps to ${shortcut.targetPath}`
+              : shortcut.actionCode}
           </div>
         </div>
 
@@ -239,6 +268,18 @@ export default function ShortcutRow({
             </Badge>
           )}
         </Button>
+
+        {shortcut.actionType === "NAVIGATE" && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-red-600 hover:text-red-700"
+            onClick={handleDelete}
+          >
+            Delete
+          </Button>
+        )}
       </div>
 
       {rolesOpen && (

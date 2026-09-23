@@ -9,6 +9,7 @@ import ERPDeleteDialog from "@/components/erp/crud/ERPDeleteDialog";
 import { usePriceLists } from "../hooks/usePriceLists";
 import PriceListTable from "../components/PriceListTable";
 import PriceListDialog from "../components/PriceListDialog";
+import ItemPriceTiersDialog from "../components/ItemPriceTiersDialog";
 
 import priceListService from "@/services/price-list/price-list.service";
 
@@ -28,6 +29,8 @@ export default function PriceListsPage() {
   const [selected, setSelected] = useState<PriceList>();
 
   const [deleteOpen, setDeleteOpen] = useState(false);
+
+  const [ratesFor, setRatesFor] = useState<PriceList>();
 
   async function deletePriceList() {
     if (!selected) return;
@@ -76,6 +79,17 @@ export default function PriceListsPage() {
         onDelete={(priceList) => {
           setSelected(priceList);
           setDeleteOpen(true);
+        }}
+        onRates={(priceList) => {
+          setRatesFor(priceList);
+        }}
+      />
+
+      <ItemPriceTiersDialog
+        priceListId={ratesFor?.id ?? null}
+        priceListName={ratesFor?.name}
+        onOpenChange={(open) => {
+          if (!open) setRatesFor(undefined);
         }}
       />
 

@@ -364,6 +364,28 @@ export const ReportsService = {
     return data;
   },
 
+  async getCardBook(
+    from: string,
+    to: string,
+  ): Promise<CashBookRow[]> {
+    const { data } = await apiClient.get(
+      "/reports/card-book",
+      { params: { from, to } },
+    );
+    return data;
+  },
+
+  async getUpiBook(
+    from: string,
+    to: string,
+  ): Promise<CashBookRow[]> {
+    const { data } = await apiClient.get(
+      "/reports/upi-book",
+      { params: { from, to } },
+    );
+    return data;
+  },
+
   async getBankBook(
     bankAccountId: string,
     from: string,
