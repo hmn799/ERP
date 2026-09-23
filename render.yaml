@@ -1,0 +1,24 @@
+services:
+  - type: web
+    name: erp-backend
+    runtime: node
+    plan: free
+    rootDir: backend/backend-app
+    buildCommand: npm install && npx prisma generate && npm run build
+    startCommand: npx prisma migrate deploy && npm run start:prod
+    healthCheckPath: /api/docs-json
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: JWT_SECRET
+        generateValue: true
+      - key: CORS_ORIGINS
+        sync: false
+      - key: BACKUP_DIR
+        value: /tmp/erp-backups
+      - key: BACKUP_ENCRYPTION_KEY
+        generateValue: true
+      - key: BACKUP_RETENTION_DAYS
+        value: "30"
+      - key: SLOW_QUERY_THRESHOLD_MS
+        value: "1000"
