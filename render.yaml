@@ -6,7 +6,7 @@ services:
     rootDir: backend/backend-app
     buildCommand: npm install && npx prisma generate && npm run build
     startCommand: npx prisma migrate deploy && npm run start:prod
-    healthCheckPath: /api/docs-json
+    healthCheckPath: /docs-json
     envVars:
       - key: DATABASE_URL
         sync: false
